@@ -7,7 +7,7 @@ window.BARBERIA = {
   direccion: "",          // ej. "Av. Juárez 123, Centro, Ciudad"
   mapa: "",               // enlace de Google Maps
   horario: [],            // ej. [["Lun a Vie", "10:00 – 20:00"], ["Sábado", "9:00 – 18:00"], ["Domingo", "Cerrado"]]
-  whatsapp: "",           // WhatsApp de la barbería, 10 dígitos (ej. "5512345678"). Con él aparece «Confirmar por WhatsApp» al agendar.
+  whatsapp: "2231120789",           // WhatsApp de la barbería, 10 dígitos (ej. "5512345678"). Con él aparece «Confirmar por WhatsApp» al agendar.
   supabaseUrl: "https://iqvdfhjonrricibdwchc.supabase.co",
   supabaseKey: "sb_publishable_Tau2iEMQhp09lVaRfi4qow_bW-YRdUd",
 };
