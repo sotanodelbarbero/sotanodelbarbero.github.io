@@ -515,7 +515,9 @@
 
     // ---------- Redes y Visítanos (solo lo que esté en config.js) ----------
     if (cfg.instagram) { $("footIg").firstElementChild.href = cfg.instagram; mostrar($("footIg")); }
-    const wa = cfg.whatsapp ? "https://wa.me/" + String(cfg.whatsapp).replace(/\D/g, "") : "";
+    // Número de 10 dígitos de México → se le agrega el 52 para WhatsApp
+    const numWa = ((d) => d.length === 10 ? "52" + d : d)(String(cfg.whatsapp || "").replace(/\D/g, ""));
+    const wa = numWa ? "https://wa.me/" + numWa : "";
     if (wa) { $("footWhats").firstElementChild.href = wa; mostrar($("footWhats")); }
     const horario = Array.isArray(cfg.horario) ? cfg.horario : [];
     if (cfg.direccion) {
