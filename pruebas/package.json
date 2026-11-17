@@ -1,0 +1,7 @@
+{
+  "name": "barberia-pruebas",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node pruebas.mjs ../supabase" },
+  "dependencies": { "@electric-sql/pglite": "0.2.17" }
+}

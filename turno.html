@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Registro de turno</title>
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="logo.jpg">
+  <link rel="apple-touch-icon" href="logo.jpg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="cliente.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="barra">
+      <a class="volver" href="index.html">‹ Inicio</a>
+      <img src="logo.jpg" alt="">
+      <span></span>
+    </header>
+    <span id="nombreNegocio" class="hidden"></span>
+
+    <div class="intro" id="intro">
+      <h1>Toma tu turno</h1>
+      <p>Llegas, te formas desde el celular y te avisamos.</p>
+      <nav class="modo" aria-label="Tipo de visita">
+        <a href="turno.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Tomar turno</a>
+        <a href="cita.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Agendar cita</a>
+      </nav>
+      <div id="colaInfo" class="cola-pill hidden"><span class="punto"></span><span id="colaTexto">Revisando la fila…</span></div>
+    </div>
+
+    <!-- ===== 1. Registro ===== -->
+    <form id="vistaForm" class="hidden" novalidate>
+      <div id="avisoCerrado" class="card hidden" style="text-align:center;margin-bottom:8px;border-color:rgba(212,166,74,.4)">
+        <p id="avisoCerradoTxt" style="margin:0 0 6px;font-weight:600"></p>
+        <p class="muted small" style="margin:0 0 14px">Puedes apartar tu lugar para otro día.</p>
+        <a href="cita.html" class="big" style="display:block;padding:14px;border-radius:999px;background:var(--oro);color:#1a1206;font-weight:600;text-decoration:none">Agendar cita</a>
+      </div>
+      <div class="paso-t" id="paso1"><span class="n">1</span><h2>Tus datos</h2></div>
+      <div class="campo2" id="campoNombre">
+        <input id="nombre" name="nombre" autocomplete="given-name" maxlength="80" required placeholder=" " aria-describedby="msgNombre">
+        <label for="nombre">Tu nombre</label>
+        <div class="msg" id="msgNombre"></div>
+      </div>
+      <div class="campo2" id="campoTel">
+        <input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder=" " aria-describedby="msgTel">
+        <label for="telefono">Teléfono</label>
+        <span class="opc">Opcional</span>
+        <div class="msg" id="msgTel"></div>
+      </div>
+
+      <div class="paso-t" id="paso2"><span class="n">2</span><h2>Elige tu servicio</h2></div>
+      <div id="servicios" class="servicios" role="group" aria-label="Servicio">
+        <div class="cargando" aria-label="Cargando servicios"></div>
+      </div>
+      <div class="msg" id="msgServicio" style="text-align:center;margin-top:10px"></div>
+      <div id="error" class="error" role="alert"></div>
+
+      <div class="enviar-barra">
+        <div class="dentro">
+          <div class="resumen" id="resumen"><b>Elige un servicio</b>Pagas al terminar</div>
+          <button id="enviar" class="primary" type="submit">Tomar turno</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- ===== 2. Mi turno (se actualiza solo) ===== -->
+    <section id="vistaTurno" class="hidden" aria-live="polite">
+      <div id="tarjetaTurno" class="card estado-card"></div>
+      <div id="accionesTurno"></div>
+      <div class="actualizado" id="actualizado"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script>
+    const cfg = window.BARBERIA;
+    const db = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const peso = (n) => Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+    const hoyISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
+    const TITULO = "Turno · " + cfg.nombre;
+
+    $("nombreNegocio").textContent = cfg.nombre;
+    document.title = TITULO;
+
+    // ---------- Almacenamiento local (solo en el celular del cliente) ----------
+    const leer = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+    const guardar = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+    const prev = leer("cliente") || {};
+    if (prev.nombre) $("nombre").value = prev.nombre;
+    if (prev.telefono) $("telefono").value = prev.telefono;
+
+    let servicios = [], elegido = null;
+
+    // ---------- Vistas ----------
+    function mostrar(vista) {
+      $("vistaForm").classList.toggle("hidden", vista !== "form");
+      $("vistaTurno").classList.toggle("hidden", vista !== "turno");
+      $("colaInfo").classList.toggle("hidden", vista === "turno");
+      $("intro").classList.toggle("hidden", vista === "turno");
+      window.scrollTo(0, 0);
+    }
+
+    // ---------- Cola actual (antes de registrarse) ----------
+    // Texto de la fila / horario (cola_publica)
+    function textoCola(d) {
+      if (d.abierto === false || d.acepta === false) {
+        const hoy = hoyISO();
+        const man = (() => { const [y, m, dd] = hoy.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10); })();
+        const cuando = !d.proxima_fecha ? "" : d.proxima_fecha === hoy ? "hoy" : d.proxima_fecha === man ? "mañana"
+          : "el " + new Date(d.proxima_fecha + "T12:00:00Z").toLocaleDateString("es-MX", { timeZone: "UTC", weekday: "long" });
+        const pre = d.motivo ? `Cerrado: ${d.motivo}` : "Cerrado ahora";
+        if (d.abierto === false) return { cerrado: true, txt: cuando ? `${pre}. Abrimos ${cuando} a las ${d.proxima_hora}` : pre };
+        return { cerrado: true, txt: `Ya no tomamos turnos hoy (cerramos a las ${d.cierra})` };
+      }
+      return { cerrado: false, txt: d.esperando === 0 ? "Ahora mismo no hay espera"
+        : `Ahora: ${d.esperando} ${d.esperando === 1 ? "persona esperando" : "personas esperando"}, unos ${d.minutos} min` };
+    }
+    async function cargarCola() {
+      const { data, error } = await db.rpc("cola_publica");
+      if (error || !data) return;
+      const c = textoCola(data);
+      $("colaTexto").textContent = c.txt;
+      $("colaInfo").querySelector(".punto").style.background = c.cerrado ? "var(--bad)" : "";
+      $("avisoCerrado").classList.toggle("hidden", !c.cerrado);
+      $("avisoCerradoTxt").textContent = c.txt + ".";
+      $("enviar").disabled = c.cerrado;
+    }
+
+    async function cargarServicios() {
+      const { data, error } = await db.from("servicios").select("id,nombre,precio").eq("activo", true).order("orden");
+      const cont = $("servicios");
+      if (error) { cont.innerHTML = '<div class="error" style="grid-column:1/-1;margin:0">No se pudieron cargar los servicios. Revisa tu conexión o avisa en recepción.</div>'; return; }
+      servicios = data;
+      cont.innerHTML = "";
+      data.forEach((s, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "serv"; b.setAttribute("aria-pressed", "false");
+        b.innerHTML = `${ICONOS[i % ICONOS.length]}<span><b></b><span class="precio">${peso(s.precio)}</span></span>`;
+        b.querySelector("b").textContent = s.nombre;
+        b.onclick = () => {
+          elegido = s.id;
+          cont.querySelectorAll(".serv").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+          cont.classList.remove("mal"); $("msgServicio").textContent = "";
+          actualizarResumen();
+          try { navigator.vibrate?.(8); } catch {}
+        };
+        cont.appendChild(b);
+      });
+      if (data.length === 1) cont.firstChild.click();
+    }
+
+    const ICONOS = [
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>',
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15 15 3l6 6-12 12H3z"/><path d="M9 9l6 6"/></svg>',
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',
+    ];
+
+    // ---------- Resumen y validación en vivo ----------
+    function actualizarResumen() {
+      const s = servicios.find((x) => x.id === elegido);
+      const nombre = $("nombre").value.trim();
+      $("resumen").innerHTML = s
+        ? `<b>${esc(s.nombre)} · ${peso(s.precio)}</b>${nombre.length >= 2 ? "A nombre de " + esc(nombre) : "Pagas al terminar"}`
+        : `<b>Elige un servicio</b>Pagas al terminar`;
+      $("paso1").classList.toggle("listo", nombre.length >= 2);
+      $("paso2").classList.toggle("listo", !!s);
+    }
+    function marcar(campo, msg, texto) { $(campo).classList.toggle("mal", !!texto); $(msg).textContent = texto || ""; }
+    const telValido = (t) => !t || t.replace(/\D/g, "").length >= 10;
+    $("nombre").addEventListener("input", () => { if ($("nombre").value.trim().length >= 2) marcar("campoNombre", "msgNombre", ""); actualizarResumen(); });
+    $("telefono").addEventListener("input", () => { if (telValido($("telefono").value.trim())) marcar("campoTel", "msgTel", ""); });
+    $("telefono").addEventListener("blur", () => { if (!telValido($("telefono").value.trim())) marcar("campoTel", "msgTel", "Escribe los 10 dígitos o déjalo vacío."); });
+    actualizarResumen();
+
+    // ---------- Aviso con sonido y vibración ----------
+    let audio = null;
+    function desbloquearAudio() { // los navegadores solo dejan sonar después de un toque
+      try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+    }
+    function avisar() {
+      try { navigator.vibrate?.([300, 150, 300, 150, 600]); } catch {}
+      try {
+        if (!audio) return;
+        [0, .25, .5].forEach((t, i) => {
+          const o = audio.createOscillator(), g = audio.createGain();
+          o.frequency.value = i === 2 ? 1046 : 784; o.connect(g); g.connect(audio.destination);
+          g.gain.setValueAtTime(.0001, audio.currentTime + t);
+          g.gain.exponentialRampToValueAtTime(.3, audio.currentTime + t + .02);
+          g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + t + .22);
+          o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .25);
+        });
+      } catch {}
+    }
+
+    // ---------- Registro ----------
+    $("vistaForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      desbloquearAudio();
+      const nombre = $("nombre").value.trim();
+      const telefono = $("telefono").value.trim();
+      $("error").textContent = "";
+      if (nombre.length < 2) { marcar("campoNombre", "msgNombre", "Escribe tu nombre para llamarte cuando sea tu turno."); $("nombre").focus(); return; }
+      if (!telValido(telefono)) { marcar("campoTel", "msgTel", "Escribe los 10 dígitos o déjalo vacío."); $("telefono").focus(); return; }
+      if (!elegido) { $("servicios").classList.add("mal"); $("msgServicio").textContent = "Elige un servicio."; $("paso2").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+
+      $("enviar").disabled = true; $("enviar").textContent = "Tomando turno…";
+      const { data, error } = await db.rpc("registrar_turno", { p_nombre: nombre, p_telefono: telefono || null, p_servicio_id: elegido });
+      $("enviar").disabled = false; $("enviar").textContent = "Tomar turno";
+      if (error || !data) {
+        const m = error?.message || "";
+        $("error").textContent = m.includes("Cerrado") ? "Estamos cerrados en este momento. Puedes agendar una cita."
+          : m.includes("no alcanza") ? "Ya no alcanzamos a atenderte hoy. Agenda una cita para otro día."
+          : "No se pudo registrar. Intenta de nuevo o avisa en recepción.";
+        cargarCola();
+        return;
+      }
+
+      guardar("cliente", { nombre, telefono });
+      guardar("turno", { token: data.token, fecha: hoyISO() });
+      ultimoEstado = null;
+      seguirTurno();
+    });
+
+    // ---------- Seguimiento del turno ----------
+    let ultimoEstado = null, timer = null;
+
+    async function seguirTurno() {
+      const t = leer("turno");
+      if (!t || t.fecha !== hoyISO()) { guardar("turno", null); return irAlFormulario(); }
+      mostrar("turno");
+      const { data, error } = await db.rpc("estado_turno", { p_token: t.token });
+      if (error) { $("actualizado").textContent = "Sin conexión. Reintentando…"; return programar(); }
+      if (!data || !data.es_hoy) { guardar("turno", null); return irAlFormulario(); }
+
+      if (data.estado === "atendiendo" && ultimoEstado && ultimoEstado !== "atendiendo") avisar();
+      ultimoEstado = data.estado;
+      pintarTurno(data);
+      $("actualizado").textContent = data.estado === "espera" || data.estado === "atendiendo"
+        ? "Actualizado " + new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + " · se actualiza solo"
+        : "";
+      programar(data.estado);
+    }
+
+    function programar(estado) {
+      clearTimeout(timer);
+      if (estado === "cobrado" || estado === "cancelado") return; // ya no cambia
+      timer = setTimeout(() => { if (!document.hidden) seguirTurno(); else programar(estado); }, 10000);
+    }
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && leer("turno")) seguirTurno(); });
+
+    function pintarTurno(d) {
+      const card = $("tarjetaTurno"), acc = $("accionesTurno");
+      card.classList.toggle("tu-turno", d.estado === "atendiendo");
+      document.title = d.estado === "atendiendo" ? "🔔 ¡Es tu turno!" : TITULO;
+      const servicio = `<div class="badge" style="font-size:.9375rem;padding:4px 12px;margin-top:6px">${esc(d.servicio || "")}${d.precio != null ? " · " + peso(d.precio) : ""}</div>`;
+
+      if (d.estado === "espera") {
+        card.innerHTML = `
+          <div class="muted">Hola ${esc(d.nombre)}, tu turno es${d.de_cita ? ' <span class="badge">con cita</span>' : ""}</div>
+          <div class="turno-num">${d.turno}</div>
+          ${servicio}
+          ${d.antes === 0
+            ? `<div class="siguiente">¡Eres el siguiente!</div>`
+            : `<div class="stats">
+                 <div class="stat"><div class="v">${d.antes}</div><div class="l">${d.antes === 1 ? "persona" : "personas"} antes de ti</div></div>
+                 <div class="stat"><div class="v">~${d.minutos}</div><div class="l">minutos aprox.</div></div>
+               </div>`}
+          <p class="muted small" style="margin:16px 0 0">Deja esta página abierta: aquí te avisamos cuando sea tu turno.</p>`;
+        acc.innerHTML = `<button id="btnCancelar" class="big danger" style="background:var(--surface)">Cancelar mi turno</button>`;
+        $("btnCancelar").onclick = cancelar;
+      } else if (d.estado === "atendiendo") {
+        card.innerHTML = `
+          <div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          <h2>¡Es tu turno!</h2>
+          <p style="font-size:1.125rem;margin:10px 0 0">${d.barbero ? "Pasa con <b>" + esc(d.barbero) + "</b>" : "Pasa por favor"}</p>
+          <div class="muted" style="margin-top:14px">Turno ${d.turno}</div>`;
+        acc.innerHTML = "";
+      } else if (d.estado === "cobrado") {
+        card.innerHTML = `
+          <div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          <h2>¡Gracias por tu visita, ${esc(d.nombre)}!</h2>
+          <p class="muted" style="margin:10px 0 0">Te esperamos pronto en ${esc(cfg.nombre)}.</p>
+          ${cfg.instagram ? `<a class="boton ig" style="margin-top:16px;background:var(--surface-2);color:var(--text)" href="${esc(cfg.instagram)}" target="_blank" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+            Síguenos en Instagram</a>` : ""}`;
+        acc.innerHTML = `<button id="btnOtro" class="big">Tomar otro turno</button>`;
+        $("btnOtro").onclick = () => { guardar("turno", null); irAlFormulario(); };
+      } else {
+        card.innerHTML = `
+          <h2>Turno cancelado</h2>
+          <p class="muted" style="margin:10px 0 0">Tu turno ${d.turno} ya no está en la fila.</p>`;
+        acc.innerHTML = `<button id="btnOtro" class="primary big">Tomar turno de nuevo</button>`;
+        $("btnOtro").onclick = () => { guardar("turno", null); irAlFormulario(); };
+      }
+    }
+
+    async function cancelar() {
+      if (!confirm("¿Seguro que quieres cancelar tu turno?")) return;
+      const t = leer("turno");
+      const { error } = await db.rpc("cancelar_turno", { p_token: t?.token });
+      if (error) { alert("No se pudo cancelar. Avisa en recepción."); return; }
+      seguirTurno();
+    }
+
+    function irAlFormulario() {
+      clearTimeout(timer);
+      document.title = TITULO;
+      mostrar("form");
+      cargarCola();
+      if (!servicios.length) cargarServicios();
+    }
+
+    // Si reabrió la página, el primer toque en cualquier parte habilita el sonido
+    document.addEventListener("pointerdown", desbloquearAudio, { once: true });
+
+    // ---------- Inicio ----------
+    // Si ya tiene un turno de hoy en este celular, lo mostramos en lugar del formulario
+    if (leer("turno")) seguirTurno(); else irAlFormulario();
+    setInterval(() => { if (!document.hidden && $("vistaTurno").classList.contains("hidden")) cargarCola(); }, 30000);
+  </script>
+</body>
+</html>

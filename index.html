@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sótano del Barbero</title>
+  <meta name="description" content="Barbería de caballeros: corte, barba y afeitado a navaja. Toma tu turno desde el celular y llega cuando te toque.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="logo.jpg">
+  <link rel="apple-touch-icon" href="logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================================
+       Sótano del Barbero — barbería de caballeros
+       Negro, latón y rojo vino. Letra del sistema (estilo Apple)
+       y titulares condensados.
+       ========================================================= */
+    :root {
+      --negro: #000000;
+      --carbon: #111110;       /* mosaicos */
+      --carbon-2: #1a1917;     /* mosaicos al pasar el mouse */
+      --linea: rgba(255,255,255,.1);
+      --hueso: #f2ede4;        /* texto */
+      --gris: #9a958b;         /* texto secundario */
+      --oro: #d4a64a;          /* latón */
+      --oro-2: #f0cf85;
+      --vino: #8f1d1d;         /* rojo vino, cuero */
+      --vino-2: #5a1010;
+      --navy: #1c3f8c;
+      --ok: #3ccf6e;
+      --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+      --ancho: 1160px;
+      --facil: cubic-bezier(.2,.8,.2,1);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+    body {
+      margin: 0; background: var(--negro); color: var(--hueso);
+      font: 400 1.0625rem/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    }
+    h1, h2, h3, p { margin: 0; }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    .hidden { display: none !important; }
+    .contenedor { max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
+    :focus-visible { outline: 2px solid var(--oro); outline-offset: 3px; border-radius: 6px; }
+
+    /* Grano de película sobre todo el sitio */
+    body::after {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .07;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ---------- Botones (respuesta inmediata al presionar) ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font: 500 .9375rem/1 inherit; letter-spacing: .01em; white-space: nowrap;
+      padding: 0 22px; height: 46px; border-radius: 999px; border: 1px solid var(--oro);
+      background: var(--oro); color: #1a1206;
+      transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform 100ms ease-out;
+      user-select: none;
+    }
+    .btn:hover { background: var(--oro-2); border-color: var(--oro-2); }
+    .btn:active { transform: scale(.97); }
+    .btn.chico { height: 34px; padding: 0 14px; font-size: .8125rem; }
+    .btn.linea { background: transparent; color: var(--hueso); border-color: rgba(255,255,255,.2); }
+    .btn.linea:hover { border-color: var(--oro); color: var(--oro-2); background: rgba(212,166,74,.06); }
+    .btn svg { width: 16px; height: 16px; flex: none; }
+
+    /* ---------- Aviso de turno activo ---------- */
+    .cinta-aviso { background: var(--oro); color: #1a1206; font-size: .9375rem; font-weight: 500; text-align: center; padding: 10px 16px; }
+    .cinta-aviso a { font-weight: 700; text-decoration: underline; }
+
+    /* ---------- Header translúcido ---------- */
+    .nav {
+      position: sticky; top: 0; z-index: 20; height: 68px;
+      background: rgba(0,0,0,.6); -webkit-backdrop-filter: saturate(160%) blur(20px); backdrop-filter: saturate(160%) blur(20px);
+      box-shadow: inset 0 -1px 0 transparent; transition: box-shadow .25s ease, background .25s ease;
+    }
+    .nav.con-borde { box-shadow: inset 0 -1px 0 var(--linea); background: rgba(0,0,0,.78); }
+    .nav .contenedor { display: flex; align-items: center; gap: 28px; height: 100%; }
+    .marca { display: flex; align-items: center; margin-right: auto; }
+    .marca img { height: 54px; width: auto; filter: invert(1); mix-blend-mode: screen; }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: var(--gris); font-size: .875rem; font-weight: 500; transition: color .15s; }
+    .nav-links a:hover { color: var(--hueso); }
+    .nav-acciones { display: flex; gap: 10px; }
+
+    /* ---------- Hero ---------- */
+    .hero { position: relative; isolation: isolate; overflow: hidden; padding: 56px 0 40px; min-height: min(92vh, 860px); display: flex; align-items: center; }
+    .hero::before { /* luz cálida, como un foco en el sótano */
+      content: ""; position: absolute; z-index: -2; inset: -20% -10% auto auto; width: 900px; height: 900px; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(212,166,74,.22), rgba(143,29,29,.12) 55%, transparent 75%);
+    }
+    .hero::after { /* piso */
+      content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 40%;
+      background: linear-gradient(to top, #000 20%, transparent);
+    }
+    .hero .contenedor { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: center; width: 100%; }
+    .hero h1 {
+      font: 900 clamp(3.5rem, 9.5vw, 8.5rem)/.86 var(--display); text-transform: uppercase; letter-spacing: -0.01em;
+    }
+    .hero h1 .oro {
+      display: block;
+      background: linear-gradient(180deg, var(--oro-2) 10%, var(--oro) 55%, #8a6220);
+      -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    }
+    .hero .sub { color: var(--gris); font-size: clamp(1.0625rem, 1.6vw, 1.25rem); max-width: 36ch; margin-top: 24px; }
+    .hero .sub strong { color: var(--hueso); font-weight: 500; }
+    .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
+    .estado {
+      display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; min-height: 36px;
+      padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--linea);
+      font-size: .875rem;
+    }
+    .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(60,207,110,.6); flex: none; animation: pulso 2s ease-out infinite; }
+    @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(60,207,110,.55); } 70%, 100% { box-shadow: 0 0 0 10px rgba(60,207,110,0); } }
+
+    /* Escena 3D */
+    .escena { position: relative; height: min(78vh, 680px); }
+    .escena canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+    .escena .sombra { position: absolute; left: 50%; bottom: 4%; width: 46%; height: 28px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.9), transparent); filter: blur(6px); }
+    /* Poste de respaldo si no hay WebGL */
+    .poste-css { position: absolute; left: 50%; top: 8%; bottom: 10%; width: 92px; transform: translateX(-50%); border-radius: 46px; overflow: hidden;
+      background: repeating-linear-gradient(-35deg, #c8102e 0 22px, #f5f1ea 22px 44px, var(--navy) 44px 66px, #f5f1ea 66px 88px);
+      background-size: 100% 200%; animation: girar 3s linear infinite; box-shadow: inset -18px 0 30px rgba(0,0,0,.45), inset 14px 0 20px rgba(255,255,255,.3); }
+    @keyframes girar { to { background-position: 0 -176px; } }
+
+    /* Entrada del hero */
+    @media (prefers-reduced-motion: no-preference) {
+      .hero h1 > span { display: block; animation: subir .9s var(--facil) both; }
+      .hero h1 > span:nth-child(2) { animation-delay: .08s; }
+      .hero h1 > span:nth-child(3) { animation-delay: .16s; }
+      .hero .sub, .hero .ctas, .hero .estado { animation: subir .9s var(--facil) .28s both; }
+      .escena { animation: aparecer 1.4s var(--facil) .1s both; }
+      @keyframes subir { from { opacity: 0; transform: translateY(28px); } }
+      @keyframes aparecer { from { opacity: 0; transform: scale(.94); } }
+    }
+
+    /* ---------- Cinta en movimiento ---------- */
+    .marquesina { border-block: 1px solid var(--linea); background: var(--vino-2); overflow: hidden; }
+    .marquesina .pista { display: flex; width: max-content; animation: correr 32s linear infinite; }
+    .marquesina span { display: inline-flex; align-items: center; gap: 28px; padding: 18px 14px; font: 800 1.5rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; color: var(--hueso); white-space: nowrap; }
+    .marquesina svg { width: 22px; height: 22px; color: var(--oro); }
+    @keyframes correr { to { transform: translateX(-50%); } }
+
+    /* ---------- Secciones ---------- */
+    .seccion { padding: 112px 0; position: relative; }
+    .cabeza { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
+    .cabeza h2 { font: 900 clamp(2.75rem, 6.5vw, 5rem)/.9 var(--display); text-transform: uppercase; }
+    .cabeza p { color: var(--gris); max-width: 38ch; }
+
+    /* Aparecer al hacer scroll */
+    @media (prefers-reduced-motion: no-preference) {
+      .revelar { opacity: 0; translate: 0 40px; transition: opacity .9s var(--facil), translate .9s var(--facil), transform .5s var(--facil), background .3s, border-color .3s; transition-delay: var(--d, 0s); }
+      .revelar.visto { opacity: 1; translate: 0 0; }
+      .mosaico.revelar.visto:hover { transition: opacity .9s, translate .9s, transform .12s ease-out, background .3s, border-color .3s; transition-delay: 0s; }
+    }
+
+    /* Servicios: mosaicos con inclinación 3D */
+    .mosaicos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; perspective: 1200px; }
+    .mosaico {
+      --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
+      position: relative; overflow: hidden; min-height: 200px; padding: 28px; border-radius: 26px;
+      background: var(--carbon); border: 1px solid var(--linea);
+      display: flex; flex-direction: column; justify-content: space-between; gap: 28px;
+      transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d;
+      transition: transform .5s var(--facil), background .3s, border-color .3s;
+    }
+    .mosaico:hover { background: var(--carbon-2); border-color: rgba(212,166,74,.35); transition: transform .12s ease-out, background .3s, border-color .3s; }
+    .mosaico::before { /* brillo que sigue al cursor */
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+      background: radial-gradient(400px circle at var(--mx) var(--my), rgba(212,166,74,.18), transparent 45%);
+    }
+    .mosaico:hover::before { opacity: 1; }
+    .mosaico h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.2; transform: translateZ(30px); }
+    .mosaico .precio { font: 800 2.75rem/1 var(--display); color: var(--oro); font-variant-numeric: tabular-nums; transform: translateZ(50px); }
+    .mosaico .precio small { font: 500 .875rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--gris); margin-left: 6px; }
+    .mosaico .icono { width: 40px; height: 40px; color: var(--oro); opacity: .9; transform: translateZ(40px); }
+    .mosaico.grande { grid-column: span 2; grid-row: span 2; padding: 40px; justify-content: flex-end;
+      background: radial-gradient(120% 90% at 100% 0%, rgba(143,29,29,.55), transparent 60%), var(--carbon); }
+    .mosaico.grande h3 { font: 900 clamp(2.25rem, 4vw, 3.25rem)/.95 var(--display); text-transform: uppercase; }
+    .mosaico.grande .precio { font-size: 5rem; }
+    .mosaico.grande .icono { width: 64px; height: 64px; position: absolute; top: 36px; right: 36px; }
+    .vacio { grid-column: 1 / -1; text-align: center; color: var(--gris); padding: 32px; }
+    .nota { color: var(--gris); font-size: .875rem; margin-top: 20px; }
+
+    /* Cómo funciona */
+    .pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 0; padding: 0; list-style: none; counter-reset: paso; }
+    .paso { counter-increment: paso; position: relative; overflow: hidden; padding: 32px 28px 36px; border-radius: 26px; background: var(--carbon); border: 1px solid var(--linea); }
+    .paso::before { content: counter(paso); position: absolute; right: 18px; top: -18px; font: 900 9rem/1 var(--display); color: rgba(212,166,74,.09); }
+    .paso .app { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; margin-bottom: 28px;
+      background: linear-gradient(160deg, #2a2723, #141311); border: 1px solid rgba(212,166,74,.35); color: var(--oro);
+      box-shadow: 0 10px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
+    .paso .app svg { width: 28px; height: 28px; }
+    .paso h3 { font: 800 1.75rem/1 var(--display); text-transform: uppercase; margin-bottom: 10px; letter-spacing: .01em; }
+    .paso p { color: var(--gris); }
+
+    /* Visítanos */
+    .visita { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .grupo-titulo { font-size: .8125rem; color: var(--gris); margin: 0 16px 8px; }
+    .grupo { background: var(--carbon); border: 1px solid var(--linea); border-radius: 18px; overflow: hidden; }
+    .fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px 18px; min-height: 52px; position: relative; }
+    .fila + .fila::before { content: ""; position: absolute; top: 0; left: 18px; right: 0; height: 1px; background: var(--linea); }
+    .fila .valor { color: var(--gris); font-variant-numeric: tabular-nums; text-align: right; }
+    a.fila { transition: background .1s; }
+    a.fila:active { background: rgba(255,255,255,.06); }
+    a.fila .accion { color: var(--oro-2); }
+    a.fila::after { content: "›"; color: var(--gris); font-size: 1.375rem; line-height: 0; }
+
+    /* Cierre */
+    .cierre { padding: 24px 0 112px; }
+    .panel { position: relative; overflow: hidden; isolation: isolate; border-radius: 36px; padding: 96px 32px; text-align: center;
+      background: radial-gradient(90% 120% at 50% 0%, #b52a2a, var(--vino) 40%, var(--vino-2) 75%, #2a0707); border: 1px solid rgba(255,255,255,.08); }
+    .panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 10px; z-index: -1;
+      background: repeating-linear-gradient(-45deg, #c8102e 0 14px, #f5f1ea 14px 28px, var(--navy) 28px 42px, #f5f1ea 42px 56px); }
+    .panel h2 { font: 900 clamp(3rem, 9vw, 7rem)/.88 var(--display); text-transform: uppercase; }
+    .panel p { color: rgba(242,237,228,.8); font-size: 1.1875rem; margin: 16px 0 36px; }
+
+    /* ---------- Footer ---------- */
+    .footer { border-top: 1px solid var(--linea); background: #080808; color: var(--gris); font-size: .8125rem; padding: 48px 0 calc(28px + env(safe-area-inset-bottom)); }
+    .footer a:hover { color: var(--hueso); }
+    .footer-arriba { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--linea); }
+    .footer .marca img { height: 80px; }
+    .footer h4 { margin: 0 0 12px; font-size: .8125rem; font-weight: 600; color: var(--hueso); }
+    .footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .footer-abajo { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 20px; font-size: .75rem; }
+
+    /* ---------- Responsivo ---------- */
+    /* ---------- Indicador "Desliza" y barra fija de botones (celular) ---------- */
+    .desliza {
+      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 25;
+      display: none; flex-direction: column; align-items: center; gap: 2px;
+      padding: 8px 16px 6px; border: 0; border-radius: 999px; background: rgba(0,0,0,.55);
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      color: var(--hueso); font: 500 .8125rem/1 inherit; letter-spacing: .02em; cursor: pointer;
+      transition: opacity .3s ease;
+    }
+    .desliza svg { width: 22px; height: 22px; color: var(--oro); }
+    .desliza.oculto { opacity: 0; pointer-events: none; }
+    @media (prefers-reduced-motion: no-preference) { .desliza svg { animation: bajarFlecha 1.6s ease-in-out infinite; } }
+    @keyframes bajarFlecha { 0%, 100% { transform: translateY(-2px); opacity: .6; } 50% { transform: translateY(5px); opacity: 1; } }
+
+    .barra-cta {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      display: none; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(0,0,0,.82); -webkit-backdrop-filter: saturate(160%) blur(18px); backdrop-filter: saturate(160%) blur(18px);
+      border-top: 1px solid var(--linea);
+      transform: translateY(110%); transition: transform .35s var(--facil);
+    }
+    .barra-cta.visible { transform: none; }
+    .barra-cta .btn { flex: 1; height: 46px; padding: 0 12px; }
+
+    @media (max-width: 960px) {
+      .nav-links { display: none; }
+      .hero { min-height: 0; padding: 24px 0 32px; }
+      .hero .contenedor { grid-template-columns: 1fr; }
+      .escena { height: clamp(220px, 34vh, 380px); order: -1; margin: -8px 0 -16px; }
+      .desliza { display: flex; }
+      .barra-cta { display: flex; }
+      .footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+      .mosaicos { grid-template-columns: 1fr 1fr; }
+      .pasos, .visita { grid-template-columns: 1fr; }
+      .footer-arriba { grid-template-columns: 1fr 1fr; }
+      .footer-arriba > :first-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 560px) {
+      .contenedor { padding: 0 16px; }
+      .nav { height: 60px; }
+      .nav .contenedor { gap: 8px; }
+      .marca img { height: 44px; }
+      .nav-acciones .btn.chico { padding: 0 12px; }
+      .nav-acciones .txt-entrar { display: none; }
+      .nav-acciones .btn.linea { width: 38px; padding: 0; }
+      .escena { height: clamp(200px, 30vh, 300px); }
+      .hero { padding: 12px 0 28px; }
+      .hero h1 { font-size: clamp(3rem, 15.5vw, 4.5rem); }
+      .hero .sub { margin-top: 16px; font-size: 1rem; }
+      .hero .ctas { margin-top: 22px; }
+      .hero .ctas .btn { flex: 1 1 100%; height: 50px; font-size: 1rem; }
+      .estado { margin-top: 18px; font-size: .8125rem; }
+      .cabeza { margin-bottom: 32px; }
+      .footer-arriba { grid-template-columns: 1fr; }
+      .seccion { padding: 80px 0; }
+      .mosaico { padding: 20px; min-height: 160px; border-radius: 22px; }
+      .mosaico .precio { font-size: 2.25rem; }
+      .mosaico.grande { padding: 24px; min-height: 260px; }
+      .mosaico.grande .precio { font-size: 3.5rem; }
+      .mosaico.grande .icono { width: 48px; height: 48px; top: 22px; right: 22px; }
+      .panel { padding: 72px 20px; border-radius: 28px; }
+      .marquesina span { font-size: 1.25rem; padding: 14px 10px; gap: 20px; }
+    }
+
+    @media (max-width: 380px) {
+      .contenedor { padding: 0 14px; }
+      .nav-acciones .btn.chico { font-size: .75rem; padding: 0 10px; }
+      .mosaicos { grid-template-columns: 1fr; }
+      .mosaico.grande { grid-column: auto; grid-row: auto; }
+      .barra-cta .btn { font-size: .875rem; }
+    }
+    /* Tablet acostada: dos columnas pero sin que el poste coma la pantalla */
+    @media (min-width: 961px) and (max-height: 760px) {
+      .hero { min-height: 0; padding: 32px 0; }
+      .escena { height: 72vh; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+    @media (prefers-reduced-transparency: reduce) { .nav { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  </style>
+</head>
+<body>
+  <!-- Solo aparece si el cliente ya tomó turno hoy en este celular -->
+  <div id="aviso" class="cinta-aviso hidden" role="status">Tienes un turno activo para hoy. <a href="turno.html">Ver mi turno</a></div>
+
+  <header id="nav" class="nav">
+    <div class="contenedor">
+      <a class="marca" href="#" aria-label="Inicio"><img src="logo.jpg" alt="Sótano del Barbero"></a>
+      <nav class="nav-links" aria-label="Secciones">
+        <a href="#servicios">Servicios</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#visitanos" class="ir-visita hidden">Visítanos</a>
+      </nav>
+      <div class="nav-acciones">
+        <a class="btn chico linea" href="panel.html" title="Acceso para el admin y los barberos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="txt-entrar">Entrar</span>
+        </a>
+        <a class="btn chico" href="cita.html">Agendar cita</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <div class="contenedor">
+        <div>
+          <h1><span>Corte de</span><span>caballero.</span><span class="oro">Sin fila.</span></h1>
+          <p class="sub"><strong>Corte, barba y afeitado a navaja.</strong> Fórmate desde el celular para hoy, o aparta tu día y hora con anticipación.</p>
+          <div class="ctas" id="ctasHero">
+            <a class="btn" href="turno.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Tomar turno ahora</a>
+            <a class="btn linea" href="cita.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Agendar cita</a>
+          </div>
+          <div id="estado" class="estado hidden" aria-live="polite"><span class="punto" aria-hidden="true"></span><span id="estadoTexto"></span></div>
+        </div>
+        <div class="escena" id="escena" aria-hidden="true">
+          <div class="sombra"></div>
+        </div>
+      </div>
+      <button type="button" class="desliza" id="desliza" aria-label="Desliza para ver los botones">
+        Desliza
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </section>
+
+    <div class="marquesina" aria-hidden="true">
+      <div class="pista" id="pista"></div>
+    </div>
+
+    <section id="servicios" class="seccion">
+      <div class="contenedor">
+        <div class="cabeza revelar">
+          <h2>Servicios</h2>
+          <p>Precios en pesos. Pagas en efectivo, con tarjeta o por transferencia.</p>
+        </div>
+        <div id="mosaicos" class="mosaicos"><div class="vacio">Cargando servicios…</div></div>
+      </div>
+    </section>
+
+    <section id="como-funciona" class="seccion">
+      <div class="contenedor">
+        <div class="cabeza revelar">
+          <h2>Cómo funciona</h2>
+          <p>Sin cuenta y sin descargar nada. Si prefieres no esperar, agenda tu cita con día y hora.</p>
+        </div>
+        <ol class="pasos">
+          <li class="paso revelar">
+            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg></div>
+            <h3>Elige tu servicio</h3>
+            <p>Escribe tu nombre y lo que te vas a hacer. Antes de registrarte ves cuánta gente hay.</p>
+          </li>
+          <li class="paso revelar" style="--d:.1s">
+            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <h3>Recibe tu turno</h3>
+            <p>Ves cuántas personas hay antes que tú y los minutos aproximados, en vivo.</p>
+          </li>
+          <li class="paso revelar" style="--d:.2s">
+            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+            <h3>Te avisamos</h3>
+            <p>Cuando te toca, tu celular vibra y suena. Si no puedes llegar, cancelas desde ahí.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="visitanos" class="seccion hidden">
+      <div class="contenedor">
+        <div class="cabeza revelar"><h2>Visítanos</h2></div>
+        <div class="visita revelar">
+          <div id="bloqueContacto" class="hidden">
+            <div class="grupo-titulo">Dónde estamos</div>
+            <div class="grupo">
+              <div id="filaDireccion" class="fila hidden"><span id="direccion"></span></div>
+              <a id="filaMapa" class="fila hidden" target="_blank" rel="noopener"><span class="accion">Cómo llegar</span></a>
+              <a id="filaWhats" class="fila hidden" target="_blank" rel="noopener"><span class="accion">Escríbenos por WhatsApp</span></a>
+            </div>
+          </div>
+          <div id="bloqueHorario" class="hidden">
+            <div class="grupo-titulo">Horario</div>
+            <div id="horario" class="grupo"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cierre">
+      <div class="contenedor">
+        <div class="panel revelar">
+          <h2>Tu silla<br>te espera.</h2>
+          <p>Fórmate ahora o aparta tu hora. Tarda menos de un minuto.</p>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a class="btn" href="turno.html">Tomar turno ahora</a>
+            <a class="btn linea" href="cita.html">Agendar cita</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Botones siempre a la mano en el celular -->
+  <div class="barra-cta" id="barraCta" aria-hidden="true">
+    <a class="btn" href="turno.html" tabindex="-1">Tomar turno</a>
+    <a class="btn linea" href="cita.html" tabindex="-1">Agendar cita</a>
+  </div>
+
+  <footer class="footer">
+    <div class="contenedor">
+      <div class="footer-arriba">
+        <div><a class="marca" href="#" aria-label="Volver arriba"><img src="logo.jpg" alt="Sótano del Barbero"></a></div>
+        <div>
+          <h4>Barbería</h4>
+          <ul>
+            <li><a href="#servicios">Servicios y precios</a></li>
+            <li><a href="#como-funciona">Cómo funciona</a></li>
+            <li class="ir-visita hidden"><a href="#visitanos">Visítanos</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Tu visita</h4>
+          <ul>
+            <li><a href="turno.html">Tomar turno</a></li>
+            <li><a href="cita.html">Agendar cita</a></li>
+            <li><a href="turno.html">Ver mi turno</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Equipo</h4>
+          <ul>
+            <li><a href="panel.html">Entrar al panel</a></li>
+            <li id="footIg" class="hidden"><a target="_blank" rel="noopener">Instagram</a></li>
+            <li id="footWhats" class="hidden"><a target="_blank" rel="noopener">WhatsApp</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-abajo">
+        <span>© <span id="anio"></span> <span class="nombre-negocio">Sótano del Barbero</span>. Todos los derechos reservados.</span>
+        <span>Los tiempos de espera son aproximados.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const cfg = window.BARBERIA;
+    const $ = (id) => document.getElementById(id);
+    const mostrar = (el) => el && el.classList.remove("hidden");
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const hoyISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
+    const sinMovimiento = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tactil = matchMedia("(hover: none)").matches;
+
+    document.title = cfg.nombre;
+    document.querySelectorAll(".nombre-negocio").forEach((el) => (el.textContent = cfg.nombre));
+    $("anio").textContent = new Date().getFullYear();
+
+    // ---------- Header: el borde aparece al hacer scroll ----------
+    const nav = $("nav");
+    const borde = () => nav.classList.toggle("con-borde", scrollY > 4);
+    addEventListener("scroll", borde, { passive: true }); borde();
+
+    // ---------- Turno activo en este celular ----------
+    try {
+      const t = JSON.parse(localStorage.getItem("turno") || "null");
+      const c = JSON.parse(localStorage.getItem("cita") || "null");
+      if (t && t.fecha === hoyISO()) mostrar($("aviso"));
+      else if (c && c.fecha >= hoyISO()) {
+        const [y, m, d] = c.fecha.split("-").map(Number);
+        const dia = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-MX", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" });
+        $("aviso").innerHTML = `Tienes una cita el ${esc(dia)} a las ${esc(c.hora)}. <a href="cita.html">Ver mi cita</a>`;
+        mostrar($("aviso"));
+      }
+    } catch {}
+
+    // ---------- Cinta en movimiento ----------
+    const tijeras = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>';
+    const palabras = ["Corte clásico", "Fade", "Barba", "Afeitado a navaja", "Toalla caliente", "Diseño", "Cejas"];
+    const grupo = palabras.map((p) => `<span>${p} ${tijeras}</span>`).join("");
+    $("pista").innerHTML = grupo + grupo; // duplicado para que el ciclo no tenga corte
+
+    // ---------- Redes y Visítanos (solo lo que esté en config.js) ----------
+    if (cfg.instagram) { $("footIg").firstElementChild.href = cfg.instagram; mostrar($("footIg")); }
+    const wa = cfg.whatsapp ? "https://wa.me/" + String(cfg.whatsapp).replace(/\D/g, "") : "";
+    if (wa) { $("footWhats").firstElementChild.href = wa; mostrar($("footWhats")); }
+    const horario = Array.isArray(cfg.horario) ? cfg.horario : [];
+    if (cfg.direccion) {
+      $("direccion").textContent = cfg.direccion; mostrar($("filaDireccion"));
+      $("filaMapa").href = cfg.mapa || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(cfg.direccion);
+      mostrar($("filaMapa"));
+    }
+    if (wa) { $("filaWhats").href = wa; mostrar($("filaWhats")); }
+    if (cfg.direccion || wa) mostrar($("bloqueContacto"));
+    if (horario.length) {
+      $("horario").innerHTML = horario.map(([d, h]) => `<div class="fila"><span>${esc(d)}</span><span class="valor">${esc(h)}</span></div>`).join("");
+      mostrar($("bloqueHorario"));
+    }
+    if (cfg.direccion || wa || horario.length) { mostrar($("visitanos")); document.querySelectorAll(".ir-visita").forEach(mostrar); }
+
+    // ---------- Aparecer al hacer scroll ----------
+    const io = "IntersectionObserver" in window ? new IntersectionObserver((entradas) => {
+      for (const e of entradas) if (e.isIntersecting) { e.target.classList.add("visto"); io.unobserve(e.target); }
+    }, { rootMargin: "0px 0px -10% 0px" }) : null;
+    const observar = (el) => io ? io.observe(el) : el.classList.add("visto");
+    document.querySelectorAll(".revelar").forEach(observar);
+    // Respaldo: si algo no apareció (por ejemplo al imprimir o en navegadores viejos), mostrarlo
+    setTimeout(() => document.querySelectorAll(".revelar:not(.visto)").forEach((el) => {
+      if (el.getBoundingClientRect().top < innerHeight) el.classList.add("visto");
+    }), 2500);
+    addEventListener("beforeprint", () => document.querySelectorAll(".revelar").forEach((el) => el.classList.add("visto")));
+
+    // ---------- "Desliza" y barra de botones fija ----------
+    const ctas = $("ctasHero"), desliza = $("desliza"), barra = $("barraCta");
+    // "Desliza" solo si el botón principal no se alcanza a ver al abrir (y nunca encima de él)
+    function revisarDesliza() {
+      const boton = ctas.querySelector(".btn").getBoundingClientRect();
+      desliza.classList.toggle("oculto", boton.bottom <= innerHeight - 8 || scrollY > 40);
+    }
+    desliza.onclick = () => ctas.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    // La barra aparece cuando los botones de arriba ya quedaron atrás (y no tapa el cierre con sus propios botones)
+    const cierre = document.querySelector(".cierre");
+    let ctasVisibles = true, cierreVisible = false;
+    function revisarBarra() {
+      const mostrar = !ctasVisibles && !cierreVisible;
+      barra.classList.toggle("visible", mostrar);
+      barra.setAttribute("aria-hidden", String(!mostrar));
+      barra.querySelectorAll("a").forEach((a) => (a.tabIndex = mostrar ? 0 : -1));
+    }
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([e]) => { ctasVisibles = e.isIntersecting || e.boundingClientRect.top > 0; revisarBarra(); }).observe(ctas);
+      new IntersectionObserver(([e]) => { cierreVisible = e.isIntersecting; revisarBarra(); }, { threshold: .3 }).observe(cierre);
+    }
+    addEventListener("scroll", revisarDesliza, { passive: true });
+    addEventListener("resize", revisarDesliza);
+    revisarDesliza(); setTimeout(revisarDesliza, 600); setTimeout(revisarDesliza, 1500);   // después de la animación de entrada
+
+    // ---------- Inclinación 3D de los mosaicos ----------
+    function inclinar(el) {
+      if (tactil || sinMovimiento) return;
+      el.addEventListener("pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+        el.style.setProperty("--ry", ((x - .5) * 12).toFixed(2) + "deg");
+        el.style.setProperty("--rx", ((.5 - y) * 12).toFixed(2) + "deg");
+        el.style.setProperty("--mx", (x * 100).toFixed(1) + "%");
+        el.style.setProperty("--my", (y * 100).toFixed(1) + "%");
+      });
+      el.addEventListener("pointerleave", () => { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); });
+    }
+
+    // ---------- Datos en vivo ----------
+    let db = null;
+    try { db = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey); } catch {}
+
+    const iconos = [
+      tijeras,
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 15 3l6 6-12 12H3z"/><path d="M9 9l6 6"/></svg>',  // navaja
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',  // peine
+    ];
+
+    async function cargarServicios() {
+      const cont = $("mosaicos");
+      const vacio = '<div class="vacio">Pregunta por nuestros servicios en la barbería.</div>';
+      if (!db) { cont.innerHTML = vacio; return; }
+      const { data, error } = await db.from("servicios").select("nombre,precio").eq("activo", true).order("orden");
+      if (error || !data?.length) { cont.innerHTML = vacio; return; }
+      cont.innerHTML = data.map((s, i) => `
+        <div class="mosaico revelar${i === 0 && data.length > 2 ? " grande" : ""}" style="--d:${Math.min(i, 6) * 0.06}s">
+          <span class="icono" aria-hidden="true">${iconos[i % iconos.length]}</span>
+          <h3>${esc(s.nombre)}</h3>
+          <div class="precio">$${Number(s.precio).toLocaleString("es-MX", { maximumFractionDigits: 0 })}<small>MXN</small></div>
+        </div>`).join("");
+      cont.querySelectorAll(".mosaico").forEach((el) => { observar(el); inclinar(el); });
+    }
+
+    // Texto de la fila / horario (cola_publica)
+    function textoCola(d) {
+      if (d.abierto === false || d.acepta === false) {
+        const hoy = hoyISO();
+        const man = (() => { const [y, m, dd] = hoy.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10); })();
+        const cuando = !d.proxima_fecha ? "" : d.proxima_fecha === hoy ? "hoy" : d.proxima_fecha === man ? "mañana"
+          : "el " + new Date(d.proxima_fecha + "T12:00:00Z").toLocaleDateString("es-MX", { timeZone: "UTC", weekday: "long" });
+        const pre = d.motivo ? `Cerrado: ${d.motivo}` : "Cerrado ahora";
+        if (d.abierto === false) return { cerrado: true, txt: cuando ? `${pre}. Abrimos ${cuando} a las ${d.proxima_hora}` : pre };
+        return { cerrado: true, txt: `Ya no tomamos turnos hoy (cerramos a las ${d.cierra})` };
+      }
+      return { cerrado: false, txt: d.esperando === 0 ? "Ahora mismo no hay espera"
+        : `Ahora: ${d.esperando} ${d.esperando === 1 ? "persona esperando" : "personas esperando"}, unos ${d.minutos} min` };
+    }
+    async function cargarCola() {
+      if (!db) return;
+      const { data, error } = await db.rpc("cola_publica");
+      if (error || !data) return;
+      const c = textoCola(data);
+      $("estadoTexto").textContent = c.txt;
+      $("estado").querySelector(".punto").style.background = c.cerrado ? "#ff5a4f" : "";
+      $("estado").querySelector(".punto").style.animation = c.cerrado ? "none" : "";
+      mostrar($("estado"));
+    }
+
+    // Horario de la semana desde el panel (si no se escribió en config.js)
+    async function cargarHorario() {
+      if (horario.length || !db) return;
+      const { data, error } = await db.from("horario").select("*");
+      if (error || !data?.length) return;
+      const nombres = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      const corto = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+      const txt = (d) => { const h = data.find((x) => x.dia === d); return h?.abierto ? `${h.abre.slice(0, 5)} – ${h.cierra.slice(0, 5)}` : "Cerrado"; };
+      // Junta días seguidos con el mismo horario: "Lun a Sáb 10:00 – 20:00"
+      const filas = [];
+      for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+        const t = txt(d), ult = filas.at(-1);
+        if (ult && ult.t === t) ult.fin = d; else filas.push({ ini: d, fin: d, t });
+      }
+      $("horario").innerHTML = filas.map((f) => `<div class="fila"><span>${f.ini === f.fin ? nombres[f.ini] : `${corto[f.ini]} a ${corto[f.fin]}`}</span><span class="valor">${esc(f.t)}</span></div>`).join("")
+        + `<a class="fila" href="cita.html"><span class="accion">Ver días disponibles</span></a>`;
+      mostrar($("bloqueHorario")); mostrar($("visitanos"));
+      document.querySelectorAll(".ir-visita").forEach(mostrar);
+    }
+
+    cargarServicios();
+    cargarCola();
+    cargarHorario();
+    setInterval(() => { if (!document.hidden) cargarCola(); }, 30000);
+
+    // =========================================================
+    // Poste de barbero 3D (Three.js)
+    // =========================================================
+    (function poste3D() {
+      const cont = $("escena");
+      const respaldo = () => { const d = document.createElement("div"); d.className = "poste-css"; cont.appendChild(d); };
+      if (!window.THREE) return respaldo();
+      let renderer;
+      try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { return respaldo(); }
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      cont.appendChild(renderer.domElement);
+
+      const escena = new THREE.Scene();
+      const camara = new THREE.PerspectiveCamera(32, 1, .1, 100);
+      camara.position.set(0, .2, 11);
+
+      // Reflejos: un "cuarto" de luz para que el metal brille
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const cuarto = new THREE.Scene();
+      cuarto.background = new THREE.Color(0x0b0a09);
+      const luzPanel = (c, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); cuarto.add(m); };
+      luzPanel(0xfff1d6, -6, 4, 4, 6, 10);
+      luzPanel(0xffe0a0, 6, 2, 3, 3, 10);
+      luzPanel(0x8f1d1d, 0, -6, 2, 12, 3);
+      escena.environment = pmrem.fromScene(cuarto, .04).texture;
+
+      // Textura de franjas en diagonal (rojo, blanco, azul marino)
+      const tam = 256, cv = document.createElement("canvas"); cv.width = cv.height = tam;
+      const cx = cv.getContext("2d"), img = cx.createImageData(tam, tam);
+      const colores = [[200, 16, 46], [245, 241, 234], [28, 63, 140], [245, 241, 234]];
+      for (let y = 0; y < tam; y++) for (let x = 0; x < tam; x++) {
+        const c = colores[Math.floor(((x + y) % 128) / 32)], i = (y * tam + x) * 4;
+        img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2]; img.data[i + 3] = 255;
+      }
+      cx.putImageData(img, 0, 0);
+      const franjas = new THREE.CanvasTexture(cv);
+      franjas.wrapS = franjas.wrapT = THREE.RepeatWrapping;
+      franjas.repeat.set(1, 2.4);
+      franjas.encoding = THREE.sRGBEncoding;
+      franjas.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      const poste = new THREE.Group();
+      escena.add(poste);
+
+      const alto = 4.6, radio = .62;
+      // Cilindro de franjas
+      poste.add(new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, alto, 64, 1, true),
+        new THREE.MeshStandardMaterial({ map: franjas, roughness: .35, metalness: 0, emissive: 0xffffff, emissiveMap: franjas, emissiveIntensity: .18 })));
+      // Vidrio
+      poste.add(new THREE.Mesh(new THREE.CylinderGeometry(radio + .1, radio + .1, alto, 64, 1, true),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .12, roughness: .02, metalness: .3, envMapIntensity: 2.2, side: THREE.DoubleSide })));
+      // Latón: tapas, anillos y remate
+      const laton = new THREE.MeshStandardMaterial({ color: 0xd4a64a, metalness: 1, roughness: .22 });
+      const pieza = (geo, y) => { const m = new THREE.Mesh(geo, laton); m.position.y = y; poste.add(m); return m; };
+      pieza(new THREE.CylinderGeometry(radio + .2, radio + .26, .38, 64), alto / 2 + .19);
+      pieza(new THREE.CylinderGeometry(radio + .26, radio + .2, .38, 64), -alto / 2 - .19);
+      pieza(new THREE.TorusGeometry(radio + .17, .06, 16, 64), alto / 2 - .02).rotation.x = Math.PI / 2;
+      pieza(new THREE.TorusGeometry(radio + .17, .06, 16, 64), -alto / 2 + .02).rotation.x = Math.PI / 2;
+      pieza(new THREE.CylinderGeometry(.16, radio + .1, .5, 48), alto / 2 + .63);
+      pieza(new THREE.SphereGeometry(.42, 48, 32), alto / 2 + 1.16);
+      pieza(new THREE.CylinderGeometry(radio + .1, .2, .5, 48), -alto / 2 - .63);
+      pieza(new THREE.SphereGeometry(.26, 32, 24), -alto / 2 - 1.0);
+      poste.position.y = .05;
+      poste.scale.setScalar(.92);
+
+      // Partículas de luz flotando (polvo en el sótano)
+      const n = 140, pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - .5) * 8; pos[i * 3 + 1] = (Math.random() - .5) * 8; pos[i * 3 + 2] = (Math.random() - .5) * 4 - 1; }
+      const polvoGeo = new THREE.BufferGeometry(); polvoGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const polvo = new THREE.Points(polvoGeo, new THREE.PointsMaterial({ color: 0xf0cf85, size: .035, transparent: true, opacity: .7, depthWrite: false }));
+      escena.add(polvo);
+
+      // Luces
+      escena.add(new THREE.AmbientLight(0xffffff, .25));
+      const clave = new THREE.DirectionalLight(0xfff0d0, 2.2); clave.position.set(-4, 5, 6); escena.add(clave);
+      const contra = new THREE.PointLight(0xd4a64a, 3, 20); contra.position.set(4, 2, -3); escena.add(contra);
+      const roja = new THREE.PointLight(0xc8102e, 2, 14); roja.position.set(-3, -3, 2); escena.add(roja);
+
+      // Tamaño
+      function ajustar() {
+        const w = cont.clientWidth, h = cont.clientHeight;
+        renderer.setSize(w, h, false);
+        camara.aspect = w / h;
+        camara.position.z = w / h < .7 ? 13 : 11;
+        camara.updateProjectionMatrix();
+      }
+      new ResizeObserver(ajustar).observe(cont); ajustar();
+
+      // Seguir el cursor (inclinación suave con resorte)
+      let mx = 0, my = 0, rx = 0, ry = 0;
+      if (!tactil) addEventListener("pointermove", (e) => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
+
+      // Pausar cuando no se ve
+      let visible = true;
+      new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) pedir(); }).observe(cont);
+
+      const reloj = new THREE.Clock();
+      let rafId = 0;
+      function pedir() { if (!rafId) rafId = requestAnimationFrame(cuadro); }
+      function cuadro() {
+        rafId = 0;
+        const dt = Math.min(reloj.getDelta(), .05), t = reloj.elapsedTime;
+        franjas.offset.y -= dt * .35;                          // las franjas suben, como un poste real
+        rx += ((my * .25) - rx) * .06; ry += ((mx * .5) - ry) * .06; // resorte suave hacia el cursor
+        poste.rotation.set(rx + Math.sin(t * .6) * .04, ry + t * .25, Math.sin(t * .4) * .05);
+        poste.position.y = .05 + Math.sin(t * .8) * .08;        // flota
+        polvo.rotation.y = t * .03; polvo.position.y = Math.sin(t * .3) * .2;
+        renderer.render(escena, camara);
+        if (visible && !sinMovimiento && !document.hidden) pedir();
+      }
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) pedir(); });
+      pedir();
+    })();
+  </script>
+</body>
+</html>

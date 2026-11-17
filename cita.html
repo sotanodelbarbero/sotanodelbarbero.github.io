@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Agendar cita</title>
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="logo.jpg">
+  <link rel="apple-touch-icon" href="logo.jpg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="cliente.css">
+  <style>
+    /* Barbero: fichas */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 500; font-size: .9375rem;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text);
+      transition: transform 100ms ease-out, border-color .15s, background .15s;
+    }
+    .chip:active { transform: scale(.96); opacity: 1; }
+    .chip[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: #1a1206; font-weight: 600; }
+    .nota-paso { color: var(--muted); font-size: .8125rem; margin: -6px 0 12px; }
+
+    /* Días: carrusel horizontal */
+    .dias { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 16px 8px; margin: 0 -16px; scrollbar-width: none; }
+    .dias::-webkit-scrollbar { display: none; }
+    .dia {
+      flex: none; width: 68px; height: 86px; scroll-snap-align: start; padding: 0; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text); font-weight: 400;
+      transition: transform 100ms ease-out, border-color .15s, background .15s;
+    }
+    .dia:active { transform: scale(.95); opacity: 1; }
+    .dia .sem { font-size: .75rem; color: var(--muted); text-transform: capitalize; }
+    .dia .num { font: 800 1.75rem/1 var(--display); }
+    .dia .mes { font-size: .6875rem; color: var(--muted); text-transform: capitalize; }
+    .dia[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: #1a1206; }
+    .dia[aria-pressed="true"] .sem, .dia[aria-pressed="true"] .mes { color: rgba(26,18,6,.75); }
+    .dia:disabled { opacity: .35; cursor: not-allowed; }
+    .dia:disabled .mes::before { content: "Cerrado"; }
+    .dia:disabled .mes span { display: none; }
+
+    /* Calendario del mes */
+    .mes-cal { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 14px 12px 12px; }
+    .mes-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .mes-cab b { font: 800 1.375rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+    .mes-cab button { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: rgba(255,255,255,.06); color: var(--text); font-size: 1.25rem; }
+    .mes-cab button:disabled { opacity: .25; }
+    .mes-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .mes-grid .sem { text-align: center; font-size: .6875rem; color: var(--muted); padding: 4px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .dm { aspect-ratio: 1; padding: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      background: transparent; color: var(--text); font-weight: 600; font-size: 1.0625rem; border: 1px solid transparent; position: relative;
+      transition: transform 100ms ease-out, background .15s, border-color .15s; }
+    .dm:not(:disabled) { background: rgba(212,166,74,.1); border-color: rgba(212,166,74,.25); }
+    .dm:not(:disabled):hover { border-color: var(--oro); }
+    .dm:active { transform: scale(.92); opacity: 1; }
+    .dm small { font-size: .5625rem; font-weight: 500; color: var(--oro-2); line-height: 1; }
+    .dm:disabled { color: rgba(242,237,228,.25); cursor: not-allowed; }
+    .dm.cerrado:disabled { text-decoration: line-through; }
+    .dm.hoy::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--oro); }
+    .dm[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: #1a1206; }
+    .dm[aria-pressed="true"] small { color: rgba(26,18,6,.75); }
+    .dm[aria-pressed="true"]::after { background: #1a1206; }
+    .dm.vacio { visibility: hidden; }
+    .dia-info { text-align: center; color: var(--muted); font-size: .875rem; margin: 10px 0 0; min-height: 1.3em; }
+    .dia-info b { color: var(--text); font-weight: 600; }
+
+    /* Horas */
+    .horas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .hora {
+      height: 48px; padding: 0; border-radius: 12px; font-weight: 600; font-size: 1rem; font-variant-numeric: tabular-nums;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text);
+      transition: transform 100ms ease-out, border-color .15s, background .15s;
+    }
+    .hora:hover { border-color: rgba(212,166,74,.4); }
+    .hora:active { transform: scale(.95); opacity: 1; }
+    .hora[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: #1a1206; }
+    .horas .aviso-horas { grid-column: 1 / -1; padding: 20px 16px; border-radius: 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); font-size: .9375rem; }
+    .horas .cargando { grid-column: 1 / -1; height: 104px; }
+    .seccion-hora { font-size: .8125rem; color: var(--muted); grid-column: 1 / -1; margin: 6px 2px -2px; }
+    @media (max-width: 360px) { .horas { grid-template-columns: repeat(3, 1fr); } }
+
+    /* Confirmación */
+    .confirmada .cuando { font: 900 1.75rem/1 var(--display); text-transform: uppercase; margin-top: 18px; color: var(--text); }
+    .confirmada .turno-num { font-size: 6.5rem; margin: 6px 0 12px; }
+    .detalle { display: grid; gap: 1px; margin: 22px 0 0; border-radius: 16px; overflow: hidden; background: var(--line); text-align: left; }
+    .detalle div { display: flex; justify-content: space-between; gap: 12px; padding: 13px 16px; background: #171614; font-size: .9375rem; }
+    .detalle span:first-child { color: var(--muted); }
+    .acciones-cita { display: grid; gap: 10px; margin-top: 16px; }
+    .acciones-cita .big { margin: 0; border-radius: 999px; }
+    .btn-oro { background: var(--oro) !important; color: #1a1206 !important; border-color: transparent !important; font-weight: 600; }
+    .btn-oro:hover { background: var(--oro-2) !important; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="barra">
+      <a class="volver" href="index.html">‹ Inicio</a>
+      <img src="logo.jpg" alt="">
+      <span></span>
+    </header>
+
+    <div class="intro" id="intro">
+      <h1>Agenda tu cita</h1>
+      <p>Elige día y hora, y llega directo a tu silla.</p>
+      <nav class="modo" aria-label="Tipo de visita">
+        <a href="turno.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Tomar turno</a>
+        <a href="cita.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Agendar cita</a>
+      </nav>
+    </div>
+
+    <!-- ===== Agendar ===== -->
+    <form id="vistaForm" class="hidden" novalidate>
+      <div class="paso-t" id="paso1"><span class="n">1</span><h2>Servicio</h2></div>
+      <div id="servicios" class="servicios" role="group" aria-label="Servicio"><div class="cargando"></div></div>
+
+      <div class="paso-t" id="paso2"><span class="n">2</span><h2>Barbero</h2></div>
+      <p class="nota-paso">Opcional. Con "Cualquiera" ves más horarios.</p>
+      <div id="barberos" class="chips" role="group" aria-label="Barbero">
+        <button type="button" class="chip" aria-pressed="true" data-id="">Cualquiera</button>
+      </div>
+
+      <div class="paso-t" id="paso3"><span class="n">3</span><h2>Día</h2></div>
+      <div class="mes-cal">
+        <div class="mes-cab">
+          <button type="button" id="mesAntes" aria-label="Mes anterior">‹</button>
+          <b id="mesTitulo"></b>
+          <button type="button" id="mesDespues" aria-label="Mes siguiente">›</button>
+        </div>
+        <div id="dias" class="mes-grid" role="group" aria-label="Día"></div>
+      </div>
+      <p class="dia-info" id="diaInfo"></p>
+
+      <div class="paso-t" id="paso4"><span class="n">4</span><h2>Hora</h2></div>
+      <div id="horas" class="horas" role="group" aria-label="Hora" aria-live="polite"></div>
+      <div class="msg" id="msgHora" style="text-align:center;margin-top:10px"></div>
+
+      <div class="paso-t" id="paso5"><span class="n">5</span><h2>Tus datos</h2></div>
+      <div class="campo2" id="campoNombre">
+        <input id="nombre" autocomplete="name" maxlength="80" required placeholder=" " aria-describedby="msgNombre">
+        <label for="nombre">Tu nombre</label>
+        <div class="msg" id="msgNombre"></div>
+      </div>
+      <div class="campo2" id="campoTel">
+        <input id="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder=" " aria-describedby="msgTel">
+        <label for="telefono">Teléfono (10 dígitos)</label>
+        <div class="msg" id="msgTel"></div>
+      </div>
+      <p class="nota-paso" style="margin-top:4px">Lo usamos solo para avisarte si hay algún cambio con tu cita.</p>
+      <div id="error" class="error" role="alert"></div>
+
+      <div class="enviar-barra">
+        <div class="dentro">
+          <div class="resumen" id="resumen"><b>Elige servicio, día y hora</b>Pagas al terminar</div>
+          <button id="enviar" class="primary" type="submit">Confirmar cita</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- ===== Mi cita ===== -->
+    <section id="vistaCita" class="hidden" aria-live="polite">
+      <div id="tarjetaCita" class="card estado-card confirmada"></div>
+      <div id="accionesCita" class="acciones-cita"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script>
+    const cfg = window.BARBERIA;
+    const db = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const peso = (n) => Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+    const hoyISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
+    const leer = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+    const guardar = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+    document.title = "Agendar cita · " + cfg.nombre;
+
+    // Fechas como "AAAA-MM-DD" y en UTC para que no se muevan por la zona horaria del celular
+    const aFecha = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+    const sumarDias = (iso, n) => { const d = aFecha(iso); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const fmt = (iso, op) => aFecha(iso).toLocaleDateString("es-MX", { timeZone: "UTC", ...op });
+    const fechaLarga = (iso) => fmt(iso, { weekday: "long", day: "numeric", month: "long" });
+    const hora12 = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
+
+    const ICONOS = [
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>',
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15 15 3l6 6-12 12H3z"/><path d="M9 9l6 6"/></svg>',
+      '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',
+    ];
+
+    // ---------- Estado ----------
+    let servicios = [], barberos = [], horario = [];
+    const sel = { servicio: null, barbero: null, fecha: null, hora: null };
+
+    const prev = leer("cliente") || {};
+    if (prev.nombre) $("nombre").value = prev.nombre;
+    if (prev.telefono) $("telefono").value = prev.telefono;
+
+    function mostrar(vista) {
+      $("vistaForm").classList.toggle("hidden", vista !== "form");
+      $("vistaCita").classList.toggle("hidden", vista !== "cita");
+      $("intro").classList.toggle("hidden", vista === "cita");
+      scrollTo(0, 0);
+    }
+    const marcarBoton = (cont, btn) => cont.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === btn)));
+    const vibrar = () => { try { navigator.vibrate?.(8); } catch {} };
+
+    // ---------- Servicios ----------
+    async function cargarServicios() {
+      const cont = $("servicios");
+      const { data, error } = await db.from("servicios").select("*").eq("activo", true).order("orden");
+      if (error) { cont.innerHTML = '<div class="error" style="grid-column:1/-1;margin:0">No se pudieron cargar los servicios. Revisa tu conexión.</div>'; return; }
+      servicios = data;
+      cont.innerHTML = "";
+      data.forEach((s, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "serv"; b.setAttribute("aria-pressed", "false");
+        const dur = s.duracion_min ? ` · ${s.duracion_min} min` : "";
+        b.innerHTML = `${ICONOS[i % ICONOS.length]}<span><b></b><span class="precio">${peso(s.precio)}</span><span class="muted small">${dur.slice(3)}</span></span>`;
+        b.querySelector("b").textContent = s.nombre;
+        b.onclick = () => { sel.servicio = s.id; marcarBoton(cont, b); cont.classList.remove("mal"); vibrar(); cambio(); };
+        cont.appendChild(b);
+      });
+    }
+
+    // ---------- Barberos (opcional) ----------
+    async function cargarBarberos() {
+      const { data } = await db.rpc("barberos_publicos");
+      barberos = data || [];
+      const cont = $("barberos");
+      for (const b of barberos) {
+        const x = document.createElement("button");
+        x.type = "button"; x.className = "chip"; x.setAttribute("aria-pressed", "false");
+        x.dataset.id = b.id; x.textContent = b.nombre;
+        cont.appendChild(x);
+      }
+      if (!barberos.length) { $("paso2").classList.add("hidden"); cont.classList.add("hidden"); cont.previousElementSibling.classList.add("hidden"); }
+    }
+    $("barberos").addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      sel.barbero = b.dataset.id ? Number(b.dataset.id) : null;
+      marcarBoton($("barberos"), b); vibrar(); cambio();
+    });
+
+    // ---------- Días (próximas 2 semanas) ----------
+    // ---------- Calendario del mes (lo que Alejandro abre en el panel) ----------
+    let diasCal = {}, mesVista = null;
+    const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    async function cargarDias() {
+      const hoy = hoyISO(), hasta = sumarDias(hoy, 30);
+      const { data, error } = await db.rpc("calendario_publico", { p_desde: hoy, p_hasta: hasta });
+      if (!error && Array.isArray(data)) {
+        for (const d of data) diasCal[d.fecha] = d;
+      } else {
+        // Respaldo si todavía no se ejecuta 09_calendario.sql: horario de la semana
+        const { data: sem, error: e2 } = await db.from("horario").select("*");
+        if (e2) { $("dias").innerHTML = '<div class="error" style="margin:0;grid-column:1/-1">Las citas todavía no están activadas. Toma un turno o pregunta en la barbería.</div>'; return false; }
+        const { data: cerr } = await db.rpc("dias_cerrados", { p_desde: hoy, p_hasta: hasta });
+        const cerrados = new Set(Array.isArray(cerr) ? cerr : []);
+        for (let i = 0; i <= 30; i++) {
+          const f = sumarDias(hoy, i), h = (sem || []).find((x) => x.dia === aFecha(f).getUTCDay());
+          diasCal[f] = { fecha: f, abierto: !!h?.abierto && !cerrados.has(f), abre: h?.abre?.slice(0, 5), cierra: h?.cierra?.slice(0, 5) };
+        }
+      }
+      const primero = Object.values(diasCal).find((d) => d.abierto);
+      if (primero) sel.fecha = primero.fecha;
+      mesVista = (sel.fecha || hoy).slice(0, 7);
+      pintarMes();
+      return true;
+    }
+
+    function pintarMes() {
+      const [y, m] = mesVista.split("-").map(Number);
+      const hoy = hoyISO(), limite = sumarDias(hoy, 30);
+      $("mesTitulo").textContent = `${MESES[m - 1]} ${y}`;
+      $("mesAntes").disabled = mesVista <= hoy.slice(0, 7);
+      $("mesDespues").disabled = mesVista >= limite.slice(0, 7);
+      const vacios = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;   // lunes primero
+      const nDias = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      let html = ["L", "M", "M", "J", "V", "S", "D"].map((d) => `<div class="sem">${d}</div>`).join("") + `<span class="dm vacio"></span>`.repeat(vacios);
+      for (let d = 1; d <= nDias; d++) {
+        const f = `${mesVista}-${String(d).padStart(2, "0")}`, info = diasCal[f];
+        const fuera = f < hoy || f > limite || !info;
+        const abierto = !fuera && info.abierto;
+        const etiqueta = fechaLarga(f) + (fuera ? ", no disponible" : abierto ? `, abierto de ${info.abre} a ${info.cierra}` : ", cerrado");
+        html += `<button type="button" class="dm${!fuera && !abierto ? " cerrado" : ""}${f === hoy ? " hoy" : ""}" data-fecha="${f}"
+          aria-pressed="${f === sel.fecha}" aria-label="${etiqueta}" ${abierto ? "" : "disabled"}>${d}${abierto && info.especial ? "<small>★</small>" : ""}</button>`;
+      }
+      $("dias").innerHTML = html;
+      infoDia();
+    }
+    function infoDia() {
+      const d = sel.fecha && diasCal[sel.fecha];
+      $("diaInfo").innerHTML = d ? `${esc(fmt(sel.fecha, { weekday: "long", day: "numeric", month: "long" }))}: <b>abierto de ${hora12(d.abre)} a ${hora12(d.cierra)}</b>${d.especial ? " (horario especial)" : ""}`
+        : "No hay días abiertos en el próximo mes.";
+    }
+    const cambiarMes = (n) => { const [y, m] = mesVista.split("-").map(Number); mesVista = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); pintarMes(); };
+    $("mesAntes").onclick = () => cambiarMes(-1);
+    $("mesDespues").onclick = () => cambiarMes(1);
+    $("dias").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-fecha]"); if (!b || b.disabled) return;
+      sel.fecha = b.dataset.fecha;
+      marcarBoton($("dias"), b); infoDia();
+      vibrar(); cambio();
+    });
+
+    // ---------- Horas libres ----------
+    let pedido = 0;
+    async function cargarHoras() {
+      const cont = $("horas");
+      sel.hora = null;
+      if (!sel.servicio) { cont.innerHTML = '<div class="aviso-horas">Elige primero un servicio para ver los horarios libres.</div>'; return; }
+      if (!sel.fecha) { cont.innerHTML = '<div class="aviso-horas">No hay días abiertos en las próximas dos semanas.</div>'; return; }
+      const n = ++pedido;
+      cont.innerHTML = '<div class="cargando"></div>';
+      const { data, error } = await db.rpc("horarios_disponibles", { p_fecha: sel.fecha, p_servicio_id: sel.servicio, p_barbero_id: sel.barbero });
+      if (n !== pedido) return; // llegó una respuesta vieja
+      if (error) { cont.innerHTML = '<div class="aviso-horas">No se pudieron cargar los horarios. Revisa tu conexión.</div>'; return; }
+      if (!data?.length) {
+        cont.innerHTML = `<div class="aviso-horas">No quedan horarios libres este día${sel.barbero ? " con este barbero. Prueba con «Cualquiera» u otro día" : ". Prueba otro día"}.</div>`;
+        return;
+      }
+      const grupos = [["Mañana", (h) => h < 12], ["Tarde", (h) => h >= 12 && h < 18], ["Noche", (h) => h >= 18]];
+      cont.innerHTML = grupos.map(([nombre, f]) => {
+        const lista = data.filter((t) => f(Number(t.slice(0, 2))));
+        return lista.length ? `<div class="seccion-hora">${nombre}</div>` + lista.map((t) => `<button type="button" class="hora" aria-pressed="false" data-hora="${t}">${hora12(t)}</button>`).join("") : "";
+      }).join("");
+    }
+    $("horas").addEventListener("click", (e) => {
+      const b = e.target.closest("button.hora"); if (!b) return;
+      sel.hora = b.dataset.hora; marcarBoton($("horas"), b);
+      $("msgHora").textContent = ""; vibrar(); resumen();
+      $("paso5").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    // ---------- Resumen y validación ----------
+    const telValido = (t) => t.replace(/\D/g, "").length >= 10;
+    function marcar(campo, msg, texto) { $(campo).classList.toggle("mal", !!texto); $(msg).textContent = texto || ""; }
+    function resumen() {
+      const s = servicios.find((x) => x.id === sel.servicio);
+      const partes = [];
+      if (sel.fecha) partes.push(fmt(sel.fecha, { weekday: "short", day: "numeric", month: "short" }));
+      if (sel.hora) partes.push(hora12(sel.hora));
+      $("resumen").innerHTML = s
+        ? `<b>${esc(s.nombre)} · ${peso(s.precio)}</b>${sel.hora ? esc(partes.join(", ")) : "Elige una hora"}`
+        : `<b>Elige servicio, día y hora</b>Pagas al terminar`;
+      $("paso1").classList.toggle("listo", !!s);
+      $("paso2").classList.toggle("listo", !!s);
+      $("paso3").classList.toggle("listo", !!sel.fecha);
+      $("paso4").classList.toggle("listo", !!sel.hora);
+      $("paso5").classList.toggle("listo", $("nombre").value.trim().length >= 2 && telValido($("telefono").value));
+    }
+    function cambio() { cargarHoras().then(resumen); resumen(); }
+    $("nombre").addEventListener("input", () => { if ($("nombre").value.trim().length >= 2) marcar("campoNombre", "msgNombre", ""); resumen(); });
+    $("telefono").addEventListener("input", () => { if (telValido($("telefono").value)) marcar("campoTel", "msgTel", ""); resumen(); });
+    $("telefono").addEventListener("blur", () => { const t = $("telefono").value.trim(); if (t && !telValido(t)) marcar("campoTel", "msgTel", "Escribe los 10 dígitos."); });
+
+    // ---------- Confirmar ----------
+    $("vistaForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("error").textContent = "";
+      const nombre = $("nombre").value.trim(), telefono = $("telefono").value.trim();
+      if (!sel.servicio) { $("servicios").classList.add("mal"); $("paso1").scrollIntoView({ behavior: "smooth" }); return; }
+      if (!sel.hora) { $("msgHora").textContent = "Elige una hora."; $("paso4").scrollIntoView({ behavior: "smooth" }); return; }
+      if (nombre.length < 2) { marcar("campoNombre", "msgNombre", "Escribe tu nombre."); $("nombre").focus(); return; }
+      if (!telValido(telefono)) { marcar("campoTel", "msgTel", "Escribe los 10 dígitos para poder avisarte."); $("telefono").focus(); return; }
+
+      $("enviar").disabled = true; $("enviar").textContent = "Confirmando…";
+      const { data, error } = await db.rpc("agendar_cita", {
+        p_nombre: nombre, p_telefono: telefono, p_servicio_id: sel.servicio,
+        p_barbero_id: sel.barbero, p_fecha: sel.fecha, p_hora: sel.hora,
+      });
+      $("enviar").disabled = false; $("enviar").textContent = "Confirmar cita";
+      if (error || !data) {
+        const m = error?.message || "";
+        if (m.includes("ya no está disponible")) { $("msgHora").textContent = "Alguien acaba de apartar esa hora. Elige otra."; cambio(); $("paso4").scrollIntoView({ behavior: "smooth" }); }
+        else if (m.includes("2 citas")) $("error").textContent = "Ya tienes 2 citas agendadas con este teléfono. Cancela una para apartar otra.";
+        else if (m.includes("ese día")) $("error").textContent = "Ya tienes una cita ese día con este teléfono. Elige otro día o cancela la que tienes.";
+        else if (m.includes("Hora inválida")) { $("msgHora").textContent = "Elige una de las horas de la lista."; cambio(); }
+        else $("error").textContent = "No se pudo agendar. Revisa tu conexión e intenta de nuevo.";
+        return;
+      }
+      guardar("cliente", { nombre, telefono });
+      guardar("cita", { token: data.token, fecha: data.fecha, hora: data.hora });
+      try { navigator.vibrate?.([20, 60, 20]); } catch {}
+      verCita();
+    });
+
+    // ---------- Mi cita ----------
+    async function verCita() {
+      const c = leer("cita");
+      if (!c) return irAlFormulario();
+      const { data, error } = await db.rpc("estado_cita", { p_token: c.token });
+      if (error) { mostrar("cita"); $("tarjetaCita").innerHTML = '<p class="muted">No se pudo cargar tu cita. Revisa tu conexión.</p>'; $("accionesCita").innerHTML = ""; return; }
+      if (!data || data.estado === "llego" || data.estado === "no_vino") { guardar("cita", null); return irAlFormulario(); }
+      mostrar("cita");
+      const d = data, card = $("tarjetaCita"), acc = $("accionesCita");
+      const filas = `
+        <div class="detalle">
+          <div><span>Servicio</span><span>${esc(d.servicio)} · ${peso(d.precio)}</span></div>
+          <div><span>Barbero</span><span>${esc(d.barbero || "El primero disponible")}</span></div>
+          <div><span>Duración</span><span>${d.duracion} min</span></div>
+        </div>`;
+      if (d.estado === "cancelada") {
+        card.innerHTML = `<h2>Cita cancelada</h2><p class="muted" style="margin-top:10px">Tu cita del ${esc(fechaLarga(d.fecha))} ya no está apartada.</p>`;
+        acc.innerHTML = `<button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`;
+      } else {
+        card.innerHTML = `
+          <div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          <div class="muted">${esc(d.nombre)}, tu cita está confirmada</div>
+          <div class="cuando">${esc(fechaLarga(d.fecha))}</div>
+          <div class="turno-num">${hora12(d.hora).replace(/ (am|pm)$/, "")}<span style="font-size:.3em;margin-left:.15em">${hora12(d.hora).slice(-2)}</span></div>
+          ${filas}
+          <p class="muted small" style="margin:16px 0 0">Llega 5 minutos antes. Si no puedes venir, cancela aquí para liberar el lugar.</p>`;
+        acc.innerHTML = `
+          <button class="big btn-oro" id="btnCalendario">Agregar a mi calendario</button>
+          ${d.cancelable ? '<button class="big danger" id="btnCancelar" style="background:var(--surface)">Cancelar cita</button>' : ""}
+          <a href="index.html" class="big" style="display:block;text-align:center;padding:15px;color:var(--muted);text-decoration:none">Volver al inicio</a>`;
+        $("btnCalendario").onclick = () => calendario(d);
+        if ($("btnCancelar")) $("btnCancelar").onclick = cancelar;
+      }
+      const otra = $("btnOtra"); if (otra) otra.onclick = () => { guardar("cita", null); irAlFormulario(); };
+    }
+
+    async function cancelar() {
+      if (!confirm("¿Seguro que quieres cancelar tu cita?")) return;
+      const c = leer("cita");
+      const { data, error } = await db.rpc("cancelar_cita", { p_token: c?.token });
+      if (error || !data) { alert("No se pudo cancelar. Si ya pasó la hora, avísanos por teléfono."); return; }
+      verCita();
+    }
+
+    // Archivo .ics para agregar la cita al calendario del celular
+    function calendario(d) {
+      const ini = d.fecha.replace(/-/g, "") + "T" + d.hora.replace(":", "") + "00";
+      const [h, m] = d.hora.split(":").map(Number), finMin = h * 60 + m + d.duracion;
+      const fin = d.fecha.replace(/-/g, "") + "T" + String(Math.floor(finMin / 60)).padStart(2, "0") + String(finMin % 60).padStart(2, "0") + "00";
+      const linea = (s) => String(s).replace(/[,;\\]/g, (c) => "\\" + c);
+      const ics = [
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Barberia//Citas//ES", "BEGIN:VEVENT",
+        "UID:" + Date.now() + "@barberia", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
+        "DTSTART;TZID=America/Mexico_City:" + ini, "DTEND;TZID=America/Mexico_City:" + fin,
+        "SUMMARY:" + linea(d.servicio + " · " + cfg.nombre),
+        cfg.direccion ? "LOCATION:" + linea(cfg.direccion) : "",
+        "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", "DESCRIPTION:" + linea("Tu cita en " + cfg.nombre), "END:VALARM",
+        "END:VEVENT", "END:VCALENDAR",
+      ].filter(Boolean).join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+      a.download = "cita-barberia.ics";
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    // ---------- Inicio ----------
+    let listo = false;
+    async function irAlFormulario() {
+      mostrar("form");
+      if (listo) return;
+      listo = true;
+      $("horas").innerHTML = '<div class="aviso-horas">Elige primero un servicio para ver los horarios libres.</div>';
+      await Promise.all([cargarServicios(), cargarBarberos(), cargarDias()]);
+      if (servicios.length === 1) $("servicios").firstChild.click();
+      resumen();
+    }
+    if (leer("cita")) verCita(); else irAlFormulario();
+  </script>
+</body>
+</html>

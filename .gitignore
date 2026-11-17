@@ -1,0 +1,6 @@
+# Dependencias de las pruebas (se instalan con npm install)
+node_modules/
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+*.log
