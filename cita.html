@@ -505,7 +505,7 @@
       } else {
         const avisoLlegada = d.puede_llegar
           ? `<div class="aviso-llegada"><b>¿Ya estás en la barbería?</b> Toca «Ya llegué» y entras a la fila con prioridad.</div>`
-          : esHoy ? `<div class="aviso-llegada">Hoy es tu cita. Desde las <b>${esc(hora12(d.llegar_desde))}</b> podrás avisar aquí que ya llegaste.</div>` : "";
+          : esHoy && d.llegar_desde ? `<div class="aviso-llegada">Hoy es tu cita. Desde las <b>${esc(hora12(d.llegar_desde))}</b> podrás avisar aquí que ya llegaste.</div>` : "";
         card.innerHTML = `${check}
           <div class="muted">${esc(d.nombre)}, tu cita está confirmada</div>
           <div class="cuando">${esc(fechaLarga(d.fecha))}</div>

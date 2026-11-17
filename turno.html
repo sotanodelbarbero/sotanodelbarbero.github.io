@@ -332,7 +332,7 @@
       if (data.estado === "llego" && data.turno_token && data.turno_estado !== "cobrado") {   // ya llegó: ver su turno
         guardar("turno", { token: data.turno_token, fecha: data.fecha }); return seguirTurno();
       }
-      if (data.estado !== "agendada") return;
+      if (data.estado !== "agendada" || !("puede_llegar" in data)) return;   // sin 11_llegada.sql no se muestra
       box.innerHTML = `<p style="margin:0 0 4px;font-weight:600;font-size:1.0625rem">Tienes cita hoy a las ${esc(hora12(data.hora))}</p>
         <p class="muted small" style="margin:0 0 12px">${esc(data.servicio)}${data.barbero ? " con " + esc(data.barbero) : ""}. No necesitas formarte.</p>
         ${data.puede_llegar
