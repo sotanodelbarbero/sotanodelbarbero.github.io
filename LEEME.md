@@ -1,5 +1,13 @@
 # Barbería: registro por QR y corte de caja
 
+**Página publicada:** https://nutrementeycuerpo.github.io/sotano-del-barbero/
+- Clientes: `…/turno.html` (tomar turno) y `…/cita.html` (agendar cita)
+- Personal: `…/panel.html`
+- QR para imprimir: `…/qr.html`
+
+Para publicar cambios: guarda los archivos y ejecuta en esta carpeta
+`git add -A && git commit -m "qué cambiaste" && git push`. GitHub actualiza la página en 1 o 2 minutos.
+
 | Archivo | Para qué sirve |
 |---|---|
 | `index.html` | Página principal del negocio: servicios y precios, cómo funciona, horario y el botón **Obtén una cita**. |

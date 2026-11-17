@@ -660,13 +660,22 @@
     // =========================================================
     // Poste de barbero 3D (Three.js)
     // =========================================================
-    (function poste3D() {
+    // El 3D arranca cuando la página ya pidió sus datos y el navegador está desocupado
+    const cuandoLibre = window.requestIdleCallback ? (f) => requestIdleCallback(f, { timeout: 1200 }) : (f) => setTimeout(f, 300);
+    cuandoLibre(function poste3D() {
       const cont = $("escena");
-      const respaldo = () => { const d = document.createElement("div"); d.className = "poste-css"; cont.appendChild(d); };
+      const respaldo = () => { if (!cont.querySelector(".poste-css")) { const d = document.createElement("div"); d.className = "poste-css"; cont.appendChild(d); } };
       if (!window.THREE) return respaldo();
+      const chico = innerWidth < 960;
       let renderer;
-      try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { return respaldo(); }
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      try { renderer = new THREE.WebGLRenderer({ antialias: !chico, alpha: true, powerPreference: "low-power" }); } catch { return respaldo(); }
+      // Sin tarjeta de video (gráficos por software) el 3D congela la página: usar el poste animado plano
+      try {
+        const gl = renderer.getContext(), info = gl.getExtension("WEBGL_debug_renderer_info");
+        const nombre = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+        if (/swiftshader|llvmpipe|software|basic render|softpipe/i.test(nombre)) { renderer.dispose(); return respaldo(); }
+      } catch {}
+      renderer.setPixelRatio(Math.min(devicePixelRatio, chico ? 1.5 : 2));
       renderer.outputEncoding = THREE.sRGBEncoding;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       cont.appendChild(renderer.domElement);
@@ -725,7 +734,7 @@
       poste.scale.setScalar(.92);
 
       // Partículas de luz flotando (polvo en el sótano)
-      const n = 140, pos = new Float32Array(n * 3);
+      const n = chico ? 60 : 140, pos = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - .5) * 8; pos[i * 3 + 1] = (Math.random() - .5) * 8; pos[i * 3 + 2] = (Math.random() - .5) * 4 - 1; }
       const polvoGeo = new THREE.BufferGeometry(); polvoGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
       const polvo = new THREE.Points(polvoGeo, new THREE.PointsMaterial({ color: 0xf0cf85, size: .035, transparent: true, opacity: .7, depthWrite: false }));
@@ -757,9 +766,25 @@
 
       const reloj = new THREE.Clock();
       let rafId = 0;
-      function pedir() { if (!rafId) rafId = requestAnimationFrame(cuadro); }
-      function cuadro() {
+      function pedir() { if (!rafId && !rendido) rafId = requestAnimationFrame(cuadro); }
+      // Vigilante: si los primeros cuadros van lentos (equipo sin fuerza), cambiar al poste plano
+      let rendido = false, medidos = 0, tPrevio = 0; const lentos = [];
+      function vigilar(ahora) {
+        if (medidos > 40 || sinMovimiento) return;
+        if (tPrevio && !document.hidden) { lentos.push(ahora - tPrevio); medidos++; }
+        tPrevio = ahora;
+        if (medidos === 24) {
+          const orden = [...lentos].sort((a, b) => a - b), mediana = orden[Math.floor(orden.length / 2)];
+          if (mediana > 70) {            // menos de ~14 cuadros por segundo
+            rendido = true; cancelAnimationFrame(rafId);
+            renderer.domElement.remove(); renderer.dispose(); respaldo();
+          }
+        }
+      }
+      function cuadro(ahora) {
         rafId = 0;
+        vigilar(ahora);
+        if (rendido) return;
         const dt = Math.min(reloj.getDelta(), .05), t = reloj.elapsedTime;
         franjas.offset.y -= dt * .35;                          // las franjas suben, como un poste real
         rx += ((my * .25) - rx) * .06; ry += ((mx * .5) - ry) * .06; // resorte suave hacia el cursor
@@ -771,7 +796,7 @@
       }
       document.addEventListener("visibilitychange", () => { if (!document.hidden) pedir(); });
       pedir();
-    })();
+    });
   </script>
 </body>
 </html>
