@@ -857,8 +857,13 @@
       b.onclick = async () => { t.remove(); await op.deshacer(); };
       t.appendChild(b);
     }
+    if (op.enlace) {   // { texto, href }: por ejemplo «Enviar por WhatsApp»
+      const a = document.createElement("a"); a.className = "boton"; a.textContent = op.enlace.texto; a.href = op.enlace.href;
+      a.target = "_blank"; a.rel = "noopener"; a.style.marginLeft = "6px"; a.onclick = () => t.remove();
+      t.appendChild(a);
+    }
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), op.deshacer ? 7000 : error ? 4500 : 2400);
+    setTimeout(() => t.remove(), op.deshacer || op.enlace ? 9000 : error ? 4500 : 2400);
   }
 
   // ---------- Sesión ----------
@@ -2240,7 +2245,9 @@
     const dia = c.fecha === hoyISO() ? "hoy" : "el " + fechaLarga(c.fecha);
     const s = servicio(c.servicio_id), b = barbero(c.barbero_id);
     const nombre = c.cliente_nombre.split(" ")[0];
-    const txt = tipo === "barbero"
+    const txt = tipo === "confirmar"
+      ? `Hola ${nombre} ✅ Tu cita en ${cfg.nombre} quedó confirmada: ${dia} a las ${hhmm(c.hora)} (${s?.nombre || "servicio"}${b ? " con " + b.nombre : ""}). Si no puedes venir, avísanos por aquí. ¡Te esperamos!`
+      : tipo === "barbero"
       ? `Hola ${nombre}, te escribimos de ${cfg.nombre}. Tu cita ${dia} a las ${hhmm(c.hora)} sigue en pie; ahora te atenderá otro de nuestros barberos. ¡Te esperamos!`
       : tipo === "reprogramar"
       ? `Hola ${nombre}, te escribimos de ${cfg.nombre}. Tuvimos un cambio y no podremos atenderte ${dia} a las ${hhmm(c.hora)}. ¿Te acomoda otro horario? Disculpa la molestia.`
@@ -2428,6 +2435,7 @@
     const acc = [];
     if (c.estado === "agendada") {
       if (esHoy) acc.push(`<button class="primary ancho" data-dc="llego">Llegó: pasar a la fila</button>`);
+      acc.push(`<a class="boton ancho" href="${waCita(c, "confirmar")}" target="_blank" rel="noopener">Confirmar por WhatsApp</a>`);
       acc.push(`<button data-dc="mover">Mover</button>`);
       acc.push(`<a class="boton" href="${waCita(c)}" target="_blank" rel="noopener">${esHoy ? "Escribir" : "Recordar"}</a>`);
       if (esHoy) acc.push(`<button data-dc="no_vino">No vino</button>`);
@@ -2493,7 +2501,9 @@
         });
         if (error) return error.message.includes("no está disponible") ? "Esa hora ya no está libre. Elige otra."
           : error.message.includes("function") ? "Falta ejecutar supabase/08_panel.sql en Supabase." : "No se pudo agendar: " + error.message;
-        toast("Cita agendada");
+        const nueva = { cliente_nombre: nombre, telefono: tel.replace(/\D/g, ""), fecha: $("sFecha").value, hora,
+          servicio_id: Number($("sServicio").value), barbero_id: $("sBarb").value ? Number($("sBarb").value) : null };
+        toast("Cita agendada", { enlace: { texto: "Enviar confirmación", href: waCita(nueva, "confirmar") } });
         if (visible("citas")) { $("citaFecha").value = $("sFecha").value; cargarCitas(); }
         cargarCitasHoy(); if (visible("inicio")) cargarInicio();
         return null;

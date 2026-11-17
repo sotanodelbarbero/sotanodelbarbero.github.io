@@ -94,6 +94,17 @@
     .acciones-cita .big { margin: 0; border-radius: 999px; }
     .btn-oro { background: var(--oro) !important; color: #1a1206 !important; border-color: transparent !important; font-weight: 600; }
     .btn-oro:hover { background: var(--oro-2) !important; }
+    /* WhatsApp */
+    .btn-wa { display: flex !important; align-items: center; justify-content: center; gap: 10px; text-decoration: none; font-weight: 600;
+      min-height: 52px; padding: 14px 18px; border-radius: 999px; font-size: 1.0625rem;
+      background: #25d366 !important; color: #062b14 !important; border-color: transparent !important; }
+    .btn-wa:hover { background: #3ee07a !important; }
+    .btn-wa-linea { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 999px; text-decoration: none;
+      color: #3ee07a; border: 1px solid rgba(37,211,102,.45); font-weight: 500; }
+    .btn-wa-linea:hover { background: rgba(37,211,102,.08); }
+    .ultimo-paso { margin-top: 16px; padding: 12px 14px; border-radius: 14px; text-align: left; font-size: .9375rem; line-height: 1.4;
+      background: rgba(37,211,102,.08); border: 1px solid rgba(37,211,102,.35); }
+    .ultimo-paso b { color: #3ee07a; }
   </style>
 </head>
 <body>
@@ -186,6 +197,7 @@
     const sumarDias = (iso, n) => { const d = aFecha(iso); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const fmt = (iso, op) => aFecha(iso).toLocaleDateString("es-MX", { timeZone: "UTC", ...op });
     const fechaLarga = (iso) => fmt(iso, { weekday: "long", day: "numeric", month: "long" });
+    const mayus = (t) => t ? t[0].toUpperCase() + t.slice(1) : t;
     const hora12 = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
 
     const ICONOS = [
@@ -388,9 +400,30 @@
       }
       guardar("cliente", { nombre, telefono });
       guardar("cita", { token: data.token, fecha: data.fecha, hora: data.hora });
+      recienAgendada = true;
       try { navigator.vibrate?.([20, 60, 20]); } catch {}
       verCita();
     });
+
+    // ---------- WhatsApp ----------
+    const ICONO_WA = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>`;
+    // Número de la barbería (config.js). 10 dígitos de México → se le agrega el 52.
+    const numeroBarberia = () => { const d = String(cfg.whatsapp || "").replace(/\D/g, ""); return d.length === 10 ? "52" + d : d; };
+    function mensajeCita(d, tipo) {
+      const cliente = (leer("cliente") || {}).nombre || d.nombre;
+      const datos = [
+        `📅 ${mayus(fechaLarga(d.fecha))}`,
+        `🕐 ${hora12(d.hora)}`,
+        `✂️ ${d.servicio} (${peso(d.precio)})`,
+        `💈 ${d.barbero ? "Con " + d.barbero : "Con el barbero que esté disponible"}`,
+      ];
+      if (tipo === "confirmar") return [`Hola 👋 Acabo de agendar una cita en ${cfg.nombre}:`, "", ...datos, `🙋 A nombre de: ${cliente}`, "", "¿Me la confirman? Gracias."].join("\n");
+      if (tipo === "cancelar") return `Hola, soy ${cliente}. Cancelé mi cita del ${fechaLarga(d.fecha)} a las ${hora12(d.hora)}. Gracias.`;
+      // "guardar": para mandárselo uno mismo
+      return [`Mi cita en ${cfg.nombre} 💈`, "", ...datos, cfg.direccion ? `📍 ${cfg.direccion}` : "", "", `Ver o cancelar: ${new URL("cita.html", location.href).href}`].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+    }
+    const enlaceWa = (numero, texto) => `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+    let recienAgendada = false;
 
     // ---------- Mi cita ----------
     async function verCita() {
@@ -407,9 +440,11 @@
           <div><span>Barbero</span><span>${esc(d.barbero || "El primero disponible")}</span></div>
           <div><span>Duración</span><span>${d.duracion} min</span></div>
         </div>`;
+      const num = numeroBarberia();
       if (d.estado === "cancelada") {
         card.innerHTML = `<h2>Cita cancelada</h2><p class="muted" style="margin-top:10px">Tu cita del ${esc(fechaLarga(d.fecha))} ya no está apartada.</p>`;
-        acc.innerHTML = `<button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`;
+        acc.innerHTML = `${num ? `<a class="btn-wa-linea" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "cancelar")))}">${ICONO_WA}Avisar a la barbería que cancelé</a>` : ""}
+          <button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`;
       } else {
         card.innerHTML = `
           <div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
@@ -417,8 +452,11 @@
           <div class="cuando">${esc(fechaLarga(d.fecha))}</div>
           <div class="turno-num">${hora12(d.hora).replace(/ (am|pm)$/, "")}<span style="font-size:.3em;margin-left:.15em">${hora12(d.hora).slice(-2)}</span></div>
           ${filas}
+          ${recienAgendada && num ? `<div class="ultimo-paso"><b>Último paso:</b> manda tu confirmación por WhatsApp para que la barbería tenga tus datos.</div>` : ""}
           <p class="muted small" style="margin:16px 0 0">Llega 5 minutos antes. Si no puedes venir, cancela aquí para liberar el lugar.</p>`;
         acc.innerHTML = `
+          ${num ? `<a class="big btn-wa" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "confirmar")))}">${ICONO_WA}Confirmar por WhatsApp</a>` : ""}
+          <a class="${num ? "btn-wa-linea" : "big btn-wa"}" target="_blank" rel="noopener" href="${esc(enlaceWa("", mensajeCita(d, "guardar")))}">${num ? "" : ICONO_WA}Guardarla en mi WhatsApp</a>
           <button class="big btn-oro" id="btnCalendario">Agregar a mi calendario</button>
           ${d.cancelable ? '<button class="big danger" id="btnCancelar" style="background:var(--surface)">Cancelar cita</button>' : ""}
           <a href="index.html" class="big" style="display:block;text-align:center;padding:15px;color:var(--muted);text-decoration:none">Volver al inicio</a>`;
@@ -433,6 +471,7 @@
       const c = leer("cita");
       const { data, error } = await db.rpc("cancelar_cita", { p_token: c?.token });
       if (error || !data) { alert("No se pudo cancelar. Si ya pasó la hora, avísanos por teléfono."); return; }
+      recienAgendada = false;
       verCita();
     }
 
