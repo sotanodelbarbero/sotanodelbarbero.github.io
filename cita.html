@@ -105,6 +105,20 @@
     .ultimo-paso { margin-top: 16px; padding: 12px 14px; border-radius: 14px; text-align: left; font-size: .9375rem; line-height: 1.4;
       background: rgba(37,211,102,.08); border: 1px solid rgba(37,211,102,.35); }
     .ultimo-paso b { color: #3ee07a; }
+    /* Llegada */
+    .btn-llegue { display: flex !important; align-items: center; justify-content: center; gap: 10px; min-height: 56px; font-size: 1.125rem !important; }
+    .aviso-llegada { margin-top: 16px; padding: 12px 14px; border-radius: 14px; font-size: .9375rem; line-height: 1.4; text-align: left;
+      background: rgba(212,166,74,.08); border: 1px solid rgba(212,166,74,.35); }
+    .aviso-llegada b { color: var(--oro-2); }
+    /* Guarda tu cita */
+    .guardar-t { font-size: .8125rem; color: var(--muted); font-weight: 600; margin: 8px 4px 2px; text-align: center; }
+    .guardar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .guardar a, .guardar button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 0;
+      padding: 10px 12px; border-radius: 14px; font-size: .9375rem; font-weight: 500; text-decoration: none; text-align: center; line-height: 1.2;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text); width: 100%; }
+    .guardar a:hover, .guardar button:hover { border-color: rgba(212,166,74,.5); }
+    .guardar svg { width: 18px; height: 18px; flex: none; color: var(--oro); }
+    .guardar .wa svg { color: #3ee07a; }
   </style>
 </head>
 <body>
@@ -420,50 +434,132 @@
       if (tipo === "confirmar") return [`Hola 👋 Acabo de agendar una cita en ${cfg.nombre}:`, "", ...datos, `🙋 A nombre de: ${cliente}`, "", "¿Me la confirman? Gracias."].join("\n");
       if (tipo === "cancelar") return `Hola, soy ${cliente}. Cancelé mi cita del ${fechaLarga(d.fecha)} a las ${hora12(d.hora)}. Gracias.`;
       // "guardar": para mandárselo uno mismo
-      return [`Mi cita en ${cfg.nombre} 💈`, "", ...datos, cfg.direccion ? `📍 ${cfg.direccion}` : "", "", `Ver o cancelar: ${new URL("cita.html", location.href).href}`].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+      return [`Mi cita en ${cfg.nombre} 💈`, "", ...datos, cfg.direccion ? `📍 ${cfg.direccion}` : "", "", `Ver o cancelar: ${enlaceCita()}`].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
     }
     const enlaceWa = (numero, texto) => `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+    // Enlace personal: abre ESTA cita en cualquier teléfono (lleva el código secreto de la cita)
+    function enlaceCita() {
+      const c = leer("cita"), u = new URL("cita.html", location.href);
+      u.search = ""; u.hash = "";
+      if (c?.token) u.searchParams.set("c", c.token);
+      return u.href;
+    }
+    // Google Calendar (funciona bien en Android y en la computadora)
+    function enlaceGoogle(d) {
+      const ini = d.fecha.replace(/-/g, "") + "T" + d.hora.replace(":", "") + "00";
+      const [h, m] = d.hora.split(":").map(Number), f = h * 60 + m + d.duracion;
+      const fin = d.fecha.replace(/-/g, "") + "T" + String(Math.floor(f / 60)).padStart(2, "0") + String(f % 60).padStart(2, "0") + "00";
+      const u = new URL("https://calendar.google.com/calendar/render");
+      u.searchParams.set("action", "TEMPLATE");
+      u.searchParams.set("text", `${d.servicio} · ${cfg.nombre}`);
+      u.searchParams.set("dates", `${ini}/${fin}`);
+      u.searchParams.set("ctz", "America/Mexico_City");
+      u.searchParams.set("details", `${d.barbero ? "Con " + d.barbero + ". " : ""}Ver o cancelar tu cita: ${enlaceCita()}`);
+      if (cfg.direccion) u.searchParams.set("location", cfg.direccion);
+      return u.href;
+    }
     let recienAgendada = false;
 
     // ---------- Mi cita ----------
+    const ICO = {
+      google: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15h6M12 12v6"/></svg>',
+      cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M9 18h6"/></svg>',
+      copiar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+      llegue: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    };
+    const check = `<div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>`;
+
     async function verCita() {
       const c = leer("cita");
       if (!c) return irAlFormulario();
       const { data, error } = await db.rpc("estado_cita", { p_token: c.token });
       if (error) { mostrar("cita"); $("tarjetaCita").innerHTML = '<p class="muted">No se pudo cargar tu cita. Revisa tu conexión.</p>'; $("accionesCita").innerHTML = ""; return; }
-      if (!data || data.estado === "llego" || data.estado === "no_vino") { guardar("cita", null); return irAlFormulario(); }
+      if (!data || data.estado === "no_vino") { guardar("cita", null); return irAlFormulario(); }
+      guardar("cita", { token: c.token, fecha: data.fecha, hora: data.hora });   // por si llegó con el enlace personal
       mostrar("cita");
       const d = data, card = $("tarjetaCita"), acc = $("accionesCita");
+      const num = numeroBarberia(), esHoy = d.fecha === hoyISO();
       const filas = `
         <div class="detalle">
           <div><span>Servicio</span><span>${esc(d.servicio)} · ${peso(d.precio)}</span></div>
           <div><span>Barbero</span><span>${esc(d.barbero || "El primero disponible")}</span></div>
           <div><span>Duración</span><span>${d.duracion} min</span></div>
         </div>`;
-      const num = numeroBarberia();
-      if (d.estado === "cancelada") {
+
+      // Ya llegó: mostrar su turno en la fila
+      if (d.estado === "llego") {
+        const atendido = d.turno_estado === "cobrado";
+        card.innerHTML = `${check}
+          <h2>${atendido ? "¡Gracias por tu visita!" : "Ya estás en la fila"}</h2>
+          ${atendido ? `<p class="muted" style="margin-top:10px">Te esperamos pronto en ${esc(cfg.nombre)}.</p>`
+            : `<div class="muted" style="margin-top:12px">Tu turno</div><div class="turno-num">${d.turno ?? "—"}</div>
+               <p class="muted small" style="margin:0">Tienes prioridad por tu cita de las ${esc(hora12(d.hora))}.</p>`}`;
+        acc.innerHTML = atendido ? `<button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`
+          : `<button class="big btn-oro" id="btnVerTurno">Ver mi turno en vivo</button>`;
+        if ($("btnVerTurno")) $("btnVerTurno").onclick = () => { guardar("turno", { token: d.turno_token, fecha: d.fecha }); location.href = "turno.html"; };
+        if (atendido) guardar("cita", null);
+      } else if (d.estado === "cancelada") {
         card.innerHTML = `<h2>Cita cancelada</h2><p class="muted" style="margin-top:10px">Tu cita del ${esc(fechaLarga(d.fecha))} ya no está apartada.</p>`;
         acc.innerHTML = `${num ? `<a class="btn-wa-linea" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "cancelar")))}">${ICONO_WA}Avisar a la barbería que cancelé</a>` : ""}
           <button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`;
       } else {
-        card.innerHTML = `
-          <div class="check-ok" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        const avisoLlegada = d.puede_llegar
+          ? `<div class="aviso-llegada"><b>¿Ya estás en la barbería?</b> Toca «Ya llegué» y entras a la fila con prioridad.</div>`
+          : esHoy ? `<div class="aviso-llegada">Hoy es tu cita. Desde las <b>${esc(hora12(d.llegar_desde))}</b> podrás avisar aquí que ya llegaste.</div>` : "";
+        card.innerHTML = `${check}
           <div class="muted">${esc(d.nombre)}, tu cita está confirmada</div>
           <div class="cuando">${esc(fechaLarga(d.fecha))}</div>
           <div class="turno-num">${hora12(d.hora).replace(/ (am|pm)$/, "")}<span style="font-size:.3em;margin-left:.15em">${hora12(d.hora).slice(-2)}</span></div>
           ${filas}
+          ${avisoLlegada}
           ${recienAgendada && num ? `<div class="ultimo-paso"><b>Último paso:</b> manda tu confirmación por WhatsApp para que la barbería tenga tus datos.</div>` : ""}
           <p class="muted small" style="margin:16px 0 0">Llega 5 minutos antes. Si no puedes venir, cancela aquí para liberar el lugar.</p>`;
         acc.innerHTML = `
+          ${d.puede_llegar ? `<button class="big btn-oro btn-llegue" id="btnLlegue">${ICO.llegue}Ya llegué</button><div class="error" id="errLlegue" role="alert"></div>` : ""}
           ${num ? `<a class="big btn-wa" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "confirmar")))}">${ICONO_WA}Confirmar por WhatsApp</a>` : ""}
-          <a class="${num ? "btn-wa-linea" : "big btn-wa"}" target="_blank" rel="noopener" href="${esc(enlaceWa("", mensajeCita(d, "guardar")))}">${num ? "" : ICONO_WA}Guardarla en mi WhatsApp</a>
-          <button class="big btn-oro" id="btnCalendario">Agregar a mi calendario</button>
+          <div class="guardar-t">Guarda tu cita</div>
+          <div class="guardar">
+            <a href="${esc(enlaceGoogle(d))}" target="_blank" rel="noopener">${ICO.google}Google Calendar</a>
+            <button type="button" id="btnCalendario">${ICO.cal}Calendario del celular</button>
+            <a class="wa" href="${esc(enlaceWa("", mensajeCita(d, "guardar")))}" target="_blank" rel="noopener">${ICONO_WA}En mi WhatsApp</a>
+            <button type="button" id="btnCopiar">${ICO.copiar}Copiar enlace</button>
+          </div>
           ${d.cancelable ? '<button class="big danger" id="btnCancelar" style="background:var(--surface)">Cancelar cita</button>' : ""}
           <a href="index.html" class="big" style="display:block;text-align:center;padding:15px;color:var(--muted);text-decoration:none">Volver al inicio</a>`;
         $("btnCalendario").onclick = () => calendario(d);
+        $("btnCopiar").onclick = copiarEnlace;
+        if ($("btnLlegue")) $("btnLlegue").onclick = llegue;
         if ($("btnCancelar")) $("btnCancelar").onclick = cancelar;
       }
       const otra = $("btnOtra"); if (otra) otra.onclick = () => { guardar("cita", null); irAlFormulario(); };
+    }
+
+    // "Ya llegué": entra a la fila con la prioridad de su cita y pasa a ver su turno
+    async function llegue() {
+      const btn = $("btnLlegue"), c = leer("cita");
+      btn.disabled = true; btn.lastChild.textContent = "Avisando…";
+      const { data, error } = await db.rpc("llegue_cita", { p_token: c.token });
+      if (error || !data) {
+        const m = error?.message || "";
+        $("errLlegue").textContent = m.includes("temprano") ? "Todavía es temprano. Podrás avisar 45 minutos antes de tu cita."
+          : m.includes("pasó tu hora") ? "Ya pasó tu hora. Avisa en recepción para ver si aún te pueden atender."
+          : m.includes("Cerrado") ? "La barbería está cerrada en este momento. Avisa en recepción."
+          : "No se pudo avisar. Revisa tu conexión o avisa en recepción.";
+        btn.disabled = false; btn.lastChild.textContent = "Ya llegué";
+        return;
+      }
+      try { navigator.vibrate?.([20, 60, 20]); } catch {}
+      guardar("turno", { token: data.token, fecha: data.fecha });
+      location.href = "turno.html";
+    }
+
+    async function copiarEnlace() {
+      const url = enlaceCita(), btn = $("btnCopiar");
+      try { await navigator.clipboard.writeText(url); }
+      catch { prompt("Copia este enlace para abrir tu cita en cualquier teléfono:", url); return; }
+      const antes = btn.innerHTML;
+      btn.innerHTML = `${ICO.copiar}¡Copiado!`;
+      setTimeout(() => (btn.innerHTML = antes), 1800);
     }
 
     async function cancelar() {
@@ -507,6 +603,9 @@
       if (servicios.length === 1) $("servicios").firstChild.click();
       resumen();
     }
+    // Enlace personal: cita.html?c=<código> abre esa cita aunque sea otro teléfono
+    const desdeEnlace = new URLSearchParams(location.search).get("c");
+    if (desdeEnlace && /^[0-9a-f-]{36}$/i.test(desdeEnlace)) guardar("cita", { token: desdeEnlace });
     if (leer("cita")) verCita(); else irAlFormulario();
   </script>
 </body>

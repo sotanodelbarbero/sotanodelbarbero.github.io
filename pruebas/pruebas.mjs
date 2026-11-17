@@ -33,12 +33,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -456,6 +456,56 @@ await db.exec(`reset role`);
 prueba("…ni al cobrar: se usa el % real del barbero (40%)", Number(await uno(`select comision_pct from visitas where id = ${z3}`)) === 40);
 await como(ADMIN);
 prueba("Los cobros viejos (antes de este cambio) recibieron el % de su barbero", (await uno(`select count(*)::int from visitas where estado = 'cobrado' and barbero_id is not null and comision_pct is null`)) === 0);
+
+// =========================================================
+seccion("LLEGADA DEL CLIENTE CON CITA");
+await como(null);
+await reloj("2026-12-07 10:00");
+const cA = await agendar("Mario Paz", "5530303030", CORTE, 1, "2026-12-08", "17:00");
+const cB = await agendar("Nico Ríos", "5531313131", CORTE, null, "2026-12-08", "18:00");
+const cC = await agendar("Omar Gil", "5532323232", CORTE, null, "2026-12-08", "12:00");
+const cD = await agendar("Pepe Luna", "5533333330", CORTE, null, "2026-12-09", "12:00");
+let ecA = await uno(`select estado_cita($1)`, [cA.token]);
+prueba("Un día antes todavía no puede marcar que llegó", ecA.puede_llegar === false && ecA.llegar_desde === "16:15", JSON.stringify(ecA));
+prueba("«Ya llegué» un día antes se rechaza", (await error(`select llegue_cita($1)`, [cA.token]))?.includes("no es de hoy"));
+
+await reloj("2026-12-08 16:00");
+prueba("Una hora antes: «Todavía es temprano»", (await error(`select llegue_cita($1)`, [cA.token]))?.includes("temprano"));
+await turno("Walk", "5534343434");                            // alguien sin cita llegó antes
+await reloj("2026-12-08 16:20");
+prueba("A 40 min de su cita ya puede marcar que llegó", (await uno(`select estado_cita($1)`, [cA.token])).puede_llegar === true);
+const lA = await uno(`select llegue_cita($1)`, [cA.token]);
+prueba("«Ya llegué» lo pone en la fila y le da su turno", typeof lA.turno === "number" && !!lA.token, JSON.stringify(lA));
+const tA = await uno(`select estado_turno($1)`, [lA.token]);
+prueba("Entra con prioridad: nadie antes que él aunque había alguien sin cita", tA.de_cita === true && tA.antes === 0, JSON.stringify(tA));
+prueba("Queda asignado a su barbero (Juan)", tA.barbero === "Juan");
+ecA = await uno(`select estado_cita($1)`, [cA.token]);
+prueba("Su cita ahora dice 'llegó' y trae el turno para seguirlo", ecA.estado === "llego" && ecA.turno === lA.turno && ecA.turno_token === lA.token);
+const lA2 = await uno(`select llegue_cita($1)`, [cA.token]);
+prueba("Tocar «Ya llegué» otra vez no lo duplica (regresa el mismo turno)", lA2.repetido === true && lA2.turno === lA.turno);
+prueba("Solo hay una visita de Mario", (await uno(`select count(*)::int from visitas where cliente_nombre = 'Mario Paz'`)) === 1);
+
+seccion("LLEGADA: el cliente con cita usa el QR de la entrada");
+await reloj("2026-12-08 17:30");
+const qB = await turno("Nico", "55 3131 3131");
+prueba("Nico tiene cita a las 18:00 y toma turno con el QR: cuenta como llegada a su cita", qB.de_cita === true && qB.hora_cita === "18:00", JSON.stringify(qB));
+prueba("Su cita quedó como 'llegó'", (await uno(`select estado_cita($1)`, [cB.token])).estado === "llego");
+prueba("Y no queda dos veces en la fila", (await uno(`select count(*)::int from visitas where telefono = '5531313131' and fecha = '2026-12-08'`)) === 1);
+prueba("Si vuelve a tomar turno, recibe el mismo", (await turno("Nico", "5531313131")).turno === qB.turno);
+const qD = await turno("Pepe", "5533333330");
+prueba("Pepe tiene cita MAÑANA: hoy toma turno normal (sin tocar su cita)", !qD.de_cita && (await uno(`select estado_cita($1)`, [cD.token])).estado === "agendada");
+
+seccion("LLEGADA: tarde o sin permiso");
+prueba("Omar llega 5 horas tarde a su cita de las 12:00: «Ya pasó tu hora»", (await error(`select llegue_cita($1)`, [cC.token]))?.includes("pasó tu hora"));
+prueba("Un token inventado no hace nada", (await error(`select llegue_cita('00000000-0000-0000-0000-000000000000')`))?.includes("no existe"));
+await db.exec(`set role anon`);
+prueba("Un visitante no puede usar la función interna de pasar a la fila", (await error(`select _pasar_a_fila(1)`))?.includes("permission denied"));
+prueba("Un visitante no puede usar el «Llegó» del personal", (await error(`select llegada_cita(1)`))?.includes("permission denied"));
+await db.exec(`reset role`);
+await como(BARB);
+const cE = await agendar("Quino Paz", "5535353535", CORTE, null, "2026-12-08", "19:00");
+prueba("El personal sigue pudiendo marcar «Llegó» desde el panel", typeof (await uno(`select llegada_cita(id) from citas where token = $1`, [cE.token])) === "number");
+await como(null);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }

@@ -149,3 +149,6 @@ body { background: radial-gradient(700px 420px at 50% -120px, rgba(143,29,29,.45
 .modo a:hover { color: var(--text); }
 .modo a[aria-current="page"] { background: var(--oro); color: #1a1206; }
 .modo svg { width: 17px; height: 17px; }
+
+/* Los mensajes de error no ocupan espacio mientras están vacíos */
+.error:empty { display: none; }

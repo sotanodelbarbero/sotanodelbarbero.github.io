@@ -1035,7 +1035,8 @@
     canal = db.channel("visitas")
       .on("postgres_changes", { event: "*", schema: "public", table: "visitas" }, () => cargarHoy())
       .on("postgres_changes", { event: "*", schema: "public", table: "ventas_productos" }, () => cargarHoy())
-      .on("postgres_changes", { event: "*", schema: "public", table: "citas" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "citas" }, (pl) => {
+        avisarLlegada(pl);
         cargarCitasHoy();
         if (visible("citas")) cargarCitas();
         if (visible("inicio")) cargarInicio();
@@ -2273,6 +2274,36 @@
     </div>`;
   }
 
+  // ---------- Aviso cuando un cliente con cita llega solo (desde su celular o con el QR) ----------
+  const marcadasAqui = new Set();
+  let audioPanel = null;
+  document.addEventListener("pointerdown", () => { try { audioPanel = audioPanel || new (window.AudioContext || window.webkitAudioContext)(); audioPanel.resume(); } catch {} }, { once: true });
+  function campanita() {
+    try {
+      if (!audioPanel) return;
+      [0, .18].forEach((t, i) => {
+        const o = audioPanel.createOscillator(), g = audioPanel.createGain();
+        o.frequency.value = i ? 1175 : 880; o.connect(g); g.connect(audioPanel.destination);
+        g.gain.setValueAtTime(.0001, audioPanel.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(.25, audioPanel.currentTime + t + .02);
+        g.gain.exponentialRampToValueAtTime(.0001, audioPanel.currentTime + t + .3);
+        o.start(audioPanel.currentTime + t); o.stop(audioPanel.currentTime + t + .32);
+      });
+    } catch {}
+  }
+  function avisarLlegada(pl) {
+    const n = pl?.new;
+    if (!n || n.estado !== "llego" || n.fecha !== hoyISO()) return;
+    if (marcadasAqui.has(n.id)) return;                    // la marcó alguien en este panel: ya se avisó
+    const antes = citasHoy.find((x) => x.id === n.id);
+    if (antes && antes.estado !== "agendada") return;
+    if (!esAdmin() && n.barbero_id && n.barbero_id !== miBarbero) return;   // a cada barbero solo sus clientes (o los de cualquiera)
+    marcadasAqui.add(n.id);
+    toast(`${n.cliente_nombre.split(" ")[0]} llegó a su cita de las ${hhmm(n.hora)} y ya está en la fila`);
+    campanita();
+    try { navigator.vibrate?.([120, 80, 120]); } catch {}
+  }
+
   // ---------- Citas pendientes de hoy (pestaña Hoy) ----------
   let vencidasRevisadas = false;
   async function cargarCitasHoy() {
@@ -2386,6 +2417,7 @@
   // ---------- Acciones sobre una cita ----------
   async function cambiarCita(c, a) {
     if (a === "llego") {
+      marcadasAqui.add(c.id);
       const { data, error } = await db.rpc("llegada_cita", { p_id: c.id });
       if (error) { toast("Error: " + error.message); return false; }
       toast(`${c.cliente_nombre.split(" ")[0]} pasó a la fila con el turno ${data}`);

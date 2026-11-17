@@ -22,12 +22,13 @@ Para publicar cambios: guarda los archivos y ejecuta en esta carpeta
 | `supabase/08_panel.sql` | Bloqueos (vacaciones, comida, barbero que no viene), citas desde el panel y mover citas. |
 | `supabase/functions/equipo/index.ts` | Función de Supabase para crear cuentas del equipo y cambiar contraseñas (ver **Equipo** abajo). |
 | `supabase/09_calendario.sql` | Calendario de apertura: horario distinto o cerrado en días específicos. |
+| `supabase/11_llegada.sql` | El cliente con cita avisa «Ya llegué» desde su celular o con el QR y entra a la fila con prioridad. |
 | `supabase/10_equipo.sql` | Guarda la comisión de cada cobro (cambiar el % no altera lo ya cobrado) y la hora en que empezó cada corte. |
 | `pruebas/` | Pruebas de los casos de uso de la base de datos (`cd pruebas && npm install && npm test`). No tocan tu Supabase. |
 | `config.js` | URL y clave del proyecto de Supabase, y la dirección, horario y WhatsApp que se ven en la página principal. |
 
 ## Cómo ponerlo en marcha
-1. Crea un proyecto en Supabase y en el **SQL Editor** ejecuta `supabase/schema.sql`. Después ejecuta `supabase/03_roles.sql`, cambiando antes `CORREO-DE-ALEJANDRO` por su correo. Ese archivo crea los roles: admin (Alejandro), barbero y cliente (QR, sin cuenta). Al final ejecuta `supabase/04_admin.sql`, que agrega comisiones, gastos, cierre de caja y el resumen de clientes, después `supabase/05_cliente.sql`, que permite al cliente seguir su turno en vivo, después `supabase/06_productos.sql`, que agrega la venta e inventario de productos (pomadas, ceras, etc.), después `supabase/07_citas.sql`, que activa las citas con día y hora, después `supabase/08_panel.sql`, que agrega los bloqueos de agenda y las citas desde el panel, después `supabase/09_calendario.sql`, que activa el calendario de apertura, y al final `supabase/10_equipo.sql`, que congela la comisión de cada cobro.
+1. Crea un proyecto en Supabase y en el **SQL Editor** ejecuta `supabase/schema.sql`. Después ejecuta `supabase/03_roles.sql`, cambiando antes `CORREO-DE-ALEJANDRO` por su correo. Ese archivo crea los roles: admin (Alejandro), barbero y cliente (QR, sin cuenta). Al final ejecuta `supabase/04_admin.sql`, que agrega comisiones, gastos, cierre de caja y el resumen de clientes, después `supabase/05_cliente.sql`, que permite al cliente seguir su turno en vivo, después `supabase/06_productos.sql`, que agrega la venta e inventario de productos (pomadas, ceras, etc.), después `supabase/07_citas.sql`, que activa las citas con día y hora, después `supabase/08_panel.sql`, que agrega los bloqueos de agenda y las citas desde el panel, después `supabase/09_calendario.sql`, que activa el calendario de apertura, después `supabase/10_equipo.sql`, que congela la comisión de cada cobro, y al final `supabase/11_llegada.sql`, para que el cliente con cita avise que llegó.
 2. En **Project Settings > API**, copia la URL y la clave *publishable/anon* y pégalas en `config.js`.
 3. En **Authentication > Users > Add user**, crea solo el usuario de Alejandro. Las cuentas de los barberos se crean desde el panel, en **Equipo** (ver abajo).
 4. Publica la carpeta en un hosting estático (Netlify, Vercel o GitHub Pages) para que el QR funcione desde cualquier celular.
@@ -56,7 +57,7 @@ Para publicar cambios: guarda los archivos y ejecuta en esta carpeta
 ## Reglas de la fila y las citas
 - **Turnos sin cita**: solo en horario. Se dejan de aceptar cuando la espera ya no alcanza antes de cerrar (la página ofrece agendar cita). Si el mismo teléfono vuelve a registrarse, recibe el turno que ya tenía.
 - **Citas**: cada 30 min, de hoy (con 15 min de anticipación) hasta 30 días. Nunca hay más citas encimadas que barberos activos, y un barbero elegido no tiene dos a la vez. Máximo 2 citas pendientes y 1 por día por teléfono.
-- **Al llegar** (botón **Llegó**), el cliente con cita pasa **antes** que los que llegaron sin cita. La espera que ven los demás ya cuenta las citas que están por llegar.
+- **Al llegar**, el cliente toca **Ya llegué** en su cita (desde 45 min antes hasta 30 min después de su hora), o el personal toca **Llegó** en el panel. Si escanea el QR y pone su teléfono, se toma como su llegada (no queda dos veces). El panel suena y avisa cuando alguien llega solo. El cliente con cita pasa **antes** que los que llegaron sin cita. La espera que ven los demás ya cuenta las citas que están por llegar.
 - Las citas que pasan 2 horas sin que nadie toque **Llegó** se marcan **no vino** solas. En el panel se ve **retrasada X min** y el botón **Recordar/Escribir** abre WhatsApp con el mensaje listo.
 
 ## Equipo: cuentas de los barberos
@@ -68,3 +69,6 @@ Crear cuentas y cambiar contraseñas de otros necesita la función `equipo` (se 
 3. Borra el ejemplo, pega todo el contenido de `supabase/functions/equipo/index.ts` y dale **Deploy**.
 
 La función usa la llave de administrador que Supabase le da por dentro; esa llave nunca va en las páginas. Antes de hacer algo revisa que quien la llama haya iniciado sesión y sea administrador.
+
+## El cliente guarda su cita
+En la pantalla de su cita tiene **Guarda tu cita**: Google Calendar, calendario del celular, enviársela por WhatsApp y **copiar enlace**. El enlace (`cita.html?c=…`) abre **su** cita en cualquier teléfono, para verla, avisar que llegó o cancelarla.

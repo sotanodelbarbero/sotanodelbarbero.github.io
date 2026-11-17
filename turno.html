@@ -35,6 +35,7 @@
 
     <!-- ===== 1. Registro ===== -->
     <form id="vistaForm" class="hidden" novalidate>
+      <div id="avisoCita" class="card hidden" style="text-align:center;margin-bottom:12px;border-color:rgba(212,166,74,.55);background:linear-gradient(160deg,rgba(212,166,74,.14),rgba(212,166,74,.04)),var(--surface)"></div>
       <div id="avisoCerrado" class="card hidden" style="text-align:center;margin-bottom:8px;border-color:rgba(212,166,74,.4)">
         <p id="avisoCerradoTxt" style="margin:0 0 6px;font-weight:600"></p>
         <p class="muted small" style="margin:0 0 14px">Puedes apartar tu lugar para otro día.</p>
@@ -316,7 +317,42 @@
       document.title = TITULO;
       mostrar("form");
       cargarCola();
+      revisarCitaHoy();
       if (!servicios.length) cargarServicios();
+    }
+
+    // ¿Este celular tiene una cita para hoy? Entonces no necesita formarse: solo avisar que llegó
+    const hora12 = (t) => { const [h, m] = String(t).split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
+    async function revisarCitaHoy() {
+      const box = $("avisoCita"), c = leer("cita");
+      box.classList.add("hidden");
+      if (!c?.token || (c.fecha && c.fecha !== hoyISO())) return;
+      const { data } = await db.rpc("estado_cita", { p_token: c.token });
+      if (!data || data.fecha !== hoyISO()) return;
+      if (data.estado === "llego" && data.turno_token && data.turno_estado !== "cobrado") {   // ya llegó: ver su turno
+        guardar("turno", { token: data.turno_token, fecha: data.fecha }); return seguirTurno();
+      }
+      if (data.estado !== "agendada") return;
+      box.innerHTML = `<p style="margin:0 0 4px;font-weight:600;font-size:1.0625rem">Tienes cita hoy a las ${esc(hora12(data.hora))}</p>
+        <p class="muted small" style="margin:0 0 12px">${esc(data.servicio)}${data.barbero ? " con " + esc(data.barbero) : ""}. No necesitas formarte.</p>
+        ${data.puede_llegar
+          ? `<button class="primary big" id="btnLlegueTurno" style="margin:0">Ya llegué</button><div class="error" id="errLlegueTurno" role="alert"></div>`
+          : `<p class="small" style="margin:0 0 8px">Desde las <b>${esc(hora12(data.llegar_desde))}</b> podrás avisar aquí que ya llegaste.</p>`}
+        <a href="cita.html" style="display:inline-block;margin-top:10px;color:var(--muted);font-size:.875rem">Ver mi cita</a>`;
+      box.classList.remove("hidden");
+      const btn = $("btnLlegueTurno"); if (!btn) return;
+      btn.onclick = async () => {
+        desbloquearAudio();
+        btn.disabled = true; btn.textContent = "Avisando…";
+        const { data: r, error } = await db.rpc("llegue_cita", { p_token: c.token });
+        if (error || !r) {
+          const m = error?.message || "";
+          $("errLlegueTurno").textContent = m.includes("temprano") ? "Todavía es temprano para avisar." : m.includes("pasó tu hora") ? "Ya pasó tu hora. Avisa en recepción." : "No se pudo avisar. Avisa en recepción.";
+          btn.disabled = false; btn.textContent = "Ya llegué"; return;
+        }
+        guardar("turno", { token: r.token, fecha: r.fecha || hoyISO() });
+        ultimoEstado = null; seguirTurno();
+      };
     }
 
     // Si reabrió la página, el primer toque en cualquier parte habilita el sonido
