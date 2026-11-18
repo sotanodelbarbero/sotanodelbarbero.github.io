@@ -660,7 +660,8 @@
       listo = true;
       $("horas").innerHTML = '<div class="aviso-horas">Elige primero un servicio para ver los horarios libres.</div>';
       await Promise.all([cargarServicios(), cargarBarberos(), cargarDias()]);
-      if (servicios.length === 1) $("servicios").firstChild.click();
+      // El primer servicio (Corte) ya viene marcado para que los horarios salgan desde el inicio
+      if (servicios.length && !sel.servicio) { sel.servicio = servicios[0].id; marcarBoton($("servicios"), $("servicios").firstChild); cambio(); }
       resumen();
     }
     // Enlace personal: cita.html?c=<código> abre esa cita aunque sea otro teléfono
