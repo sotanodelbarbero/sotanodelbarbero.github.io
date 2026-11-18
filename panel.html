@@ -3418,6 +3418,7 @@
     ajustes: "Elige los colores y el estilo de tu panel. Alejandro también encuentra aquí el código QR de la entrada.",
   };
   const icoFoco = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>`;
+  const ayudasPedidas = new Set();   // pestañas donde tocaste «¿Cómo se usa?» (solo en esta visita)
   function ponerAyudas() {
     for (const [tab, txt] of Object.entries(AYUDA)) {
       const sec = $("tab-" + tab); if (!sec) continue;
@@ -3430,11 +3431,12 @@
       }
       el.innerHTML = `${icoFoco}<span>${esc(typeof txt === "function" ? txt() : txt)}</span><button type="button" class="ghost" data-entendido="${tab}">Entendido</button>`;
       const visto = leerLocal("ayuda-oculta-" + tab) === "1" || (typeof tourVisto === "function" && (tourVisto("ayuda-" + tab) || tourVisto(claveTab(tab))));
-      el.classList.toggle("hidden", visto);
+      el.classList.toggle("hidden", visto && !ayudasPedidas.has(tab));
     }
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-entendido]"); if (!b) return;
+    ayudasPedidas.delete(b.dataset.entendido);
     guardarLocal("ayuda-oculta-" + b.dataset.entendido, "1");
     marcarTour("ayuda-" + b.dataset.entendido);   // en la cuenta: no vuelve a salir en ningún aparato
     b.closest(".ayuda").classList.add("hidden");
@@ -3735,6 +3737,7 @@
     // Volver a mostrar también las ayudas ocultas
     verConsejos = true;
     const t = tabActual();
+    if (AYUDA[t]) { ayudasPedidas.add(t); ponerAyudas(); }   // también la explicación de esta pestaña
     if (t === "inicio" || !abrirTourTab(t)) abrirTour();
   };
 
