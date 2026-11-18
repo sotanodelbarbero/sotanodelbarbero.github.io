@@ -294,9 +294,6 @@
     .pub-dias button[aria-pressed="true"], .pub-estilos button[aria-pressed="true"] { background: #25d366; border-color: #25d366; color: #062b14; font-weight: 700; }
     .pub-estilos button { display: inline-flex; align-items: center; gap: 8px; }
     .mu { width: 18px; height: 18px; border-radius: 50%; flex: none; border: 1px solid rgba(255,255,255,.3); }
-    .mu-dorado { background: linear-gradient(135deg, #050505 50%, #d4a64a 50%); }
-    .mu-poste { background: repeating-linear-gradient(-45deg, #c8102e 0 4px, #f4efe6 4px 8px, #1c3f8c 8px 12px, #f4efe6 12px 16px); }
-    .mu-neon { background: radial-gradient(circle, #ff3ea5 30%, #090b18 70%); box-shadow: 0 0 8px #3ee6ff; }
     .pub-prev { position: relative; }
     .pub-cargando { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); border-radius: 14px; font-size: .9375rem; }
     .prev-horario { display: block; width: 100%; max-height: 52vh; object-fit: contain; border-radius: 14px; background: #000; border: 1px solid var(--line); }
@@ -3272,40 +3269,72 @@
     ].filter((x) => x !== "").join("\n").replace(/\u200b/g, "");
   }
 
-  // ---------- Estilos ----------
+  // ---------- Estilos de la imagen ----------
+  // Cada estilo define sus colores y su fondo. Para agregar uno nuevo basta con copiar uno y cambiar colores.
+  //  fondo: tipo de fondo · tinta: texto principal · titulo: «HOY ABRIMOS» · horas: color o degradado de las horas
+  //  pill/pillTinta: etiqueta de la fecha · chip*: barberos · caja*: horarios libres · cta*: botón «Agenda tu cita»
   const ESTILOS = {
-    dorado: { nombre: "Dorado", fondo: "#050505", tinta: "#f2ede4", sub: "#a8a296", acento: "#d4a64a", acento2: "#f0cf85", malo: "#e0827a",
-      chip: "rgba(212,166,74,.12)", chipBorde: "rgba(212,166,74,.55)", chipTinta: "#f0cf85", cta: "#d4a64a", ctaTinta: "#1a1206", brillo: null },
-    poste: { nombre: "Poste", fondo: "#f4efe6", tinta: "#111111", sub: "#5c564c", acento: "#c8102e", acento2: "#1c3f8c", malo: "#c8102e",
-      chip: "#111111", chipBorde: "#111111", chipTinta: "#f4efe6", cta: "#c8102e", ctaTinta: "#ffffff", brillo: null },
-    neon: { nombre: "Neón", fondo: "#090b18", tinta: "#ffffff", sub: "#a9b0d6", acento: "#ff3ea5", acento2: "#3ee6ff", malo: "#ff5a6e",
-      chip: "rgba(62,230,255,.08)", chipBorde: "#3ee6ff", chipTinta: "#bff6ff", cta: "#ff3ea5", ctaTinta: "#ffffff", brillo: true },
+    dorado: { nombre: "Dorado", fondo: "luz", base: "#050505", luces: ["rgba(212,166,74,.32)", "rgba(143,29,29,.22)"], marco: "rgba(212,166,74,.55)",
+      tinta: "#f2ede4", titulo: "#f2ede4", sub: "#a8a296", horas: ["#f0cf85", "#d4a64a", "#8a6220"], libresT: "#d4a64a", malo: "#e0827a",
+      pill: "rgba(212,166,74,.12)", pillBorde: "rgba(212,166,74,.55)", pillTinta: "#f0cf85", chip: "rgba(212,166,74,.12)", chipBorde: "rgba(212,166,74,.55)", chipTinta: "#f0cf85",
+      caja: "rgba(255,255,255,.06)", cajaBorde: "rgba(212,166,74,.55)", cajaTinta: "#f2ede4", cta: "#d4a64a", ctaTinta: "#1a1206", muestra: "linear-gradient(135deg,#050505 50%,#d4a64a 50%)" },
+    poste: { nombre: "Poste", fondo: "postes", base: "#f4efe6", tinta: "#111", titulo: "#111", sub: "#5c564c", horas: "#c8102e", libresT: "#1c3f8c", malo: "#c8102e",
+      pill: "#111", pillBorde: "#111", pillTinta: "#f4efe6", chip: "#111", chipBorde: "#111", chipTinta: "#f4efe6",
+      caja: "#fff", cajaBorde: "#111", cajaTinta: "#111", cta: "#c8102e", ctaTinta: "#fff", angosto: true,
+      muestra: "repeating-linear-gradient(-45deg,#c8102e 0 4px,#f4efe6 4px 8px,#1c3f8c 8px 12px,#f4efe6 12px 16px)" },
+    neon: { nombre: "Neón", fondo: "ladrillo", base: "#090b18", halo: "rgba(255,62,165,.18)", brillo: true,
+      tinta: "#fff", titulo: "#fff", tituloGlow: "#ff3ea5", sub: "#a9b0d6", horas: "#3ee6ff", horasGlow: "#3ee6ff", libresT: "#ff3ea5", malo: "#ff5a6e",
+      pill: "rgba(62,230,255,.08)", pillBorde: "#3ee6ff", pillTinta: "#bff6ff", chip: "rgba(62,230,255,.08)", chipBorde: "#3ee6ff", chipTinta: "#bff6ff",
+      caja: "rgba(255,255,255,.06)", cajaBorde: "#3ee6ff", cajaTinta: "#fff", cta: "#ff3ea5", ctaTinta: "#fff", muestra: "radial-gradient(circle,#ff3ea5 30%,#090b18 70%)" },
+    vino: { nombre: "Vino", fondo: "luz", base: "#2a070d", luces: ["rgba(232,184,107,.22)", "rgba(120,10,30,.55)"], marco: "rgba(246,233,215,.45)",
+      tinta: "#f6e9d7", titulo: "#f6e9d7", sub: "#d9b9a7", horas: ["#fbe3b3", "#e8b86b", "#a8742c"], libresT: "#e8b86b", malo: "#ffb4a8",
+      pill: "rgba(246,233,215,.1)", pillBorde: "rgba(246,233,215,.5)", pillTinta: "#f6e9d7", chip: "rgba(246,233,215,.1)", chipBorde: "rgba(232,184,107,.6)", chipTinta: "#fbe3b3",
+      caja: "rgba(0,0,0,.25)", cajaBorde: "rgba(232,184,107,.6)", cajaTinta: "#f6e9d7", cta: "#f6e9d7", ctaTinta: "#5a0f1c", muestra: "linear-gradient(135deg,#5a0f1c 50%,#f6e9d7 50%)" },
+    vintage: { nombre: "Vintage", fondo: "luz", base: "#0f2a20", luces: ["rgba(217,164,65,.18)", "rgba(0,0,0,.35)"], marco: "#d9a441", marcoDoble: true,
+      tinta: "#f3ead3", titulo: "#f3ead3", sub: "#c9c0a5", horas: ["#f2d48a", "#d9a441", "#9a6d1c"], libresT: "#d9a441", malo: "#f29b8a",
+      pill: "#d9a441", pillBorde: "#d9a441", pillTinta: "#0f2a20", chip: "rgba(243,234,211,.08)", chipBorde: "#d9a441", chipTinta: "#f3ead3",
+      caja: "rgba(243,234,211,.06)", cajaBorde: "rgba(217,164,65,.7)", cajaTinta: "#f3ead3", cta: "#d9a441", ctaTinta: "#0f2a20", muestra: "linear-gradient(135deg,#0f2a20 50%,#d9a441 50%)" },
+    marino: { nombre: "Marino", fondo: "rayas", base: "#0e1f3d", rayas: "rgba(255,255,255,.035)", marco: "rgba(255,255,255,.5)",
+      tinta: "#ffffff", titulo: "#ffffff", sub: "#a9b7d3", horas: "#ff4d5a", libresT: "#ff4d5a", malo: "#ff8a93",
+      pill: "#e63946", pillBorde: "#e63946", pillTinta: "#fff", chip: "rgba(255,255,255,.08)", chipBorde: "#ffffff", chipTinta: "#fff",
+      caja: "rgba(255,255,255,.07)", cajaBorde: "rgba(255,255,255,.7)", cajaTinta: "#fff", cta: "#e63946", ctaTinta: "#fff", muestra: "linear-gradient(135deg,#0e1f3d 50%,#e63946 50%)" },
+    pizarra: { nombre: "Pizarra", fondo: "pizarra", base: "#27332d", tinta: "#f4f4ef", titulo: "#f4f4ef", sub: "#c3cbc4", horas: "#f7d774", libresT: "#9ad1d4", malo: "#ff9e8f",
+      pill: "rgba(244,244,239,.08)", pillBorde: "rgba(244,244,239,.75)", pillTinta: "#f4f4ef", chip: "rgba(244,244,239,.06)", chipBorde: "rgba(244,244,239,.75)", chipTinta: "#f4f4ef",
+      caja: "rgba(244,244,239,.05)", cajaBorde: "rgba(244,244,239,.7)", cajaTinta: "#f4f4ef", cta: "#f7d774", ctaTinta: "#27332d", gis: true, angosto: true,
+      muestra: "linear-gradient(135deg,#27332d 60%,#8b5a2b 60%)" },
+    madera: { nombre: "Madera", fondo: "madera", base: "#3b2416", tinta: "#fbf0dc", titulo: "#fbf0dc", sub: "#dcc3a0", horas: ["#ffe08a", "#f2c14e", "#b07d18"], libresT: "#f2c14e", malo: "#ffb39c",
+      pill: "rgba(0,0,0,.35)", pillBorde: "#f2c14e", pillTinta: "#ffe08a", chip: "rgba(0,0,0,.3)", chipBorde: "#f2c14e", chipTinta: "#fbf0dc",
+      caja: "rgba(0,0,0,.32)", cajaBorde: "rgba(242,193,78,.75)", cajaTinta: "#fbf0dc", cta: "#f2c14e", ctaTinta: "#3b2416", muestra: "repeating-linear-gradient(90deg,#5a3720 0 5px,#3b2416 5px 9px)" },
+    atardecer: { nombre: "Atardecer", fondo: "degradado", grad: ["#2b1055", "#7b2a8f", "#d53a9d", "#ff7e5f"], tinta: "#ffffff", titulo: "#ffffff", sub: "#f6d6ef", horas: "#ffd166", libresT: "#ffd166", malo: "#ffe0e0",
+      pill: "rgba(255,255,255,.16)", pillBorde: "rgba(255,255,255,.7)", pillTinta: "#fff", chip: "rgba(255,255,255,.16)", chipBorde: "rgba(255,255,255,.7)", chipTinta: "#fff",
+      caja: "rgba(255,255,255,.14)", cajaBorde: "rgba(255,255,255,.75)", cajaTinta: "#fff", cta: "#ffd166", ctaTinta: "#2b1055", pie: "#3a0f4f", muestra: "linear-gradient(160deg,#2b1055,#d53a9d,#ff7e5f)" },
+    minimal: { nombre: "Minimal", fondo: "liso", base: "#ffffff", marco: "#111", tinta: "#111", titulo: "#111", sub: "#777", horas: "#111", libresT: "#111", malo: "#d1342f",
+      pill: "#111", pillBorde: "#111", pillTinta: "#fff", chip: "#f2f2f2", chipBorde: "#f2f2f2", chipTinta: "#111",
+      caja: "#fff", cajaBorde: "#111", cajaTinta: "#111", cta: "#111", ctaTinta: "#fff", muestra: "linear-gradient(135deg,#fff 50%,#111 50%)" },
   };
-  let pubEstilo = (() => { try { return localStorage.getItem("pub-estilo") || "dorado"; } catch { return "dorado"; } })();
+  let pubEstilo = (() => { try { const v = localStorage.getItem("pub-estilo"); return v && ESTILOS[v] ? v : "dorado"; } catch { return "dorado"; } })();
   let pubDia = null;
 
-  async function imagenDia(info, libres, estiloId, conLogo = true) {
-    const E = ESTILOS[estiloId], W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
-    const g = c.getContext("2d");
-    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
-    const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
-    const t = tituloDia(info.fecha), ANCHO = estiloId === "poste" ? W - 280 : W - 150;
-    const brilla = (color, fuerza = 28) => { if (E.brillo) { g.shadowColor = color; g.shadowBlur = fuerza; } };
-    const sinBrillo = () => { g.shadowBlur = 0; g.shadowColor = "transparent"; };
-    const texto = (s, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(s, x, y); if (glow) { g.fillText(s, x, y); sinBrillo(); } };
-    // Ajusta el tamaño de letra para que quepa en un ancho
-    const ajusta = (s, peso, max, ancho, fam = DISP) => { let px = max; do { g.font = `${peso} ${px}px ${fam}`; px -= 4; } while (g.measureText(s).width > ancho && px > 20); return `${peso} ${px + 4}px ${fam}`; };
-
-    // ----- Fondo -----
-    g.fillStyle = E.fondo; g.fillRect(0, 0, W, H);
-    if (estiloId === "dorado") {
-      const l1 = g.createRadialGradient(W * .85, 380, 30, W * .85, 380, 900); l1.addColorStop(0, "rgba(212,166,74,.32)"); l1.addColorStop(.55, "rgba(143,29,29,.16)"); l1.addColorStop(1, "rgba(0,0,0,0)");
+  // Dibuja el fondo de cada estilo
+  function pintarFondo(g, E, W, H) {
+    if (E.fondo === "degradado") {
+      const gr = g.createLinearGradient(0, 0, W * .3, H); E.grad.forEach((c, i) => gr.addColorStop(i / (E.grad.length - 1), c));
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      // círculos suaves tipo "sol"
+      const sol = g.createRadialGradient(W * .8, H * .2, 10, W * .8, H * .2, 520); sol.addColorStop(0, "rgba(255,209,102,.35)"); sol.addColorStop(1, "rgba(255,209,102,0)");
+      g.fillStyle = sol; g.fillRect(0, 0, W, H);
+      return;
+    }
+    g.fillStyle = E.base; g.fillRect(0, 0, W, H);
+    if (E.fondo === "luz") {
+      const l1 = g.createRadialGradient(W * .85, 380, 30, W * .85, 380, 900); l1.addColorStop(0, E.luces[0]); l1.addColorStop(1, "rgba(0,0,0,0)");
       g.fillStyle = l1; g.fillRect(0, 0, W, H);
-      const l2 = g.createRadialGradient(0, H, 20, 0, H, 800); l2.addColorStop(0, "rgba(143,29,29,.25)"); l2.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = l2; g.fillRect(0, 0, W, H);
-      // marco fino dorado
-      g.strokeStyle = "rgba(212,166,74,.55)"; g.lineWidth = 3; g.beginPath(); g.roundRect(44, 44, W - 88, H - 88, 36); g.stroke();
-    } else if (estiloId === "poste") {
-      // dos postes de barbero delgados en las orillas (no tapan el texto)
+      const l2 = g.createRadialGradient(0, H, 20, 0, H, 900); l2.addColorStop(0, E.luces[1]); l2.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = l2; g.fillRect(0, 0, W, H);
+      g.strokeStyle = E.marco; g.lineWidth = 3; g.beginPath(); g.roundRect(44, 44, W - 88, H - 88, 36); g.stroke();
+      if (E.marcoDoble) { g.lineWidth = 1.5; g.beginPath(); g.roundRect(62, 62, W - 124, H - 124, 26); g.stroke();
+        // esquinas decorativas
+        g.fillStyle = E.marco; for (const [x, y] of [[62, 62], [W - 62, 62], [62, H - 62], [W - 62, H - 62]]) { g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill(); } }
+    } else if (E.fondo === "postes") {
       const postes = (x) => {
         g.save(); g.beginPath(); g.roundRect(x, 90, 34, H - 180, 17); g.clip();
         const col = ["#c8102e", "#f4efe6", "#1c3f8c", "#f4efe6"];
@@ -3313,94 +3342,122 @@
         g.restore(); g.strokeStyle = "#111"; g.lineWidth = 3; g.beginPath(); g.roundRect(x, 90, 34, H - 180, 17); g.stroke();
       };
       postes(78); postes(W - 112);
-      g.strokeStyle = "#111"; g.lineWidth = 8; g.strokeRect(36, 36, W - 72, H - 72);
-      g.lineWidth = 2; g.strokeRect(56, 56, W - 112, H - 112);
-    } else {
-      // pared oscura con ladrillos tenues + halo
+      g.strokeStyle = "#111"; g.lineWidth = 8; g.strokeRect(36, 36, W - 72, H - 72); g.lineWidth = 2; g.strokeRect(56, 56, W - 112, H - 112);
+    } else if (E.fondo === "ladrillo") {
       g.strokeStyle = "rgba(255,255,255,.035)"; g.lineWidth = 2;
       for (let y = 0, f = 0; y < H; y += 70, f++) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); for (let x = (f % 2) * 90; x < W; x += 180) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 70); g.stroke(); } }
-      const h1 = g.createRadialGradient(W / 2, 760, 50, W / 2, 760, 700); h1.addColorStop(0, "rgba(255,62,165,.18)"); h1.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = h1; g.fillRect(0, 0, W, H);
+      const h1 = g.createRadialGradient(W / 2, 760, 50, W / 2, 760, 700); h1.addColorStop(0, E.halo); h1.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = h1; g.fillRect(0, 0, W, H);
+    } else if (E.fondo === "rayas") {
+      g.save(); g.strokeStyle = E.rayas; g.lineWidth = 18;
+      for (let x = -H; x < W; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + H, H); g.stroke(); }
+      g.restore();
+      g.strokeStyle = E.marco; g.lineWidth = 3; g.strokeRect(44, 44, W - 88, H - 88);
+      // franja roja/blanca arriba y abajo (bandera de barbería)
+      for (const y of [44, H - 58]) { for (let x = 44, i = 0; x < W - 44; x += 40, i++) { g.fillStyle = i % 2 ? "#ffffff" : "#e63946"; g.fillRect(x, y, Math.min(40, W - 44 - x), 14); } }
+    } else if (E.fondo === "pizarra") {
+      // marco de madera
+      const mad = g.createLinearGradient(0, 0, W, H); mad.addColorStop(0, "#8b5a2b"); mad.addColorStop(.5, "#6b4220"); mad.addColorStop(1, "#8b5a2b");
+      g.fillStyle = mad; g.fillRect(0, 0, W, H);
+      g.fillStyle = E.base; g.fillRect(40, 40, W - 80, H - 80);
+      // polvo de gis
+      for (let i = 0; i < 1600; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * .045})`; g.fillRect(40 + Math.random() * (W - 80), 40 + Math.random() * (H - 80), 2 + Math.random() * 3, 1 + Math.random() * 2); }
+      // marco de gis punteado
+      g.save(); g.setLineDash([18, 12]); g.strokeStyle = "rgba(244,244,239,.45)"; g.lineWidth = 3; g.strokeRect(78, 78, W - 156, H - 156); g.restore();
+    } else if (E.fondo === "madera") {
+      // vetas
+      for (let y = 0; y < H; y += 6) { const v = 30 + Math.sin(y / 37) * 8 + Math.sin(y / 11) * 4; g.fillStyle = `rgba(${90 + v},${55 + v / 2},${30 + v / 3},.35)`; g.fillRect(0, y, W, 3); }
+      for (let i = 0; i < 14; i++) { const y = Math.random() * H; g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2; g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(W * .3, y + 30, W * .7, y - 30, W, y + 10); g.stroke(); }
+      const v = g.createRadialGradient(W / 2, H / 2, 300, W / 2, H / 2, 1200); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.55)"); g.fillStyle = v; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(242,193,78,.6)"; g.lineWidth = 3; g.beginPath(); g.roundRect(44, 44, W - 88, H - 88, 30); g.stroke();
+    } else if (E.fondo === "liso") {
+      g.strokeStyle = E.marco; g.lineWidth = 2; g.strokeRect(60, 60, W - 120, H - 120);
     }
+  }
 
-    // Cuadrícula de horarios libres (hasta 8)
+  async function imagenDia(info, libres, estiloId, conLogo = true) {
+    const E = ESTILOS[estiloId] || ESTILOS.dorado, W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
+    const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+    const t = tituloDia(info.fecha), ANCHO = E.angosto ? W - 280 : W - 150;
+    const brilla = (color, fuerza = 28) => { if (E.brillo && color) { g.shadowColor = color; g.shadowBlur = fuerza; } };
+    const sinBrillo = () => { g.shadowBlur = 0; g.shadowColor = "transparent"; };
+    const texto = (s, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(s, x, y); if (glow && E.brillo) { g.fillText(s, x, y); } sinBrillo(); };
+    const ajusta = (s, peso, max, ancho, fam = DISP) => { let px = max; do { g.font = `${peso} ${px}px ${fam}`; px -= 4; } while (g.measureText(s).width > ancho && px > 20); return `${peso} ${px + 4}px ${fam}`; };
+    // Color o degradado vertical para textos grandes
+    const relleno = (col, y0, y1) => { if (!Array.isArray(col)) return col; const gr = g.createLinearGradient(0, y0, 0, y1); col.forEach((c, i) => gr.addColorStop(i / (col.length - 1), c)); return gr; };
+    // En el estilo pizarra los bordes se ven como trazos de gis
+    const caja = (x, y, w, h, r, fondo, borde) => { g.fillStyle = fondo; g.strokeStyle = borde; g.lineWidth = 3; if (E.gis) g.setLineDash([10, 6]); g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); g.stroke(); g.setLineDash([]); };
+
+    pintarFondo(g, E, W, H);
+
+    // Cuadrícula de horarios libres
     const dibujaLibres = (y, titulo, libres) => {
-      texto(titulo, W / 2, y, ajusta(titulo, 800, 46, ANCHO), estiloId === "poste" ? E.acento2 : E.acento, "center", E.brillo ? E.acento : null);
+      texto(titulo, W / 2, y, ajusta(titulo, 800, 46, ANCHO), E.libresT, "center", E.brillo ? E.libresT : null);
       y += 36;
-      const cols = estiloId === "poste" ? 3 : 4, cw = estiloId === "poste" ? 220 : 200, ch = 86, gx = 16;
-      const LIMITE = H - 375;   // arriba del botón «Agenda tu cita»
+      const cols = E.angosto ? 3 : 4, cw = E.angosto ? 220 : 200, ch = 86, gx = 16;
+      const LIMITE = H - 375;
       const filasCaben = Math.max(1, Math.min(2, Math.floor((LIMITE - y - 20) / (ch + gx))));
       const lista = libres.slice(0, cols * filasCaben);
       lista.forEach((h, i) => {
         const fila = Math.floor(i / cols), enFila = Math.min(cols, lista.length - fila * cols), col = i % cols;
         const x0 = W / 2 - (enFila * cw + (enFila - 1) * gx) / 2 + col * (cw + gx), y0 = y + fila * (ch + gx);
-        g.fillStyle = estiloId === "poste" ? "#fff" : "rgba(255,255,255,.06)"; g.strokeStyle = estiloId === "poste" ? "#111" : E.chipBorde; g.lineWidth = 3;
-        if (E.brillo) brilla(E.chipBorde, 12);
-        g.beginPath(); g.roundRect(x0, y0, cw, ch, 22); g.fill(); g.stroke(); sinBrillo();
-        texto(h12(h), x0 + cw / 2, y0 + 58, `800 46px ${DISP}`, E.tinta);
+        if (E.brillo) brilla(E.cajaBorde, 12);
+        caja(x0, y0, cw, ch, 22, E.caja, E.cajaBorde); sinBrillo();
+        texto(h12(h), x0 + cw / 2, y0 + 58, `800 46px ${DISP}`, E.cajaTinta);
       });
-      const filasUsadas = Math.ceil(lista.length / cols);
-      const yMas = y + filasUsadas * (ch + gx) + 40;
+      const yMas = y + Math.ceil(lista.length / cols) * (ch + gx) + 40;
       if (libres.length > lista.length && yMas < LIMITE) texto(`y ${libres.length - lista.length} horarios más`, W / 2, yMas, `500 34px ${SANS}`, E.sub);
     };
 
-    // ----- Encabezado: logo + nombre -----
+    // ----- Logo + nombre -----
     const logo = conLogo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
     if (logo) { g.save(); g.beginPath(); g.arc(W / 2, 210, 92, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - 92, 118, 184, 184); g.restore();
-      if (E.brillo) { g.strokeStyle = E.acento2; g.lineWidth = 5; brilla(E.acento2, 30); g.beginPath(); g.arc(W / 2, 210, 96, 0, Math.PI * 2); g.stroke(); sinBrillo(); } }
+      g.strokeStyle = E.pillBorde; g.lineWidth = 4; brilla(E.pillBorde, 30); g.beginPath(); g.arc(W / 2, 210, 96, 0, Math.PI * 2); g.stroke(); sinBrillo(); }
     texto(cfg.nombre.toUpperCase(), W / 2, 370, `800 46px ${DISP}`, E.sub);
 
     // ----- Fecha -----
     const pill = `${t.dia} ${t.num} ${t.mes}`;
     g.font = `800 44px ${DISP}`; const pw = g.measureText(pill).width + 80;
-    g.fillStyle = estiloId === "poste" ? "#111" : E.chip; g.strokeStyle = E.chipBorde; g.lineWidth = 3;
-    if (E.brillo) brilla(E.acento2, 20);
-    g.beginPath(); g.roundRect(W / 2 - pw / 2, 420, pw, 84, 42); g.fill(); g.stroke(); sinBrillo();
-    texto(pill, W / 2, 477, `800 44px ${DISP}`, estiloId === "poste" ? "#f4efe6" : E.chipTinta);
+    brilla(E.pillBorde, 20); caja(W / 2 - pw / 2, 420, pw, 84, 42, E.pill, E.pillBorde); sinBrillo();
+    texto(pill, W / 2, 477, `800 44px ${DISP}`, E.pillTinta);
 
     let y;
     if (info.abierto) {
-      // ----- ABIERTO + horas -----
       const palabra = t.cual === "HOY" ? "HOY ABRIMOS" : t.cual === "MAÑANA" ? "MAÑANA ABRIMOS" : "ABRIMOS";
-      texto(palabra, W / 2, 660, ajusta(palabra, 900, 150, ANCHO), E.tinta, "center", E.brillo ? E.acento : null);
+      texto(palabra, W / 2, 660, ajusta(palabra, 900, 150, ANCHO), E.titulo, "center", E.tituloGlow);
       const horas = `${h12(info.abre)} – ${h12(info.cierra)}`;
-      const fH = ajusta(horas, 900, 200, ANCHO);
-      if (estiloId === "dorado") { const gr = g.createLinearGradient(0, 700, 0, 880); gr.addColorStop(0, E.acento2); gr.addColorStop(.6, E.acento); gr.addColorStop(1, "#8a6220"); texto(horas, W / 2, 870, fH, gr); }
-      else texto(horas, W / 2, 870, fH, estiloId === "neon" ? E.acento2 : E.acento, "center", E.brillo ? E.acento2 : null);
+      texto(horas, W / 2, 870, ajusta(horas, 900, 200, ANCHO), relleno(E.horas, 700, 880), "center", E.horasGlow);
       y = 940;
-      // avisos (comida, nota especial)
       for (const n of info.notas.slice(0, 2)) { texto(`⚠  ${n}`, W / 2, y + 20, ajusta(`⚠  ${n}`, 600, 40, W - 200, SANS), E.malo); y += 64; }
-      // ----- Barberos -----
       if (info.equipo.length) {
         y += 40; texto("TE ATIENDEN", W / 2, y, `800 42px ${DISP}`, E.sub); y += 34;
         g.font = `700 40px ${SANS}`;
         const anchos = info.equipo.slice(0, 6).map((n) => g.measureText(n).width + 64), gap = 18;
         const filas = []; let fila = [], ancho = 0;
-        anchos.forEach((a, i) => { if (ancho + a > W - 200 && fila.length) { filas.push(fila); fila = []; ancho = 0; } fila.push(i); ancho += a + gap; });
+        anchos.forEach((a, i) => { if (ancho + a > ANCHO - 40 && fila.length) { filas.push(fila); fila = []; ancho = 0; } fila.push(i); ancho += a + gap; });
         if (fila.length) filas.push(fila);
         for (const fl of filas) {
           const total = fl.reduce((s, i) => s + anchos[i], 0) + gap * (fl.length - 1); let x = W / 2 - total / 2;
           for (const i of fl) {
-            g.fillStyle = E.chip; g.strokeStyle = E.chipBorde; g.lineWidth = 3; if (E.brillo) brilla(E.chipBorde, 16);
-            g.beginPath(); g.roundRect(x, y, anchos[i], 76, 38); g.fill(); g.stroke(); sinBrillo();
+            brilla(E.chipBorde, 16); caja(x, y, anchos[i], 76, 38, E.chip, E.chipBorde); sinBrillo();
             texto(info.equipo[i], x + anchos[i] / 2, y + 52, `700 40px ${SANS}`, E.chipTinta); x += anchos[i] + gap;
           }
           y += 96;
         }
       }
-      // ----- Horarios libres -----
       y += 70;
       dibujaLibres(y, libres.length ? "HORARIOS LIBRES PARA CITA" : "CITAS LLENAS · VEN POR TU TURNO", libres);
     } else {
-      // ----- CERRADO -----
-      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, 700, `900 140px ${DISP}`, E.tinta);
-      texto("CERRADO", W / 2, 900, ajusta("CERRADO", 900, 230, W - 140), E.malo, "center", E.brillo ? E.malo : null);
+      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, 700, ajusta(t.dia, 900, 140, ANCHO), E.titulo);
+      texto("CERRADO", W / 2, 900, ajusta("CERRADO", 900, 230, ANCHO), E.malo, "center", E.brillo ? E.malo : null);
       y = 990;
-      if (info.motivo) { texto(info.motivo, W / 2, y + 30, ajusta(info.motivo, 600, 54, W - 200, SANS), E.tinta); y += 90; }
+      if (info.motivo) { texto(info.motivo, W / 2, y + 30, ajusta(info.motivo, 600, 54, ANCHO - 40, SANS), E.tinta); y += 90; }
       const prox = proximaApertura(info.fecha);
       if (prox) {
         y += 60; texto("TE ESPERAMOS", W / 2, y, `800 46px ${DISP}`, E.sub); y += 80;
         const pt = tituloDia(prox.fecha);
-        texto(`${pt.dia} ${pt.num} ${pt.mes}`, W / 2, y, `900 88px ${DISP}`, estiloId === "poste" ? E.acento2 : E.acento2, "center", E.brillo ? E.acento2 : null); y += 76;
+        texto(`${pt.dia} ${pt.num} ${pt.mes}`, W / 2, y, ajusta(`${pt.dia} ${pt.num} ${pt.mes}`, 900, 88, ANCHO), relleno(E.horas, y - 80, y), "center", E.horasGlow); y += 76;
         texto(`desde las ${h12(prox.abre)}`, W / 2, y, `600 46px ${SANS}`, E.tinta);
         if (libres.length) dibujaLibres(y + 110, `APARTA TU LUGAR PARA EL ${pt.dia}`, libres);
       }
@@ -3408,11 +3465,10 @@
 
     // ----- Llamado a agendar -----
     const by = H - 360;
-    g.fillStyle = E.cta; if (E.brillo) brilla(E.cta, 40);
-    g.beginPath(); g.roundRect(150, by, W - 300, 132, 66); g.fill(); sinBrillo();
+    brilla(E.cta, 40); caja(150, by, W - 300, 132, 66, E.cta, E.cta); sinBrillo();
     texto("AGENDA TU CITA", W / 2, by + 88, `900 68px ${DISP}`, E.ctaTinta);
-    texto(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200, `500 32px ${SANS}`, E.sub);
-    if (cfg.whatsapp) texto(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 248, `600 34px ${SANS}`, E.sub);
+    texto(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200, `500 32px ${SANS}`, E.pie || E.sub);
+    if (cfg.whatsapp) texto(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 248, `600 34px ${SANS}`, E.pie || E.sub);
 
     try { return await new Promise((ok, mal) => { try { c.toBlob(ok, "image/png"); } catch (e) { mal(e); } }); }
     catch (e) { if (conLogo) return imagenDia(info, libres, estiloId, false); throw e; }
@@ -3433,7 +3489,7 @@
     $("dcCuerpo").innerHTML = `
       <div class="pub-dias" role="group" aria-label="Día">${dias.map((f, i) => `<button type="button" data-pdia="${f}" aria-pressed="${f === pubDia}">${etiqueta(f, i)}</button>`).join("")}
         <button type="button" data-pdia="semana" aria-pressed="false">Semana</button></div>
-      <div class="pub-estilos" role="group" aria-label="Estilo">${Object.entries(ESTILOS).map(([k, e]) => `<button type="button" data-pestilo="${k}" aria-pressed="${k === pubEstilo}"><span class="mu mu-${k}"></span>${e.nombre}</button>`).join("")}</div>
+      <div class="pub-estilos" role="group" aria-label="Estilo">${Object.entries(ESTILOS).map(([k, e]) => `<button type="button" data-pestilo="${k}" aria-pressed="${k === pubEstilo}"><span class="mu" style="background:${e.muestra}"></span>${e.nombre}</button>`).join("")}</div>
       <div class="pub-prev"><img alt="Vista previa de la publicación" class="prev-horario" id="pubImg"><div class="pub-cargando" id="pubCargando">Armando la imagen…</div></div>
       <details class="prev-texto"><summary>Ver el texto que se manda</summary><pre id="pubTexto"></pre></details>`;
     $("dcCuerpo").onclick = (e) => {
