@@ -302,6 +302,38 @@
     .prev-texto pre { white-space: pre-wrap; font: inherit; background: #191917; border-radius: 10px; padding: 10px 12px; margin: 8px 0 0; }
     @media (max-width: 620px) { .publicar { flex-direction: column; align-items: stretch; } .publicar .wa-btn { width: 100%; } }
 
+    /* ===== Menú agrupado ===== */
+    .tabs-grupo { font-size: .75rem; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin: 14px 12px 4px; }
+    .tabs-grupo:first-child { margin-top: 0; }
+    .tabs .corto { display: none; }
+    .tabs button { position: relative; }
+    .cuenta { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; display: inline-grid; place-items: center;
+      background: var(--warn); color: #1a1206; font-size: .75rem; font-weight: 800; line-height: 1; }
+    .tabs button[aria-selected="true"] .cuenta { background: #08131f; color: var(--oro-2); }
+    .tabs .tab-mas { display: none; }
+    /* Hoja «Más» */
+    .hoja-mas h3 { font-size: .8125rem; color: var(--muted); font-weight: 600; margin: 14px 4px 8px; }
+    .hoja-mas h3:first-child { margin-top: 0; }
+    .mas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mas-item { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px; border-radius: 16px; text-align: left; min-height: 0;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text); font-weight: 400; }
+    .mas-item[aria-current="true"] { border-color: var(--oro); background: rgba(111,168,220,.1); }
+    .mas-item svg { width: 26px; height: 26px; color: var(--oro); }
+    .mas-item b { font-weight: 600; font-size: 1rem; }
+    .mas-item span { font-size: .8125rem; color: var(--muted); line-height: 1.3; }
+    @media (max-width: 768px) {
+      .tabs-grupo, .tabs .en-mas { display: none !important; }
+      .tabs { overflow: visible; -webkit-mask-image: none !important; mask-image: none !important; }
+      .tabs button, .tab-mas { flex: 1 1 0 !important; }
+      .tabs .tab-mas { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; font-size: .625rem; color: var(--muted); background: transparent; border: 0; }
+      .tab-mas svg { width: 26px; height: 26px; }
+      .tab-mas[aria-selected="true"] { color: var(--oro); }
+      .tabs .largo { display: none; }
+      .tabs .corto { display: inline; }
+      .cuenta { position: absolute; top: 0; left: calc(50% + 6px); margin: 0; min-width: 18px; height: 18px; font-size: .625rem; padding: 0 5px; }
+      .tabs button[aria-selected="true"] .cuenta { background: var(--warn); color: #1a1206; }
+    }
+
     /* ===== Calendario de apertura ===== */
     .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .cal-cab h2 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 1.75rem; letter-spacing: .01em; }
@@ -375,40 +407,46 @@
         <img class="brand-logo" src="logo.jpg" alt="" style="width:40px;height:40px">
         <div><h1 class="txt-negocio">Barbería</h1><div class="muted small"><span class="txt-rol"></span></div></div>
       </div>
-      <div class="tabs" role="tablist">
+      <div class="tabs" role="tablist" aria-label="Secciones del panel">
+        <div class="tabs-grupo" role="presentation">Día a día</div>
         <button role="tab" data-tab="inicio" aria-selected="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5.5h4V20"/></svg>
-          <span>Inicio</span></button>
+          <span class="lbl">Inicio</span></button>
         <button role="tab" data-tab="hoy" aria-selected="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>
-          <span>Hoy</span></button>
+          <span class="lbl"><span class="largo">Fila de hoy</span><span class="corto">Hoy</span></span><b class="cuenta hidden" id="cuentaHoy" aria-label="pendientes"></b></button>
         <button role="tab" data-tab="citas" aria-selected="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14.5h3"/></svg>
-          <span>Citas</span></button>
+          <span class="lbl">Citas</span><b class="cuenta hidden" id="cuentaCitas" aria-label="pendientes"></b></button>
         <button role="tab" data-tab="corte" aria-selected="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>
-          <span>Corte</span></button>
-        <button role="tab" data-tab="clientes" aria-selected="false" class="solo-admin hidden">
+          <span class="lbl"><span class="solo-admin">Caja</span><span class="solo-barbero">Mis ventas</span></span></button>
+        <div class="tabs-grupo" role="presentation">Negocio</div>
+        <button role="tab" data-tab="clientes" aria-selected="false" class="solo-admin hidden en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c.7-2.2 2.4-3.5 4.5-3.5s3.8 1.3 4.5 3.5"/></svg>
-          <span>Clientes</span></button>
-        <button role="tab" data-tab="reportes" aria-selected="false" class="solo-admin hidden">
+          <span class="lbl">Clientes</span></button>
+        <button role="tab" data-tab="reportes" aria-selected="false" class="solo-admin hidden en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><rect x="5" y="11" width="3.2" height="7" rx="1"/><rect x="10.4" y="6" width="3.2" height="12" rx="1"/><rect x="15.8" y="13.5" width="3.2" height="4.5" rx="1"/></svg>
-          <span>Reportes</span></button>
-        <button role="tab" data-tab="precios" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.2V4.5A1.5 1.5 0 0 1 4.5 3h7.7l8.8 8.8a1.5 1.5 0 0 1 0 2.1l-7.1 7.1a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.6"/></svg>
-          <span>Precios</span></button>
-        <button role="tab" data-tab="productos" aria-selected="false">
+          <span class="lbl">Reportes</span></button>
+        <button role="tab" data-tab="productos" aria-selected="false" class="en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="9" width="13" height="12" rx="2.5"/><path d="M8 9V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V9"/><path d="M9 14h6"/></svg>
-          <span>Productos</span></button>
-        <button role="tab" data-tab="equipo" aria-selected="false" class="solo-admin hidden">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M14.5 14.6c.6-.2 1.3-.3 2-.3 2.3 0 4.2 1.5 4.8 4.2"/></svg>
-          <span>Equipo</span></button>
-        <button role="tab" data-tab="horario" aria-selected="false" class="solo-admin hidden">
+          <span class="lbl">Productos</span></button>
+        <div class="tabs-grupo" role="presentation">Configuración</div>
+        <button role="tab" data-tab="precios" aria-selected="false" class="en-mas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.2V4.5A1.5 1.5 0 0 1 4.5 3h7.7l8.8 8.8a1.5 1.5 0 0 1 0 2.1l-7.1 7.1a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.6"/></svg>
+          <span class="lbl"><span class="largo">Servicios y precios</span><span class="corto">Precios</span></span></button>
+        <button role="tab" data-tab="horario" aria-selected="false" class="solo-admin hidden en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="15.5" cy="15.5" r="3"/><path d="M15.5 14v1.6l1 .8"/></svg>
-          <span>Horario</span></button>
-        <button role="tab" data-tab="ajustes" aria-selected="false" class="solo-admin hidden">
+          <span class="lbl">Horario</span></button>
+        <button role="tab" data-tab="equipo" aria-selected="false" class="solo-admin hidden en-mas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M14.5 14.6c.6-.2 1.3-.3 2-.3 2.3 0 4.2 1.5 4.8 4.2"/></svg>
+          <span class="lbl">Equipo</span></button>
+        <button role="tab" data-tab="ajustes" aria-selected="false" class="solo-admin hidden en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-          <span>Ajustes</span></button>
+          <span class="lbl">Ajustes</span></button>
+        <button type="button" class="tab-mas" id="tabMas" aria-haspopup="dialog" aria-label="Más secciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+          <span class="lbl">Más</span></button>
       </div>
       <div class="muted small txt-hoy" style="padding:0 12px"></div>
       <div class="sesion">
@@ -466,7 +504,7 @@
 
     <!-- Hoy -->
     <section id="tab-hoy" class="hidden">
-      <h1 class="page-title">Hoy</h1>
+      <h1 class="page-title">Fila de hoy</h1>
       <div class="kpis">
         <div class="kpi"><div class="v" id="kEspera">0</div><div class="l">En espera</div></div>
         <div class="kpi"><div class="v" id="kAtendiendo">0</div><div class="l">Atendiendo</div></div>
@@ -655,7 +693,7 @@
 
     <!-- Precios (solo el admin edita; lo exige la base de datos) -->
     <section id="tab-precios" class="hidden">
-      <h1 class="page-title">Precios</h1>
+      <h1 class="page-title">Servicios y precios</h1>
       <div class="card">
         <div class="tabla-scroll"><table id="tablaPrecios" class="tabla-cards"></table></div>
         <form id="formServicio" class="fila solo-admin hidden" style="margin-top:12px">
@@ -834,6 +872,12 @@
     </form>
   </dialog>
 
+  <!-- ===== «Más» en el celular: el resto de las secciones ===== -->
+  <dialog id="dlgMas" class="hoja-mas" aria-label="Más secciones">
+    <div id="masCuerpo"></div>
+    <button type="button" class="big" id="masCerrar" style="margin-top:12px">Cerrar</button>
+  </dialog>
+
   <!-- ===== Perfil de un barbero ===== -->
   <dialog id="dlgPerfil" aria-label="Perfil del barbero">
     <button type="button" class="ghost pf-cerrar" id="pfCerrar" aria-label="Cerrar">✕</button>
@@ -928,6 +972,7 @@
       await cargarHoy();
       await cargarCitasHoy();
       cargarInicio();
+      abrirTabInicial();
       arrancarAyuda();
       suscribir();
     }
@@ -949,20 +994,58 @@
   $("salirPendiente").onclick = () => cerrarSesion(false);
 
   // ---------- Pestañas ----------
-  document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
-    document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
-    ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"].forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+  const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
+  const botonTab = (t) => document.querySelector(`.tabs [data-tab="${t}"]`);
+  // Cambia de sección. Guarda la pestaña (para recargar ahí) y deja que el «atrás» del celular regrese.
+  function irTab(tab, { historial = true } = {}) {
+    const b = botonTab(tab);
+    if (!b || b.classList.contains("hidden")) tab = "inicio";
+    document.querySelectorAll(".tabs [data-tab]").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === tab)));
+    $("tabMas").setAttribute("aria-selected", String(!!botonTab(tab)?.classList.contains("en-mas")));
+    TABS.forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== tab));
     window.scrollTo(0, 0);
-    if (b.dataset.tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
-    if (b.dataset.tab === "horario") { pintarHorario(); cargarCalendario(); }
-    if (b.dataset.tab === "citas") cargarCitas();
-    if (b.dataset.tab === "corte") cargarCorte();
-    if (b.dataset.tab === "clientes") cargarClientes();
-    if (b.dataset.tab === "reportes") cargarReportes();
-    if (b.dataset.tab === "precios") pintarPrecios();
-    if (b.dataset.tab === "productos") cargarCatalogos().then(pintarProductos);
-    if (b.dataset.tab === "equipo") pintarEquipo();
-  });
+    if (tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
+    if (tab === "horario") { pintarHorario(); cargarCalendario(); }
+    if (tab === "citas") cargarCitas();
+    if (tab === "corte") cargarCorte();
+    if (tab === "clientes") cargarClientes();
+    if (tab === "reportes") cargarReportes();
+    if (tab === "precios") pintarPrecios();
+    if (tab === "productos") cargarCatalogos().then(pintarProductos);
+    if (tab === "equipo") pintarEquipo();
+    try { localStorage.setItem("panel-tab", tab); localStorage.setItem("visto-" + tab, "1"); } catch {}
+    if (historial && location.hash !== "#" + tab) history.pushState({ tab }, "", "#" + tab);
+    if ($("dlgMas").open) $("dlgMas").close();
+  }
+  document.querySelectorAll(".tabs [data-tab]").forEach((b) => (b.onclick = () => irTab(b.dataset.tab)));
+  addEventListener("popstate", () => { const t = location.hash.slice(1); if (TABS.includes(t)) irTab(t, { historial: false }); });
+  // Pestaña al entrar: la del enlace (#citas) o la última que usó
+  function abrirTabInicial() {
+    let t = location.hash.slice(1);
+    if (!TABS.includes(t)) { try { t = localStorage.getItem("panel-tab") || "inicio"; } catch { t = "inicio"; } }
+    if (t !== "inicio") irTab(t, { historial: false });
+    history.replaceState({ tab: t }, "", "#" + (TABS.includes(t) ? t : "inicio"));
+  }
+
+  // ---------- «Más» (celular): el resto de las secciones, agrupadas y explicadas ----------
+  const DESC_TAB = {
+    clientes: "Quién viene y quién ya no regresa", reportes: "Ventas y ganancia de la semana o el mes", productos: "Pomadas, ceras e inventario",
+    precios: "Lo que cobras y cuánto tarda", horario: "Días y horas que abres", equipo: "Barberos, cuentas y comisiones", ajustes: "Código QR de la entrada",
+  };
+  $("tabMas").onclick = () => {
+    const grupos = [["Negocio", ["clientes", "reportes", "productos"]], ["Configuración", ["precios", "horario", "equipo", "ajustes"]]];
+    const actual = TABS.find((t) => botonTab(t)?.getAttribute("aria-selected") === "true");
+    $("masCuerpo").innerHTML = grupos.map(([titulo, tabs]) => {
+      const vis = tabs.filter((t) => !botonTab(t).classList.contains("hidden"));
+      return vis.length ? `<h3>${titulo}</h3><div class="mas-grid">${vis.map((t) => {
+        const b = botonTab(t);
+        return `<button type="button" class="mas-item" data-ir-tab="${t}" aria-current="${t === actual}">${b.querySelector("svg").outerHTML}<b>${b.querySelector(".largo")?.textContent || b.querySelector(".lbl").textContent}</b><span>${DESC_TAB[t]}</span></button>`;
+      }).join("")}</div>` : "";
+    }).join("");
+    $("dlgMas").showModal();
+  };
+  $("masCuerpo").addEventListener("click", (e) => { const b = e.target.closest("[data-ir-tab]"); if (b) irTab(b.dataset.irTab); });
+  $("masCerrar").onclick = () => $("dlgMas").close();
 
   // ---------- Catálogos ----------
   async function cargarCatalogos() {
@@ -1000,6 +1083,8 @@
   function pintarHoy() {
     const cuenta = (e) => visitas.filter((v) => v.estado === e).length;
     $("kEspera").textContent = cuenta("espera");
+    const nEsp = cuenta("espera");
+    $("cuentaHoy").textContent = nEsp; $("cuentaHoy").classList.toggle("hidden", !nEsp);
     $("kAtendiendo").textContent = cuenta("atendiendo");
     $("kCobrados").textContent = cuenta("cobrado");
     $("kTotal").textContent = peso(mias(visitas.filter((v) => v.estado === "cobrado")).reduce((a, v) => a + Number(v.monto) + Number(v.propina), 0)
@@ -2263,7 +2348,7 @@
   const mayus = (t) => t ? t[0].toUpperCase() + t.slice(1) : t;
   const ahoraMin = () => aMin(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Mexico_City", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()));
   const visible = (tab) => { const el = $("tab-" + tab); return !!el && !el.classList.contains("hidden"); };
-  const irA = (tab) => document.querySelector(`[data-tab="${tab}"]`)?.click();
+  const irA = (tab) => irTab(tab);
   const telWa = (t) => { const d = String(t || "").replace(/\D/g, ""); return d.length === 10 ? "52" + d : d; };
 
   // Minutos de retraso de una cita de hoy que aún no llega
@@ -2346,6 +2431,7 @@
     citasHoy = data || [];
     $("bloqueCitasHoy").classList.toggle("hidden", !citasHoy.length);
     $("citasHoy").innerHTML = citasHoy.map((c) => filaCita(c)).join("");
+    $("cuentaCitas").textContent = citasHoy.length; $("cuentaCitas").classList.toggle("hidden", !citasHoy.length);
   }
 
   // ---------- Pestaña Citas ----------
@@ -2987,9 +3073,10 @@
       ['[data-tab="inicio"]', "Inicio", "Tu resumen del día: ventas, clientes en espera y avisos. Los avisos de color te llevan directo a resolverlos."],
       ['[data-tab="hoy"]', "Hoy: la fila", "Aquí aparecen los clientes que llegan. Toca «Atender» cuando pase a la silla y «Cobrar» al terminar."],
       ['[data-tab="citas"]', "Citas", "La agenda del día. Toca un espacio vacío para apartar una cita a quien te llama."],
-      ['[data-tab="corte"]', esAdmin() ? "Corte de caja" : "Mis ventas", esAdmin() ? "Al cerrar, cuenta el dinero y el sistema te dice si cuadra y cuánto pagarle a cada barbero." : "Tus cortes del día y lo que te toca de comisión y propinas."],
+      ['[data-tab="corte"]', esAdmin() ? "Caja" : "Mis ventas", esAdmin() ? "Al cerrar, cuenta el dinero y el sistema te dice si cuadra y cuánto pagarle a cada barbero." : "Tus cortes del día y lo que te toca de comisión y propinas."],
     ];
-    if (esAdmin()) p.push(
+    if (movil) p.push(["#tabMas", "Más", esAdmin() ? "Aquí están Clientes, Reportes, Productos, Precios, Horario, Equipo y Ajustes, con una explicación de cada uno." : "Aquí están Productos y Precios."]);
+    else if (esAdmin()) p.push(
       ['[data-tab="equipo"]', "Equipo", "Agrega barberos, crea sus cuentas y ve cuánto hay que pagarle a cada uno."],
       ['[data-tab="horario"]', "Horario", "Marca qué días abres y en qué horario. Es lo que ven los clientes al agendar."],
     );
