@@ -1,6 +1,6 @@
 # Barbería: registro por QR y corte de caja
 
-**Página publicada:** https://nutrementeycuerpo.github.io/sotano-del-barbero/
+**Página publicada:** https://sotanodelbarbero.github.io/ (la dirección vieja nutrementeycuerpo.github.io/sotano-del-barbero redirige aquí)
 - Clientes: `…/turno.html` (tomar turno) y `…/cita.html` (agendar cita)
 - Personal: `…/panel.html`
 - QR para imprimir: `…/qr.html`
