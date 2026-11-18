@@ -1026,6 +1026,7 @@
     try { localStorage.setItem("panel-tab", tab); localStorage.setItem("visto-" + tab, "1"); } catch {}
     if (historial && location.hash !== "#" + tab) history.pushState({ tab }, "", "#" + tab);
     if ($("dlgMas").open) $("dlgMas").close();
+    if (typeof tourPrimeraVez === "function") tourPrimeraVez(tab);
   }
   document.querySelectorAll(".tabs [data-tab]").forEach((b) => (b.onclick = () => irTab(b.dataset.tab)));
   addEventListener("popstate", () => { const t = location.hash.slice(1); if (TABS.includes(t)) irTab(t, { historial: false }); });
@@ -3092,13 +3093,95 @@
     );
     p.push(
       [movil ? "#salirMovil" : "#salir", "Tu sesión", movil ? "Arriba cambias tu contraseña (candado) y cierras sesión al terminar." : "Aquí cambias tu contraseña y cierras sesión al terminar."],
-      [movil ? "#ayudaMovil" : "#ayudaBtn", "¿Te perdiste?", "Toca «¿Cómo se usa?» para ver este recorrido otra vez. ¡Listo, ya puedes empezar!"],
+      [movil ? "#ayudaMovil" : "#ayudaBtn", "¿Te perdiste?", "Cada sección te enseña sus botones la primera vez que entras. Si se te olvida algo, toca «¿Cómo se usa?» y te lo repite. ¡Listo!"],
     );
     return p;
   }
+  // Recorrido corto de cada pestaña: se presenta solo la primera vez que entras a ella
+  const TOUR_TAB = {
+    hoy: () => [
+      ["#cola", "La fila de hoy", "Aquí aparecen los clientes en orden. Toca «Atender» cuando pase a la silla y «Cobrar» al terminar. La ✕ cancela el turno."],
+      ["#btnAgregar", "+ Cliente", "Si alguien llega sin celular, anótalo tú aquí y entra a la fila."],
+      ["#btnVenta", "+ Venta", "Para vender una pomada o un producto sin corte."],
+    ],
+    citas: () => [
+      ["#btnNuevaCita", "+ Cita", "Aparta una cita a quien te llama o te escribe."],
+      ["#citaFecha", "Cambia de día", "Con las flechas o tocando la fecha ves las citas de otro día. «Hoy» te regresa."],
+      ["#agenda", "La agenda", "Toca un espacio vacío para apartar. Toca una cita para marcar que llegó, moverla o cancelarla."],
+      ["#btnBloquear", "Bloquear horario", "Aparta un rato sin citas: la comida, un pendiente o un día libre."],
+    ],
+    corte: () => esAdmin() ? [
+      ["#fechaCorte", "El día", "Elige qué día quieres revisar. Empieza en hoy."],
+      ["#cTotal", "Total del día", "Todo lo que entró hoy. Arriba ves cuánto fue en efectivo, tarjeta y transferencia."],
+      ["#cajaFondo", "Fondo de caja", "Escribe con cuánto dinero abriste la caja."],
+      ["#cajaContado", "Cuenta la caja", "Escribe lo que hay al cerrar y el sistema te dice si cuadra."],
+      ["#tablaBarberos", "Pago a barberos", "Cuánto le toca a cada uno de comisión y propinas."],
+      ["#cajaCerrar", "Cerrar caja", "Al final del día, para dejarlo guardado."],
+    ] : [
+      ["#cTotal", "Tus ventas", "Lo que cobraste hoy."],
+      ["#tablaBarberos", "Lo que te toca", "Tu comisión y tus propinas del día."],
+    ],
+    clientes: () => [
+      ["#buscarCliente", "Buscar", "Escribe el nombre o el teléfono."],
+      ["#ordenClientes", "Ordenar", "Por ejemplo, ver primero a los que hace tiempo no vienen."],
+      ["#listaClientes", "Tus clientes", "Toca uno para ver sus visitas o mandarle un WhatsApp para que regrese."],
+    ],
+    reportes: () => [
+      ["#repRango", "Periodo", "Elige semana, mes o las fechas que quieras."],
+      ["#rUtilidad", "Ganancia", "Lo que queda después de comisiones y gastos."],
+      ["#repBarberos", "Por barbero", "Cuánto vendió y cuánto ganó cada uno."],
+      ["#repCsv", "Exportar a Excel", "Descarga todo en una hoja de cálculo."],
+    ],
+    precios: () => [
+      ["#tablaPrecios", "Tus servicios", esAdmin() ? "Cambia el precio y cuánto tarda. Los clientes lo ven al momento." : "Los servicios y sus precios. Solo Alejandro los puede cambiar."],
+      ["#formServicio", "Nuevo servicio", "Agrega un servicio con su precio."],
+    ],
+    productos: () => [
+      ["#tablaProductos", "Tu inventario", "Lo que se vende se descuenta solo. Cuando llegue mercancía toca «+ Entrada»."],
+      ["#formProducto", "Nuevo producto", "Escribe nombre, precio, costo y cuántas piezas tienes."],
+    ],
+    horario: () => [
+      ["#btnPublicarHoy", "Publicar en WhatsApp", "Un toque y subes tu horario de hoy a tu Estado. La imagen ya está lista."],
+      ["#calendario", "Calendario", "Toca uno o varios días para cerrarlos (festivos) o darles otro horario."],
+      ["#listaHorario", "Horario de cada semana", "Los días y horas normales. Es lo que ven los clientes al agendar."],
+    ],
+    equipo: () => [
+      ["#btnNuevoBarbero", "+ Agregar barbero", "Agrégalo y créale su cuenta para que entre con su correo."],
+      ["#listaEquipo", "Tu equipo", "Toca a un barbero para cambiar su comisión o su contraseña, o para desactivarlo."],
+    ],
+    ajustes: () => [
+      ['#tab-ajustes a[href="qr.html"]', "Código QR", "Imprímelo y pégalo en la entrada. Los clientes lo escanean y se forman solos."],
+    ],
+  };
+  // «Ya lo vi»: se guarda en este celular y en la cuenta (así no se repite en otro celular)
+  const tourVisto = (clave) => !!user && (leerLocal(`tour-${clave}-${user.id}`) === "1" || (clave === "visto" && leerLocal("tour-visto-" + user.id) === "1") || (user.user_metadata?.tours || []).includes(clave));
+  function marcarTour(clave) {
+    if (!user || tourVisto(clave)) return;
+    guardarLocal(`tour-${clave}-${user.id}`, "1");
+    const tours = [...new Set([...(user.user_metadata?.tours || []), clave])];
+    user.user_metadata = { ...(user.user_metadata || {}), tours };
+    try { db.auth.updateUser({ data: { tours } })?.catch?.(() => {}); } catch {}
+  }
+  const tabActual = () => TABS.find((t) => !$("tab-" + t).classList.contains("hidden")) || "inicio";
+  const tourAbierto = () => $("tour") && !$("tour").classList.contains("hidden");
+  // Recorrido de una pestaña (solo los pasos cuyo botón se ve)
+  function abrirTourTab(tab) {
+    const visible = (sel) => { const el = document.querySelector(sel); return el && el.offsetParent !== null; };
+    const pasos = (TOUR_TAB[tab]?.() || []).filter(([sel]) => visible(sel));
+    if (!pasos.length) return false;
+    abrirTour(pasos, "tab-" + tab);
+    return true;
+  }
+  // La primera vez que entras a una pestaña
+  function tourPrimeraVez(tab) {
+    if (!user || !TOUR_TAB[tab] || tourAbierto() || !tourVisto("visto") || tourVisto("tab-" + tab)) return;
+    setTimeout(() => { if (tabActual() === tab && !tourAbierto()) abrirTourTab(tab); }, 600);
+  }
+
   let tourI = 0, tourPasos = [];
-  function abrirTour() {
-    tourPasos = pasosTour(); tourI = 0;
+  function abrirTour(pasos, clave = "visto") {
+    tourPasos = pasos || pasosTour(); tourI = 0;
+    marcarTour(clave);   // se presenta una sola vez, aunque lo cierres a la mitad
     if (!$("tour")) {
       const t = document.createElement("div"); t.id = "tour"; t.className = "tour"; t.setAttribute("role", "dialog"); t.setAttribute("aria-modal", "true"); t.setAttribute("aria-label", "Recorrido del panel");
       t.innerHTML = `<div class="tour-foco" id="tourFoco"></div><div class="tour-burbuja" id="tourBurbuja"></div>`;
@@ -3114,20 +3197,24 @@
     pintarTour();
   }
   function moverTour(d) { tourI += d; if (tourI >= tourPasos.length) return cerrarTour(); if (tourI < 0) tourI = 0; pintarTour(); }
-  function cerrarTour() { $("tour")?.classList.add("hidden"); if (user) guardarLocal("tour-visto-" + user.id, "1"); }
+  function cerrarTour() { $("tour")?.classList.add("hidden"); }
   function pintarTour() {
     const [sel, titulo, texto] = tourPasos[tourI];
     const el = sel ? document.querySelector(sel) : null;
     const visibleEl = el && el.offsetParent !== null;
-    if (visibleEl) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (visibleEl) {   // centrado en la pantalla (si es muy alto, desde su parte de arriba)
+      const alto = el.getBoundingClientRect().height;
+      el.scrollIntoView({ block: alto > innerHeight * .45 ? "start" : "center", inline: "nearest" });
+      if (alto > innerHeight * .45) scrollBy(0, -90);
+    }
     const foco = $("tourFoco"), bur = $("tourBurbuja");
-    const ultimo = tourI === tourPasos.length - 1;
+    const ultimo = tourI === tourPasos.length - 1, general = tourPasos[0][0] === null;
     bur.innerHTML = `<div class="tour-paso">Paso ${tourI + 1} de ${tourPasos.length}</div><h3>${esc(titulo)}</h3><p>${esc(texto)}</p>
       <div class="tour-botones">
-        ${ultimo ? "" : `<button type="button" class="ghost" data-tour="fin">Saltar</button>`}
+        ${ultimo ? "" : `<button type="button" class="ghost" data-tour="fin">${general ? "Saltar" : "Cerrar"}</button>`}
         <span style="flex:1"></span>
         ${tourI > 0 ? `<button type="button" data-tour="ant">Atrás</button>` : ""}
-        <button type="button" class="primary" data-tour="${ultimo ? "fin" : "sig"}">${ultimo ? "Empezar" : tourI === 0 ? "Empezar recorrido" : "Siguiente"}</button>
+        <button type="button" class="primary" data-tour="${ultimo ? "fin" : "sig"}">${ultimo ? (general ? "Empezar" : "Entendido") : tourI === 0 && general ? "Empezar recorrido" : "Siguiente"}</button>
       </div>`;
     requestAnimationFrame(() => {
       const W = innerWidth, H = innerHeight, bw = Math.min(360, W - 24), bh = bur.offsetHeight;
@@ -3135,7 +3222,10 @@
         foco.style.cssText = `left:${W / 2}px;top:${H / 2}px;width:0;height:0`;
         bur.style.cssText = `width:${bw}px;left:${(W - bw) / 2}px;top:${Math.max(12, (H - bh) / 2)}px`;
       } else {
-        const r = el.getBoundingClientRect(), m = 6;
+        const g = el.getBoundingClientRect(), m = 6;
+        // Si es más alto que la pantalla, se marca solo la parte que se ve y la burbuja va abajo
+        const r = { left: g.left, right: g.right, width: g.width, top: Math.max(g.top, 8), bottom: Math.min(g.bottom, H * .55) };
+        r.height = Math.max(40, r.bottom - r.top);
         foco.style.cssText = `left:${r.left - m}px;top:${r.top - m}px;width:${r.width + m * 2}px;height:${r.height + m * 2}px`;
         let x, y;
         if (r.right + bw + 24 < W && r.left < W / 3) { x = r.right + 16; y = r.top + r.height / 2 - bh / 2; }   // a la derecha (menú lateral)
@@ -3157,7 +3247,9 @@
   $("ayudaBtn").onclick = $("ayudaMovil").onclick = () => {
     // Volver a mostrar también las ayudas ocultas
     Object.keys(AYUDA).forEach((t) => guardarLocal("ayuda-oculta-" + t, null));
-    ponerAyudas(); abrirTour();
+    ponerAyudas();
+    const t = tabActual();
+    if (t === "inicio" || !abrirTourTab(t)) abrirTour();
   };
 
   // Barra de pestañas del celular: sombrear el lado donde hay más pestañas
@@ -3179,7 +3271,8 @@
   async function arrancarAyuda() {
     ponerAyudas();
     pintarPrimerosPasos();
-    if (user && leerLocal("tour-visto-" + user.id) !== "1") setTimeout(abrirTour, 700);
+    if (user && !tourVisto("visto")) setTimeout(() => abrirTour(), 700);
+    else tourPrimeraVez(tabActual());
   }
 
   // =========================================================
