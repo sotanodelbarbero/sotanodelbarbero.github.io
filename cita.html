@@ -105,6 +105,14 @@
     .ultimo-paso { margin-top: 16px; padding: 12px 14px; border-radius: 14px; text-align: left; font-size: .9375rem; line-height: 1.4;
       background: rgba(37,211,102,.08); border: 1px solid rgba(37,211,102,.35); }
     .ultimo-paso b { color: #3ee07a; }
+    /* Varias citas */
+    .ya-tienes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 12px 14px; border-radius: 14px;
+      background: rgba(212,166,74,.08); border: 1px solid rgba(212,166,74,.35); font-size: .9375rem; }
+    .otra-cita { display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 0; padding: 12px 16px; border-radius: 14px;
+      background: var(--surface); border: 1px solid var(--line); color: var(--text); font-weight: 500; text-align: left; }
+    .otra-cita span { color: var(--muted); font-size: 1.25rem; line-height: 0; }
+    .otra-cita.mini { width: auto; padding: 6px 12px; border-radius: 999px; font-size: .875rem; color: var(--oro-2); border-color: rgba(212,166,74,.45); }
+    .btn-siguiente { display: block; margin: 12px auto 0; padding: 10px 18px; border-radius: 999px; background: var(--oro); color: #1a1206; font-weight: 600; border: 0; }
     /* Llegada */
     .btn-llegue { display: flex !important; align-items: center; justify-content: center; gap: 10px; min-height: 56px; font-size: 1.125rem !important; }
     .aviso-llegada { margin-top: 16px; padding: 12px 14px; border-radius: 14px; font-size: .9375rem; line-height: 1.4; text-align: left;
@@ -140,6 +148,7 @@
 
     <!-- ===== Agendar ===== -->
     <form id="vistaForm" class="hidden" novalidate>
+      <div id="yaTienes" class="ya-tienes hidden"></div>
       <div class="paso-t" id="paso1"><span class="n">1</span><h2>Servicio</h2></div>
       <div id="servicios" class="servicios" role="group" aria-label="Servicio"><div class="cargando"></div></div>
 
@@ -349,7 +358,11 @@
       if (n !== pedido) return; // llegó una respuesta vieja
       if (error) { cont.innerHTML = '<div class="aviso-horas">No se pudieron cargar los horarios. Revisa tu conexión.</div>'; return; }
       if (!data?.length) {
-        cont.innerHTML = `<div class="aviso-horas">No quedan horarios libres este día${sel.barbero ? " con este barbero. Prueba con «Cualquiera» u otro día" : ". Prueba otro día"}.</div>`;
+        cont.innerHTML = `<div class="aviso-horas">No quedan horarios libres este día${sel.barbero ? " con este barbero" : ""}.
+          <button type="button" class="btn-siguiente" id="btnSiguiente">Buscar el siguiente día con lugar</button>
+          ${sel.barbero ? `<button type="button" class="ghost" id="btnCualquiera" style="margin-top:6px">Ver con cualquier barbero</button>` : ""}</div>`;
+        $("btnSiguiente").onclick = buscarSiguiente;
+        if ($("btnCualquiera")) $("btnCualquiera").onclick = () => $("barberos").querySelector('[data-id=""]').click();
         return;
       }
       const grupos = [["Mañana", (h) => h < 12], ["Tarde", (h) => h >= 12 && h < 18], ["Noche", (h) => h >= 18]];
@@ -357,6 +370,20 @@
         const lista = data.filter((t) => f(Number(t.slice(0, 2))));
         return lista.length ? `<div class="seccion-hora">${nombre}</div>` + lista.map((t) => `<button type="button" class="hora" aria-pressed="false" data-hora="${t}">${hora12(t)}</button>`).join("") : "";
       }).join("");
+    }
+    // Revisa los días siguientes (hasta 30) y salta al primero que tenga horarios
+    async function buscarSiguiente() {
+      const btn = $("btnSiguiente"); btn.disabled = true; btn.textContent = "Buscando…";
+      const dias = Object.values(diasCal).filter((d) => d.abierto && d.fecha > sel.fecha).map((d) => d.fecha).sort();
+      for (const f of dias) {
+        const { data } = await db.rpc("horarios_disponibles", { p_fecha: f, p_servicio_id: sel.servicio, p_barbero_id: sel.barbero });
+        if (data?.length) {
+          sel.fecha = f; mesVista = f.slice(0, 7); pintarMes(); cambio();
+          $("paso4").scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+      }
+      btn.textContent = "No hay lugar en el próximo mes"; 
     }
     $("horas").addEventListener("click", (e) => {
       const b = e.target.closest("button.hora"); if (!b) return;
@@ -366,7 +393,20 @@
     });
 
     // ---------- Resumen y validación ----------
-    const telValido = (t) => t.replace(/\D/g, "").length >= 10;
+    // Teléfono a 10 dígitos: quita el +52 / 521 si lo escribieron, para reconocer al mismo cliente
+    const normTel = (t) => { let d = String(t || "").replace(/\D/g, ""); if (d.length === 13 && d.startsWith("521")) d = d.slice(3); else if (d.length === 12 && d.startsWith("52")) d = d.slice(2); return d; };
+    const telValido = (t) => normTel(t).length >= 10;
+
+    // ---------- Las citas de este celular (puede tener más de una) ----------
+    const misCitas = () => (leer("citas") || []).filter((x) => !x.fecha || x.fecha >= hoyISO())
+      .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+    function recordarCita(c) {
+      const l = (leer("citas") || []).filter((x) => x.token !== c.token);
+      l.push(c); guardar("citas", l.slice(-8));
+    }
+    const olvidarCita = (token) => guardar("citas", (leer("citas") || []).filter((x) => x.token !== token));
+    const corta = (c) => c.fecha ? `${mayus(fmt(c.fecha, { weekday: "short", day: "numeric", month: "short" })).replace(/\./g, "")}${c.hora ? ", " + hora12(c.hora) : ""}` : "Tu cita";
+    function abrirCita(token) { const c = misCitas().find((x) => x.token === token); guardar("cita", c || { token }); recienAgendada = false; verCita(); }
     function marcar(campo, msg, texto) { $(campo).classList.toggle("mal", !!texto); $(msg).textContent = texto || ""; }
     function resumen() {
       const s = servicios.find((x) => x.id === sel.servicio);
@@ -399,7 +439,7 @@
 
       $("enviar").disabled = true; $("enviar").textContent = "Confirmando…";
       const { data, error } = await db.rpc("agendar_cita", {
-        p_nombre: nombre, p_telefono: telefono, p_servicio_id: sel.servicio,
+        p_nombre: nombre, p_telefono: normTel(telefono), p_servicio_id: sel.servicio,
         p_barbero_id: sel.barbero, p_fecha: sel.fecha, p_hora: sel.hora,
       });
       $("enviar").disabled = false; $("enviar").textContent = "Confirmar cita";
@@ -412,8 +452,9 @@
         else $("error").textContent = "No se pudo agendar. Revisa tu conexión e intenta de nuevo.";
         return;
       }
-      guardar("cliente", { nombre, telefono });
+      guardar("cliente", { nombre, telefono: normTel(telefono) });
       guardar("cita", { token: data.token, fecha: data.fecha, hora: data.hora });
+      recordarCita({ token: data.token, fecha: data.fecha, hora: data.hora });
       recienAgendada = true;
       try { navigator.vibrate?.([20, 60, 20]); } catch {}
       verCita();
@@ -474,8 +515,10 @@
       if (!c) return irAlFormulario();
       const { data, error } = await db.rpc("estado_cita", { p_token: c.token });
       if (error) { mostrar("cita"); $("tarjetaCita").innerHTML = '<p class="muted">No se pudo cargar tu cita. Revisa tu conexión.</p>'; $("accionesCita").innerHTML = ""; return; }
-      if (!data || data.estado === "no_vino") { guardar("cita", null); return irAlFormulario(); }
+      if (!data || data.estado === "no_vino") { guardar("cita", null); olvidarCita(c.token); return irAlFormulario(); }
       guardar("cita", { token: c.token, fecha: data.fecha, hora: data.hora });   // por si llegó con el enlace personal
+      if (data.estado === "agendada" || data.estado === "llego") recordarCita({ token: c.token, fecha: data.fecha, hora: data.hora });
+      else olvidarCita(c.token);
       mostrar("cita");
       const d = data, card = $("tarjetaCita"), acc = $("accionesCita");
       const num = numeroBarberia(), esHoy = d.fecha === hoyISO();
@@ -497,7 +540,7 @@
         acc.innerHTML = atendido ? `<button class="big btn-oro" id="btnOtra">Agendar otra cita</button>`
           : `<button class="big btn-oro" id="btnVerTurno">Ver mi turno en vivo</button>`;
         if ($("btnVerTurno")) $("btnVerTurno").onclick = () => { guardar("turno", { token: d.turno_token, fecha: d.fecha }); location.href = "turno.html"; };
-        if (atendido) guardar("cita", null);
+        if (atendido) { guardar("cita", null); olvidarCita(c.token); }
       } else if (d.estado === "cancelada") {
         card.innerHTML = `<h2>Cita cancelada</h2><p class="muted" style="margin-top:10px">Tu cita del ${esc(fechaLarga(d.fecha))} ya no está apartada.</p>`;
         acc.innerHTML = `${num ? `<a class="btn-wa-linea" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "cancelar")))}">${ICONO_WA}Avisar a la barbería que cancelé</a>` : ""}
@@ -531,6 +574,14 @@
         if ($("btnLlegue")) $("btnLlegue").onclick = llegue;
         if ($("btnCancelar")) $("btnCancelar").onclick = cancelar;
       }
+      // Sus otras citas y la opción de agendar otra
+      const otras = misCitas().filter((x) => x.token !== c.token);
+      const volver = acc.querySelector('a[href="index.html"]');
+      if (d.estado !== "cancelada") (volver || acc).insertAdjacentHTML(volver ? "beforebegin" : "beforeend", `
+        ${otras.length ? `<div class="guardar-t">Tus otras citas</div>${otras.map((x) => `<button type="button" class="otra-cita" data-token="${esc(x.token)}">${esc(corta(x))}<span>›</span></button>`).join("")}` : ""}
+        <button type="button" class="big" id="btnOtraMas" style="margin:0">+ Agendar otra cita</button>`);
+      acc.querySelectorAll(".otra-cita").forEach((b) => (b.onclick = () => abrirCita(b.dataset.token)));
+      const mas = $("btnOtraMas"); if (mas) mas.onclick = () => { guardar("cita", null); irAlFormulario(); };
       const otra = $("btnOtra"); if (otra) otra.onclick = () => { guardar("cita", null); irAlFormulario(); };
     }
 
@@ -596,6 +647,15 @@
     let listo = false;
     async function irAlFormulario() {
       mostrar("form");
+      // Datos del cliente ya guardados (nombre y teléfono limpio)
+      const cli = leer("cliente") || {};
+      if (cli.nombre) $("nombre").value = cli.nombre;
+      if (cli.telefono) $("telefono").value = cli.telefono;
+      const ya = misCitas();
+      $("yaTienes").classList.toggle("hidden", !ya.length);
+      $("yaTienes").innerHTML = ya.length ? `<span>Ya tienes ${ya.length === 1 ? "una cita" : ya.length + " citas"}: </span>` +
+        ya.map((x) => `<button type="button" class="otra-cita mini" data-token="${esc(x.token)}">${esc(corta(x))} ›</button>`).join("") : "";
+      $("yaTienes").querySelectorAll("[data-token]").forEach((b) => (b.onclick = () => abrirCita(b.dataset.token)));
       if (listo) return;
       listo = true;
       $("horas").innerHTML = '<div class="aviso-horas">Elige primero un servicio para ver los horarios libres.</div>';
@@ -606,7 +666,12 @@
     // Enlace personal: cita.html?c=<código> abre esa cita aunque sea otro teléfono
     const desdeEnlace = new URLSearchParams(location.search).get("c");
     if (desdeEnlace && /^[0-9a-f-]{36}$/i.test(desdeEnlace)) guardar("cita", { token: desdeEnlace });
-    if (leer("cita")) verCita(); else irAlFormulario();
+    // Celulares que guardaron una cita antes de este cambio: pasarla a la lista
+    if (!leer("citas") && leer("cita")?.token && leer("cita").fecha) recordarCita(leer("cita"));   // solo una vez
+    if (new URLSearchParams(location.search).has("nueva")) { guardar("cita", null); irAlFormulario(); }   // «Agendar otra / próximo corte»
+    else if (leer("cita")) verCita();
+    else if (misCitas().length) abrirCita(misCitas()[0].token);
+    else irAlFormulario();
   </script>
 </body>
 </html>

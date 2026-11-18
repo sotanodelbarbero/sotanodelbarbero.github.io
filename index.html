@@ -497,12 +497,15 @@
     // ---------- Turno activo en este celular ----------
     try {
       const t = JSON.parse(localStorage.getItem("turno") || "null");
-      const c = JSON.parse(localStorage.getItem("cita") || "null");
+      // La próxima de sus citas guardadas (o la última vista)
+      const lista = (JSON.parse(localStorage.getItem("citas") || "null") || []).filter((x) => x.fecha && x.fecha >= hoyISO())
+        .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+      const c = lista[0] || JSON.parse(localStorage.getItem("cita") || "null");
       if (t && t.fecha === hoyISO()) mostrar($("aviso"));
       else if (c && c.fecha >= hoyISO()) {
         const [y, m, d] = c.fecha.split("-").map(Number);
         const dia = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-MX", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" });
-        $("aviso").innerHTML = `Tienes una cita el ${esc(dia)} a las ${esc(c.hora)}. <a href="cita.html">Ver mi cita</a>`;
+        $("aviso").innerHTML = `Tienes una cita el ${esc(dia)} a las ${esc(c.hora)}. <a href="cita.html${c.token ? "?c=" + encodeURIComponent(c.token) : ""}">Ver mi cita</a>${lista.length > 1 ? ` (y ${lista.length - 1} más)` : ""}`;
         mostrar($("aviso"));
       }
     } catch {}

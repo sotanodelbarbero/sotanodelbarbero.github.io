@@ -176,7 +176,9 @@
       $("paso2").classList.toggle("listo", !!s);
     }
     function marcar(campo, msg, texto) { $(campo).classList.toggle("mal", !!texto); $(msg).textContent = texto || ""; }
-    const telValido = (t) => !t || t.replace(/\D/g, "").length >= 10;
+    // Teléfono a 10 dígitos: quita el +52 / 521 si lo escribieron, para reconocer al mismo cliente
+    const normTel = (t) => { let d = String(t || "").replace(/\D/g, ""); if (d.length === 13 && d.startsWith("521")) d = d.slice(3); else if (d.length === 12 && d.startsWith("52")) d = d.slice(2); return d; };
+    const telValido = (t) => !t || normTel(t).length >= 10;
     $("nombre").addEventListener("input", () => { if ($("nombre").value.trim().length >= 2) marcar("campoNombre", "msgNombre", ""); actualizarResumen(); });
     $("telefono").addEventListener("input", () => { if (telValido($("telefono").value.trim())) marcar("campoTel", "msgTel", ""); });
     $("telefono").addEventListener("blur", () => { if (!telValido($("telefono").value.trim())) marcar("campoTel", "msgTel", "Escribe los 10 dígitos o déjalo vacío."); });
@@ -214,7 +216,7 @@
       if (!elegido) { $("servicios").classList.add("mal"); $("msgServicio").textContent = "Elige un servicio."; $("paso2").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
 
       $("enviar").disabled = true; $("enviar").textContent = "Tomando turno…";
-      const { data, error } = await db.rpc("registrar_turno", { p_nombre: nombre, p_telefono: telefono || null, p_servicio_id: elegido });
+      const { data, error } = await db.rpc("registrar_turno", { p_nombre: nombre, p_telefono: normTel(telefono) || null, p_servicio_id: elegido });
       $("enviar").disabled = false; $("enviar").textContent = "Tomar turno";
       if (error || !data) {
         const m = error?.message || "";
@@ -293,7 +295,9 @@
           ${cfg.instagram ? `<a class="boton ig" style="margin-top:16px;background:var(--surface-2);color:var(--text)" href="${esc(cfg.instagram)}" target="_blank" rel="noopener">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
             Síguenos en Instagram</a>` : ""}`;
-        acc.innerHTML = `<button id="btnOtro" class="big">Tomar otro turno</button>`;
+        acc.innerHTML = `<a href="cita.html?nueva=1" style="display:flex;align-items:center;justify-content:center;min-height:52px;padding:14px 18px;text-decoration:none;border-radius:999px;margin-top:20px;font-weight:600;background:var(--oro);color:#1a1206">Agenda tu próximo corte</a>
+          <p class="muted small" style="text-align:center;margin:8px 0 0">Aparta tu día y hora y llegas directo a la silla.</p>
+          <button id="btnOtro" class="big">Tomar otro turno</button>`;
         $("btnOtro").onclick = () => { guardar("turno", null); irAlFormulario(); };
       } else {
         card.innerHTML = `
