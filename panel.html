@@ -281,6 +281,19 @@
       .sidebar.mas-der.mas-izq .tabs { -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent); }
     }
 
+    /* ===== Publicar horario en WhatsApp ===== */
+    .publicar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: rgba(37,211,102,.35);
+      background: linear-gradient(160deg, rgba(37,211,102,.1), rgba(37,211,102,.02)), var(--surface); }
+    .publicar-txt { flex: 1; }
+    .wa-btn { display: inline-flex !important; align-items: center; justify-content: center; gap: 10px; flex: none;
+      background: #25d366 !important; color: #062b14 !important; border-color: transparent !important; font-weight: 700; padding: 12px 20px; }
+    .wa-btn:hover { background: #3ee07a !important; filter: none; }
+    .prev-horario { display: block; width: 100%; max-height: 52vh; object-fit: contain; border-radius: 14px; background: #000; border: 1px solid var(--line); }
+    .prev-texto { margin-top: 10px; font-size: .8125rem; }
+    .prev-texto summary { cursor: pointer; color: var(--muted); }
+    .prev-texto pre { white-space: pre-wrap; font: inherit; background: #191917; border-radius: 10px; padding: 10px 12px; margin: 8px 0 0; }
+    @media (max-width: 620px) { .publicar { flex-direction: column; align-items: stretch; } .publicar .wa-btn { width: 100%; } }
+
     /* ===== Calendario de apertura ===== */
     .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .cal-cab h2 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 1.75rem; letter-spacing: .01em; }
@@ -673,6 +686,13 @@
     <section id="tab-horario" class="hidden">
       <h1 class="page-title">Horario</h1>
       <p class="muted" style="margin:-6px 0 16px">Lo que marques aquí es lo que ven los clientes en su calendario para agendar y tomar turno.</p>
+      <div class="card publicar">
+        <div class="publicar-txt">
+          <h2>Publicar en WhatsApp</h2>
+          <p class="muted small" style="margin:4px 0 0">La página web se actualiza sola. Con este botón armas una imagen con tu horario y la subes a tu Estado o a tus grupos en dos toques.</p>
+        </div>
+        <button type="button" class="wa-btn" id="btnPublicarHorario"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar horario</button>
+      </div>
       <div class="card">
         <div class="cal-cab">
           <button id="calAntes" aria-label="Mes anterior">‹</button>
@@ -857,13 +877,18 @@
       b.onclick = async () => { t.remove(); await op.deshacer(); };
       t.appendChild(b);
     }
+    if (op.accion) {   // { texto, fn }: un botón que hace algo (por ejemplo «Publicar en WhatsApp»)
+      const b = document.createElement("button"); b.type = "button"; b.textContent = op.accion.texto;
+      b.onclick = () => { t.remove(); op.accion.fn(); };
+      t.appendChild(b);
+    }
     if (op.enlace) {   // { texto, href }: por ejemplo «Enviar por WhatsApp»
       const a = document.createElement("a"); a.className = "boton"; a.textContent = op.enlace.texto; a.href = op.enlace.href;
       a.target = "_blank"; a.rel = "noopener"; a.style.marginLeft = "6px"; a.onclick = () => t.remove();
       t.appendChild(a);
     }
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), op.deshacer || op.enlace ? 9000 : error ? 4500 : 2400);
+    setTimeout(() => t.remove(), op.deshacer || op.enlace || op.accion ? 9000 : error ? 4500 : 2400);
   }
 
   // ---------- Sesión ----------
@@ -2812,7 +2837,7 @@
     if (afectadas.length && !confirm(`Hay ${afectadas.length} ${afectadas.length === 1 ? "cita apartada" : "citas apartadas"} que quedan fuera de este horario. Siguen apartadas, pero conviene avisarles. ¿Guardar de todos modos?`)) return false;
     const { error } = await db.from("horario_especial").upsert(filas, { onConflict: "fecha" });
     if (error) { toast("No se pudo guardar: " + error.message); return false; }
-    toast(filas.length === 1 ? "Día actualizado" : `${filas.length} días actualizados`);
+    toast(filas.length === 1 ? "Día actualizado en la web" : `${filas.length} días actualizados en la web`, { accion: { texto: "Publicar en WhatsApp", fn: publicarHorario } });
     calSel.clear(); horarioSemana = []; cargarCalendario();
     if (afectadas.length) setTimeout(() => avisarAfectadas(afectadas.map((c) => ({ id: c.id, fecha: c.fecha, hora: hhmm(c.hora), nombre: c.cliente_nombre, telefono: c.telefono }))), 250);
     return true;
@@ -2871,7 +2896,7 @@
     if (f !== "abierto" && !valor) return;
     const { data, error } = await db.from("horario").update({ [f]: valor }).eq("dia", Number(fila.dataset.dia)).select("dia");
     toast(error ? (error.message.includes("check") ? "La hora de cierre debe ser después de la de apertura" : "Error: " + error.message)
-      : data?.length ? "Horario guardado" : "No tienes permiso");
+      : data?.length ? "Horario guardado en la web" : "No tienes permiso", data?.length ? { accion: { texto: "Publicar en WhatsApp", fn: publicarHorario } } : {});
     pintarHorario(); horarioSemana = []; cargarCalendario();
   });
 
@@ -3051,6 +3076,161 @@
     pintarPrimerosPasos();
     if (user && leerLocal("tour-visto-" + user.id) !== "1") setTimeout(abrirTour, 700);
   }
+
+  // =========================================================
+  //  Publicar el horario en WhatsApp (Estado, grupos o difusión)
+  //  Arma una imagen bonita tamaño Estado (1080×1920) + el texto con el enlace.
+  // =========================================================
+  const URL_CITAS = new URL("cita.html", location.href).href;
+  const NOMBRES_DIA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const CORTO_DIA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  // Junta días seguidos con el mismo horario: "Lunes a Sábado · 10:00 – 20:00"
+  function filasSemana(semana) {
+    const txt = (d) => { const h = semana.find((x) => x.dia === d); return h?.abierto ? `${hhmm(h.abre)} – ${hhmm(h.cierra)}` : "Cerrado"; };
+    const filas = [];
+    for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+      const t = txt(d), ult = filas.at(-1);
+      if (ult && ult.t === t) ult.fin = d; else filas.push({ ini: d, fin: d, t });
+    }
+    return filas.map((f) => ({ dias: f.ini === f.fin ? NOMBRES_DIA[f.ini] : `${NOMBRES_DIA[f.ini]} a ${NOMBRES_DIA[f.fin]}`, horas: f.t }));
+  }
+
+  // Días especiales de las próximas 3 semanas (horario distinto, cerrado o festivo)
+  async function especialesProximos() {
+    const hoy = hoyISO(), hasta = sumarDia(hoy, 21);
+    const [re, rb] = await Promise.all([
+      db.from("horario_especial").select("*").gte("fecha", hoy).lte("fecha", hasta).order("fecha"),
+      db.from("bloqueos").select("*").is("barbero_id", null).is("hora_ini", null).lte("fecha_ini", hasta).gte("fecha_fin", hoy),
+    ]);
+    const lista = (re.error ? [] : re.data || []).map((e) => ({ fecha: e.fecha, txt: e.abierto ? `${hhmm(e.abre)} – ${hhmm(e.cierra)}` : "Cerrado", nota: e.nota }));
+    for (const b of rb.error ? [] : rb.data || []) {
+      for (let f = b.fecha_ini < hoy ? hoy : b.fecha_ini; f <= b.fecha_fin && f <= hasta; f = sumarDia(f, 1))
+        if (!lista.some((x) => x.fecha === f)) lista.push({ fecha: f, txt: "Cerrado", nota: b.motivo });
+    }
+    // Junta días seguidos iguales (vacaciones): «Mar 1 – Jue 3 dic: Cerrado»
+    const juntos = [];
+    for (const e of lista.sort((a, b) => a.fecha.localeCompare(b.fecha))) {
+      const u = juntos.at(-1);
+      if (u && u.txt === e.txt && (u.nota || "") === (e.nota || "") && sumarDia(u.hasta, 1) === e.fecha) u.hasta = e.fecha;
+      else juntos.push({ ...e, hasta: e.fecha });
+    }
+    return juntos.slice(0, 5);
+  }
+  const rangoPub = (e) => e.hasta && e.hasta !== e.fecha ? `${fechaPub(e.fecha).replace(/ \S+$/, e.fecha.slice(5, 7) === e.hasta.slice(5, 7) ? "" : "$&")} – ${fechaPub(e.hasta)}` : fechaPub(e.fecha);
+  const fechaPub = (iso) => { const [y, m, d] = iso.split("-").map(Number); const x = new Date(Date.UTC(y, m - 1, d));
+    return `${CORTO_DIA[x.getUTCDay()]} ${d} ${x.toLocaleDateString("es-MX", { timeZone: "UTC", month: "short" }).replace(".", "")}`; };
+
+  function textoHorario(filas, especiales) {
+    return [
+      `💈 *Horario de ${cfg.nombre}*`, "",
+      ...filas.map((f) => `${f.horas === "Cerrado" ? "🔒" : "🕐"} ${f.dias}: ${f.horas}`),
+      ...(especiales.length ? ["", "📌 *Días especiales*", ...especiales.map((e) => `• ${rangoPub(e)}: ${e.txt}${e.nota ? ` (${e.nota})` : ""}`)] : []),
+      "", `📅 Agenda tu cita aquí 👉 ${URL_CITAS}`,
+    ].join("\n");
+  }
+
+  // Dibuja la imagen 1080×1920 con la marca (negro, latón, poste de barbero)
+  async function imagenHorario(filas, especiales, conLogo = true) {
+    const W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
+    const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+    const ORO = "#d4a64a", ORO2 = "#f0cf85", HUESO = "#f2ede4", GRIS = "#9a958b";
+    // Fondo con luz cálida
+    g.fillStyle = "#050505"; g.fillRect(0, 0, W, H);
+    const luz = g.createRadialGradient(W * .8, 260, 40, W * .8, 260, 900);
+    luz.addColorStop(0, "rgba(212,166,74,.28)"); luz.addColorStop(.5, "rgba(143,29,29,.16)"); luz.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = luz; g.fillRect(0, 0, W, H);
+    // Franjas de poste de barbero arriba y abajo
+    const poste = (y, alto) => { g.save(); g.beginPath(); g.rect(0, y, W, alto); g.clip();
+      const col = ["#c8102e", "#f5f1ea", "#1c3f8c", "#f5f1ea"];
+      for (let x = -alto * 2, i = 0; x < W + alto * 2; x += 34, i++) { g.fillStyle = col[i % 4]; g.beginPath(); g.moveTo(x, y + alto); g.lineTo(x + 34, y + alto); g.lineTo(x + 34 + alto, y); g.lineTo(x + alto, y); g.fill(); }
+      g.restore(); };
+    poste(0, 26); poste(H - 26, 26);
+    // Logo en un cuadro blanco redondeado
+    const logo = conLogo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
+    if (logo) { g.save(); g.beginPath(); g.roundRect(W / 2 - 110, 110, 220, 220, 48); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - 110, 110, 220, 220); g.restore(); }
+    // Título
+    g.textAlign = "center"; g.fillStyle = HUESO; g.font = `900 64px ${DISP}`;
+    g.fillText(cfg.nombre.toUpperCase(), W / 2, 420);
+    const grad = g.createLinearGradient(0, 470, 0, 620); grad.addColorStop(0, ORO2); grad.addColorStop(.6, ORO); grad.addColorStop(1, "#8a6220");
+    g.fillStyle = grad; g.font = `900 200px ${DISP}`; g.fillText("HORARIO", W / 2, 640);
+    // Tarjeta con la semana
+    let y = 720;
+    const alto = 116 * filas.length + 40;
+    g.fillStyle = "rgba(255,255,255,.05)"; g.strokeStyle = "rgba(212,166,74,.45)"; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(80, y, W - 160, alto, 40); g.fill(); g.stroke();
+    y += 20;
+    filas.forEach((f, i) => {
+      const cy = y + 58 + i * 116;
+      if (i) { g.fillStyle = "rgba(255,255,255,.1)"; g.fillRect(130, cy - 58, W - 260, 2); }
+      g.textAlign = "left"; g.fillStyle = HUESO; g.font = `600 46px ${SANS}`; g.fillText(f.dias, 130, cy + 16);
+      g.textAlign = "right"; g.fillStyle = f.horas === "Cerrado" ? "#e0827a" : ORO2; g.font = `800 62px ${DISP}`; g.fillText(f.horas, W - 130, cy + 20);
+    });
+    y += alto + 40;
+    // Días especiales
+    if (especiales.length) {
+      g.textAlign = "center"; g.fillStyle = ORO; g.font = `800 52px ${DISP}`; g.fillText("DÍAS ESPECIALES", W / 2, y + 40); y += 80;
+      especiales.forEach((e) => {
+        g.textAlign = "left"; g.fillStyle = HUESO; g.font = `600 40px ${SANS}`; g.fillText(rangoPub(e), 150, y + 30);
+        g.textAlign = "right"; g.fillStyle = e.txt === "Cerrado" ? "#e0827a" : ORO2; g.font = `800 50px ${DISP}`;
+        g.fillText(e.txt + (e.nota ? `  ·  ${e.nota}`.slice(0, 26) : ""), W - 150, y + 32);
+        y += 72;
+      });
+    }
+    // Llamado a agendar
+    const by = H - 330;
+    g.fillStyle = ORO; g.beginPath(); g.roundRect(140, by, W - 280, 130, 65); g.fill();
+    g.textAlign = "center"; g.fillStyle = "#1a1206"; g.font = `800 64px ${DISP}`; g.fillText("AGENDA TU CITA", W / 2, by + 86);
+    g.fillStyle = GRIS; g.font = `500 34px ${SANS}`;
+    g.fillText(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200);
+    if (cfg.whatsapp) g.fillText(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 250);
+    try { return await new Promise((ok, mal) => { try { c.toBlob(ok, "image/png"); } catch (e) { mal(e); } }); }
+    catch (e) { if (conLogo) return imagenHorario(filas, especiales, false); throw e; }   // sin logo si el navegador no deja exportarlo
+  }
+
+  // Abre la vista previa con los botones para publicar
+  let horarioListo = null;
+  async function publicarHorario() {
+    $("dcTitulo").textContent = "Publicar horario";
+    $("dcCuerpo").innerHTML = `<p class="muted" style="text-align:center;margin:20px 0">Preparando la imagen…</p>`;
+    $("dcAcciones").innerHTML = "";
+    if (!$("dlgCita").open) $("dlgCita").showModal();
+    let semana, filas, especiales, texto, blob;
+    try {
+      ({ data: semana } = await db.from("horario").select("*"));
+      filas = filasSemana(semana || []); especiales = await especialesProximos();
+      texto = textoHorario(filas, especiales); blob = await imagenHorario(filas, especiales);
+    } catch (e) {
+      $("dcCuerpo").innerHTML = `<p class="error" style="text-align:center">No se pudo preparar la imagen. Revisa tu conexión e intenta otra vez.</p>`;
+      return;
+    }
+    const archivo = new File([blob], "horario-barberia.png", { type: "image/png" });
+    horarioListo = { texto, archivo, url: URL.createObjectURL(blob) };
+    const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [archivo] }));
+    $("dcCuerpo").innerHTML = `
+      <p class="muted small" style="margin:0 0 10px;text-align:center">La página web ya tiene este horario. Ahora publícalo en WhatsApp.</p>
+      <img src="${horarioListo.url}" alt="Imagen del horario" class="prev-horario">
+      <details class="prev-texto"><summary>Ver el texto que se manda</summary><pre>${esc(texto)}</pre></details>`;
+    $("dcAcciones").innerHTML = `
+      ${puedeCompartir ? `<button class="ancho wa-btn" id="phCompartir">Compartir en WhatsApp</button>`
+        : `<a class="boton ancho wa-btn" id="phWa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">Mandar texto por WhatsApp</a>`}
+      <a class="boton" id="phDescargar" href="${horarioListo.url}" download="horario-barberia.png" style="color:var(--text);border-color:var(--line)">Descargar imagen</a>
+      <button id="phCopiar">Copiar texto</button>
+      <p class="aviso-form ancho" style="text-align:center">${puedeCompartir ? "Elige WhatsApp y luego «Mi estado», un grupo o tu lista de difusión." : "En la computadora: descarga la imagen y súbela a tu Estado desde el celular."}</p>`;
+    $("dcAcciones").onclick = async (e) => {
+      const id = e.target.closest("[id]")?.id;
+      if (id === "phCompartir") {
+        try { await navigator.share({ files: [horarioListo.archivo], text: horarioListo.texto }); }
+        catch (err) { if (err?.name !== "AbortError") { try { await navigator.share({ text: horarioListo.texto }); } catch {} } }
+      }
+      if (id === "phCopiar") {
+        try { await navigator.clipboard.writeText(horarioListo.texto); toast("Texto copiado"); } catch { prompt("Copia el texto:", horarioListo.texto); }
+      }
+    };
+  }
+  $("btnPublicarHorario").onclick = publicarHorario;
 
   iniciar();
   </script>
