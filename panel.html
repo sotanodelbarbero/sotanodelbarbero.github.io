@@ -285,6 +285,8 @@
     .publicar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: rgba(37,211,102,.35);
       background: linear-gradient(160deg, rgba(37,211,102,.1), rgba(37,211,102,.02)), var(--surface); }
     .publicar-txt { flex: 1; }
+    .publicar-botones { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; }
+    .publicar-botones .ghost { font-size: .875rem; padding: 6px; }
     .wa-btn { display: inline-flex !important; align-items: center; justify-content: center; gap: 10px; flex: none;
       background: #25d366 !important; color: #062b14 !important; border-color: transparent !important; font-weight: 700; padding: 12px 20px; }
     .wa-btn:hover { background: #3ee07a !important; filter: none; }
@@ -475,6 +477,10 @@
       <div class="saludo">
         <h1 class="page-title" id="saludo">Hola</h1>
         <p class="muted" id="saludoFecha"></p>
+      </div>
+      <div id="avisoPublicar" class="card publicar hidden">
+        <div class="publicar-txt"><h2>Publica tu horario de hoy</h2><p class="muted small" style="margin:4px 0 0">Tu imagen ya está lista. Un toque y eliges «Mi estado».</p></div>
+        <button type="button" class="wa-btn" id="btnPublicarHoyInicio"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar en Estado</button>
       </div>
       <div id="primerosPasos" class="card hidden"></div>
       <div id="alertas" class="alertas"></div>
@@ -735,9 +741,12 @@
       <div class="card publicar">
         <div class="publicar-txt">
           <h2>Publicar en WhatsApp</h2>
-          <p class="muted small" style="margin:4px 0 0">La página web se actualiza sola. Con este botón armas una imagen con tu horario y la subes a tu Estado o a tus grupos en dos toques.</p>
+          <p class="muted small" style="margin:4px 0 0">La página web se actualiza sola. La imagen de hoy ya está lista: tócala y elige «Mi estado».</p>
         </div>
-        <button type="button" class="wa-btn" id="btnPublicarHorario"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar horario</button>
+        <div class="publicar-botones">
+          <button type="button" class="wa-btn" id="btnPublicarHoy"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar hoy en mi Estado</button>
+          <button type="button" class="ghost" id="btnPublicarHorario">Otro día o estilo</button>
+        </div>
       </div>
       <div class="card">
         <div class="cal-cab">
@@ -974,6 +983,7 @@
       cargarInicio();
       abrirTabInicial();
       arrancarAyuda();
+      if (esAdmin()) { pintarAvisoPublicar(); setTimeout(prepararHoy, 1500); }
       suscribir();
     }
   }
@@ -1005,7 +1015,7 @@
     TABS.forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== tab));
     window.scrollTo(0, 0);
     if (tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
-    if (tab === "horario") { pintarHorario(); cargarCalendario(); }
+    if (tab === "horario") { pintarHorario(); cargarCalendario(); prepararHoy(); }
     if (tab === "citas") cargarCitas();
     if (tab === "corte") cargarCorte();
     if (tab === "clientes") cargarClientes();
@@ -2932,7 +2942,7 @@
     const { error } = await db.from("horario_especial").upsert(filas, { onConflict: "fecha" });
     if (error) { toast("No se pudo guardar: " + error.message); return false; }
     toast(filas.length === 1 ? "Día actualizado en la web" : `${filas.length} días actualizados en la web`, { accion: { texto: "Publicar en WhatsApp", fn: () => publicarHorario(filas[0]?.fecha) } });
-    calSel.clear(); horarioSemana = []; cargarCalendario();
+    calSel.clear(); horarioSemana = []; cargarCalendario(); prepararHoy();
     if (afectadas.length) setTimeout(() => avisarAfectadas(afectadas.map((c) => ({ id: c.id, fecha: c.fecha, hora: hhmm(c.hora), nombre: c.cliente_nombre, telefono: c.telefono }))), 250);
     return true;
   }
@@ -2991,7 +3001,7 @@
     const { data, error } = await db.from("horario").update({ [f]: valor }).eq("dia", Number(fila.dataset.dia)).select("dia");
     toast(error ? (error.message.includes("check") ? "La hora de cierre debe ser después de la de apertura" : "Error: " + error.message)
       : data?.length ? "Horario guardado en la web" : "No tienes permiso", data?.length ? { accion: { texto: "Publicar en WhatsApp", fn: publicarHorario } } : {});
-    pintarHorario(); horarioSemana = []; cargarCalendario();
+    pintarHorario(); horarioSemana = []; cargarCalendario(); prepararHoy();
   });
 
   // =========================================================
@@ -3326,7 +3336,7 @@
   }
   // Horarios libres reales (para el servicio más básico)
   async function libresDelDia(f) {
-    const base = servicios.filter((s) => s.activo).sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0];
+    const base = servicios.filter((s) => s.activo).sort((a, b) => (a.duracion_min ?? 30) - (b.duracion_min ?? 30) || (a.orden ?? 0) - (b.orden ?? 0))[0];
     if (!base) return [];
     const { data, error } = await db.rpc("horarios_disponibles", { p_fecha: f, p_servicio_id: base.id, p_barbero_id: null });
     return error ? [] : data || [];
@@ -3343,7 +3353,7 @@
       const prox = proximaApertura(info.fecha);
       return [`💈 *${cfg.nombre}*`, "", `🔒 ${cuando} ${t.largo} *cerramos*${info.motivo ? ` (${info.motivo})` : ""}.`,
         prox ? `Te esperamos el ${tituloDia(prox.fecha).largo} desde las ${h12(prox.abre)}.` : "",
-        prox && libres.length ? `⏰ Horarios libres ese día: ${libres.slice(0, 8).map(h12).join(" · ")}${libres.length > 8 ? "…" : ""}` : "",
+        prox && libres.length ? `⏰ Horarios libres ese día: ${libres.map(h12).join(" · ")}` : "",
         "", `📅 Aparta tu cita 👉 ${URL_CITAS}`].filter((x, i, a) => x !== "" || (a[i - 1] !== "" && i > 0)).join("\n");
     }
     return [
@@ -3351,7 +3361,7 @@
       `✅ ${cuando} ${t.largo} abrimos de *${h12(info.abre)} a ${h12(info.cierra)}*`,
       ...info.notas.map((n) => `⚠️ ${n}`),
       info.equipo.length ? `✂️ Te atienden: ${info.equipo.join(", ")}` : "",
-      libres.length ? `⏰ Horarios libres para cita: ${libres.slice(0, 8).map(h12).join(" · ")}${libres.length > 8 ? "…" : ""}` : "⏰ Cupo de citas lleno; ven y tómate un turno",
+      libres.length ? `⏰ Horarios libres para cita: ${libres.map(h12).join(" · ")}` : "⏰ Cupo de citas lleno; ven y tómate un turno",
       "\u200b", `📅 Aparta el tuyo 👉 ${URL_CITAS}`,
     ].filter((x) => x !== "").join("\n").replace(/\u200b/g, "");
   }
@@ -3461,6 +3471,8 @@
     }
   }
 
+  // Dibuja la imagen del día. Se acomoda sola para que quepan TODOS los horarios libres:
+  // con pocos horarios usa letras grandes; con muchos, achica el encabezado y la cuadrícula.
   async function imagenDia(info, libres, estiloId, conLogo = true) {
     const E = ESTILOS[estiloId] || ESTILOS.dorado, W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
     const g = c.getContext("2d");
@@ -3469,84 +3481,98 @@
     const t = tituloDia(info.fecha), ANCHO = E.angosto ? W - 280 : W - 150;
     const brilla = (color, fuerza = 28) => { if (E.brillo && color) { g.shadowColor = color; g.shadowBlur = fuerza; } };
     const sinBrillo = () => { g.shadowBlur = 0; g.shadowColor = "transparent"; };
-    const texto = (s, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(s, x, y); if (glow && E.brillo) { g.fillText(s, x, y); } sinBrillo(); };
+    const texto = (s, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(s, x, y); if (glow && E.brillo) g.fillText(s, x, y); sinBrillo(); };
     const ajusta = (s, peso, max, ancho, fam = DISP) => { let px = max; do { g.font = `${peso} ${px}px ${fam}`; px -= 4; } while (g.measureText(s).width > ancho && px > 20); return `${peso} ${px + 4}px ${fam}`; };
-    // Color o degradado vertical para textos grandes
     const relleno = (col, y0, y1) => { if (!Array.isArray(col)) return col; const gr = g.createLinearGradient(0, y0, 0, y1); col.forEach((c, i) => gr.addColorStop(i / (col.length - 1), c)); return gr; };
-    // En el estilo pizarra los bordes se ven como trazos de gis
     const caja = (x, y, w, h, r, fondo, borde) => { g.fillStyle = fondo; g.strokeStyle = borde; g.lineWidth = 3; if (E.gis) g.setLineDash([10, 6]); g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); g.stroke(); g.setLineDash([]); };
+
+    // ¿Cuánto espacio necesitan los horarios? Con más de 8 se usa el modo compacto.
+    const n = libres.length, compacto = n > 8;
+    const L = compacto
+      ? { logoR: 64, logoY: 150, nombreY: 262, nombreF: 38, pillY: 296, pillH: 70, pillF: 38, palY: 470, palF: 120, horasY: 630, horasF: 160, despues: 690 }
+      : { logoR: 92, logoY: 210, nombreY: 370, nombreF: 46, pillY: 420, pillH: 84, pillF: 44, palY: 660, palF: 150, horasY: 870, horasF: 200, despues: 940 };
+    const LIMITE = H - 375;   // arriba del botón «Agenda tu cita»
 
     pintarFondo(g, E, W, H);
 
-    // Cuadrícula de horarios libres
+    // Cuadrícula de horarios: calcula columnas y tamaño para que quepan todos
     const dibujaLibres = (y, titulo, libres) => {
-      texto(titulo, W / 2, y, ajusta(titulo, 800, 46, ANCHO), E.libresT, "center", E.brillo ? E.libresT : null);
-      y += 36;
-      const cols = E.angosto ? 3 : 4, cw = E.angosto ? 220 : 200, ch = 86, gx = 16;
-      const LIMITE = H - 375;
-      const filasCaben = Math.max(1, Math.min(2, Math.floor((LIMITE - y - 20) / (ch + gx))));
-      const lista = libres.slice(0, cols * filasCaben);
+      texto(titulo, W / 2, y, ajusta(titulo, 800, compacto ? 40 : 46, ANCHO), E.libresT, "center", E.brillo ? E.libresT : null);
+      y += compacto ? 28 : 36;
+      const disponible = LIMITE - y;
+      let cols = libres.length <= 8 ? (E.angosto ? 3 : 4) : (E.angosto ? 4 : 5), gx = compacto ? 12 : 16, ch = compacto ? 72 : 86;
+      let filas = Math.ceil(libres.length / cols);
+      // si no caben, más columnas y cajas más bajas
+      while (filas * (ch + gx) > disponible && (ch > 50 || cols < (E.angosto ? 5 : 6))) {
+        if (ch > 50) ch -= 4; else cols++;
+        filas = Math.ceil(libres.length / cols);
+      }
+      const cw = Math.min(E.angosto ? 220 : 200, Math.floor((ANCHO - (cols - 1) * gx) / cols));
+      const caben = Math.min(libres.length, cols * Math.max(1, Math.floor(disponible / (ch + gx))));
+      const lista = libres.slice(0, caben), fuente = Math.round(Math.min(46, ch * .56, cw * .26));
       lista.forEach((h, i) => {
         const fila = Math.floor(i / cols), enFila = Math.min(cols, lista.length - fila * cols), col = i % cols;
         const x0 = W / 2 - (enFila * cw + (enFila - 1) * gx) / 2 + col * (cw + gx), y0 = y + fila * (ch + gx);
-        if (E.brillo) brilla(E.cajaBorde, 12);
-        caja(x0, y0, cw, ch, 22, E.caja, E.cajaBorde); sinBrillo();
-        texto(h12(h), x0 + cw / 2, y0 + 58, `800 46px ${DISP}`, E.cajaTinta);
+        if (E.brillo) brilla(E.cajaBorde, 10);
+        caja(x0, y0, cw, ch, Math.min(22, ch / 3), E.caja, E.cajaBorde); sinBrillo();
+        texto(h12(h), x0 + cw / 2, y0 + ch / 2 + fuente * .36, `800 ${fuente}px ${DISP}`, E.cajaTinta);
       });
-      const yMas = y + Math.ceil(lista.length / cols) * (ch + gx) + 40;
-      if (libres.length > lista.length && yMas < LIMITE) texto(`y ${libres.length - lista.length} horarios más`, W / 2, yMas, `500 34px ${SANS}`, E.sub);
+      // Solo si de plano no caben (más de ~30 horarios) se avisa cuántos faltan
+      if (libres.length > lista.length) texto(`y ${libres.length - lista.length} horarios más`, W / 2, Math.min(LIMITE, y + Math.ceil(lista.length / cols) * (ch + gx) + 34), `500 30px ${SANS}`, E.sub);
     };
 
     // ----- Logo + nombre -----
     const logo = conLogo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
-    if (logo) { g.save(); g.beginPath(); g.arc(W / 2, 210, 92, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - 92, 118, 184, 184); g.restore();
-      g.strokeStyle = E.pillBorde; g.lineWidth = 4; brilla(E.pillBorde, 30); g.beginPath(); g.arc(W / 2, 210, 96, 0, Math.PI * 2); g.stroke(); sinBrillo(); }
-    texto(cfg.nombre.toUpperCase(), W / 2, 370, `800 46px ${DISP}`, E.sub);
+    if (logo) { const r = L.logoR; g.save(); g.beginPath(); g.arc(W / 2, L.logoY, r, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - r, L.logoY - r, r * 2, r * 2); g.restore();
+      g.strokeStyle = E.pillBorde; g.lineWidth = 4; brilla(E.pillBorde, 30); g.beginPath(); g.arc(W / 2, L.logoY, r + 4, 0, Math.PI * 2); g.stroke(); sinBrillo(); }
+    texto(cfg.nombre.toUpperCase(), W / 2, L.nombreY, `800 ${L.nombreF}px ${DISP}`, E.sub);
 
     // ----- Fecha -----
     const pill = `${t.dia} ${t.num} ${t.mes}`;
-    g.font = `800 44px ${DISP}`; const pw = g.measureText(pill).width + 80;
-    brilla(E.pillBorde, 20); caja(W / 2 - pw / 2, 420, pw, 84, 42, E.pill, E.pillBorde); sinBrillo();
-    texto(pill, W / 2, 477, `800 44px ${DISP}`, E.pillTinta);
+    g.font = `800 ${L.pillF}px ${DISP}`; const pw = g.measureText(pill).width + 70;
+    brilla(E.pillBorde, 20); caja(W / 2 - pw / 2, L.pillY, pw, L.pillH, L.pillH / 2, E.pill, E.pillBorde); sinBrillo();
+    texto(pill, W / 2, L.pillY + L.pillH / 2 + L.pillF * .37, `800 ${L.pillF}px ${DISP}`, E.pillTinta);
 
     let y;
     if (info.abierto) {
       const palabra = t.cual === "HOY" ? "HOY ABRIMOS" : t.cual === "MAÑANA" ? "MAÑANA ABRIMOS" : "ABRIMOS";
-      texto(palabra, W / 2, 660, ajusta(palabra, 900, 150, ANCHO), E.titulo, "center", E.tituloGlow);
+      texto(palabra, W / 2, L.palY, ajusta(palabra, 900, L.palF, ANCHO), E.titulo, "center", E.tituloGlow);
       const horas = `${h12(info.abre)} – ${h12(info.cierra)}`;
-      texto(horas, W / 2, 870, ajusta(horas, 900, 200, ANCHO), relleno(E.horas, 700, 880), "center", E.horasGlow);
-      y = 940;
-      for (const n of info.notas.slice(0, 2)) { texto(`⚠  ${n}`, W / 2, y + 20, ajusta(`⚠  ${n}`, 600, 40, W - 200, SANS), E.malo); y += 64; }
+      texto(horas, W / 2, L.horasY, ajusta(horas, 900, L.horasF, ANCHO), relleno(E.horas, L.horasY - L.horasF, L.horasY), "center", E.horasGlow);
+      y = L.despues;
+      for (const nota of info.notas.slice(0, 2)) { texto(`⚠  ${nota}`, W / 2, y + 18, ajusta(`⚠  ${nota}`, 600, compacto ? 34 : 40, ANCHO - 40, SANS), E.malo); y += compacto ? 50 : 64; }
       if (info.equipo.length) {
-        y += 40; texto("TE ATIENDEN", W / 2, y, `800 42px ${DISP}`, E.sub); y += 34;
-        g.font = `700 40px ${SANS}`;
-        const anchos = info.equipo.slice(0, 6).map((n) => g.measureText(n).width + 64), gap = 18;
+        y += compacto ? 26 : 40; texto("TE ATIENDEN", W / 2, y, `800 ${compacto ? 36 : 42}px ${DISP}`, E.sub); y += compacto ? 22 : 34;
+        const chH = compacto ? 62 : 76, chF = compacto ? 34 : 40;
+        g.font = `700 ${chF}px ${SANS}`;
+        const anchos = info.equipo.slice(0, 6).map((nom) => g.measureText(nom).width + 56), gap = 14;
         const filas = []; let fila = [], ancho = 0;
         anchos.forEach((a, i) => { if (ancho + a > ANCHO - 40 && fila.length) { filas.push(fila); fila = []; ancho = 0; } fila.push(i); ancho += a + gap; });
         if (fila.length) filas.push(fila);
         for (const fl of filas) {
           const total = fl.reduce((s, i) => s + anchos[i], 0) + gap * (fl.length - 1); let x = W / 2 - total / 2;
           for (const i of fl) {
-            brilla(E.chipBorde, 16); caja(x, y, anchos[i], 76, 38, E.chip, E.chipBorde); sinBrillo();
-            texto(info.equipo[i], x + anchos[i] / 2, y + 52, `700 40px ${SANS}`, E.chipTinta); x += anchos[i] + gap;
+            brilla(E.chipBorde, 16); caja(x, y, anchos[i], chH, chH / 2, E.chip, E.chipBorde); sinBrillo();
+            texto(info.equipo[i], x + anchos[i] / 2, y + chH / 2 + chF * .36, `700 ${chF}px ${SANS}`, E.chipTinta); x += anchos[i] + gap;
           }
-          y += 96;
+          y += chH + 14;
         }
       }
-      y += 70;
-      dibujaLibres(y, libres.length ? "HORARIOS LIBRES PARA CITA" : "CITAS LLENAS · VEN POR TU TURNO", libres);
+      y += compacto ? 52 : 70;
+      dibujaLibres(y, n ? "HORARIOS LIBRES PARA CITA" : "CITAS LLENAS · VEN POR TU TURNO", libres);
     } else {
-      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, 700, ajusta(t.dia, 900, 140, ANCHO), E.titulo);
-      texto("CERRADO", W / 2, 900, ajusta("CERRADO", 900, 230, ANCHO), E.malo, "center", E.brillo ? E.malo : null);
-      y = 990;
-      if (info.motivo) { texto(info.motivo, W / 2, y + 30, ajusta(info.motivo, 600, 54, ANCHO - 40, SANS), E.tinta); y += 90; }
+      const dY = compacto ? 520 : 700, cY = compacto ? 700 : 900;
+      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, dY, ajusta(t.dia, 900, compacto ? 110 : 140, ANCHO), E.titulo);
+      texto("CERRADO", W / 2, cY, ajusta("CERRADO", 900, compacto ? 190 : 230, ANCHO), E.malo, "center", E.brillo ? E.malo : null);
+      y = cY + 90;
+      if (info.motivo) { texto(info.motivo, W / 2, y, ajusta(info.motivo, 600, compacto ? 44 : 54, ANCHO - 40, SANS), E.tinta); y += compacto ? 60 : 90; }
       const prox = proximaApertura(info.fecha);
       if (prox) {
-        y += 60; texto("TE ESPERAMOS", W / 2, y, `800 46px ${DISP}`, E.sub); y += 80;
+        y += compacto ? 30 : 60; texto("TE ESPERAMOS", W / 2, y, `800 ${compacto ? 38 : 46}px ${DISP}`, E.sub); y += compacto ? 66 : 80;
         const pt = tituloDia(prox.fecha);
-        texto(`${pt.dia} ${pt.num} ${pt.mes}`, W / 2, y, ajusta(`${pt.dia} ${pt.num} ${pt.mes}`, 900, 88, ANCHO), relleno(E.horas, y - 80, y), "center", E.horasGlow); y += 76;
-        texto(`desde las ${h12(prox.abre)}`, W / 2, y, `600 46px ${SANS}`, E.tinta);
-        if (libres.length) dibujaLibres(y + 110, `APARTA TU LUGAR PARA EL ${pt.dia}`, libres);
+        texto(`${pt.dia} ${pt.num} ${pt.mes}`, W / 2, y, ajusta(`${pt.dia} ${pt.num} ${pt.mes}`, 900, compacto ? 72 : 88, ANCHO), relleno(E.horas, y - 80, y), "center", E.horasGlow); y += compacto ? 58 : 76;
+        texto(`desde las ${h12(prox.abre)}`, W / 2, y, `600 ${compacto ? 38 : 46}px ${SANS}`, E.tinta);
+        if (libres.length) dibujaLibres(y + (compacto ? 80 : 110), `APARTA TU LUGAR PARA EL ${pt.dia}`, libres);
       }
     }
 
@@ -3559,6 +3585,41 @@
 
     try { return await new Promise((ok, mal) => { try { c.toBlob(ok, "image/png"); } catch (e) { mal(e); } }); }
     catch (e) { if (conLogo) return imagenDia(info, libres, estiloId, false); throw e; }
+  }
+
+  // ---------- Publicar HOY en un toque ----------
+  // La imagen de hoy se prepara sola en segundo plano; el botón la comparte al instante.
+  let listoHoy = null, preparando = null;
+  async function prepararHoy() {
+    if (!esAdmin() && !miBarbero) return;
+    const hoy = hoyISO(), estilo = pubEstilo;
+    preparando = (async () => {
+      try {
+        await cargarPubDatos();
+        const info = infoDia(hoy), prox = info.abierto ? null : proximaApertura(hoy);
+        const libres = info.abierto ? await libresDelDia(hoy) : prox ? await libresDelDia(prox.fecha) : [];
+        const blob = await imagenDia(info, libres, estilo);
+        listoHoy = { fecha: hoy, estilo, hora: Date.now(), texto: textoDia(info, libres), archivo: new File([blob], `horario-${hoy}.png`, { type: "image/png" }) };
+      } catch { listoHoy = null; }
+    })();
+    return preparando;
+  }
+  async function publicarHoyYa() {
+    const hoy = hoyISO();
+    const fresca = listoHoy && listoHoy.fecha === hoy && listoHoy.estilo === pubEstilo && Date.now() - listoHoy.hora < 10 * 60000;
+    const puede = fresca && navigator.canShare && navigator.canShare({ files: [listoHoy.archivo] });
+    if (!puede) { publicarHorario(hoy); prepararHoy(); return; }   // sin imagen lista o en computadora: abrir el diálogo
+    try {
+      await navigator.share({ files: [listoHoy.archivo], text: listoHoy.texto });
+      try { localStorage.setItem("publicado-" + hoy, "1"); } catch {}
+      toast("¡Listo! Horario de hoy publicado"); pintarAvisoPublicar();
+    } catch (err) { if (err?.name !== "AbortError") publicarHorario(hoy); }
+  }
+  // Recordatorio en Inicio: «Publica tu horario de hoy» (se quita al publicar)
+  function pintarAvisoPublicar() {
+    const el = $("avisoPublicar"); if (!el) return;
+    let ya = false; try { ya = localStorage.getItem("publicado-" + hoyISO()) === "1"; } catch {}
+    el.classList.toggle("hidden", !esAdmin() || ya);
   }
 
   // ---------- Diálogo: elegir día y estilo, vista previa y compartir ----------
@@ -3582,7 +3643,7 @@
     $("dcCuerpo").onclick = (e) => {
       const d = e.target.closest("[data-pdia]"), s = e.target.closest("[data-pestilo]");
       if (d) { pubDia = d.dataset.pdia; $("dcCuerpo").querySelectorAll("[data-pdia]").forEach((x) => x.setAttribute("aria-pressed", String(x === d))); armarPublicacion(); }
-      if (s) { pubEstilo = s.dataset.pestilo; try { localStorage.setItem("pub-estilo", pubEstilo); } catch {} $("dcCuerpo").querySelectorAll("[data-pestilo]").forEach((x) => x.setAttribute("aria-pressed", String(x === s))); armarPublicacion(); }
+      if (s) { pubEstilo = s.dataset.pestilo; try { localStorage.setItem("pub-estilo", pubEstilo); } catch {} prepararHoy(); $("dcCuerpo").querySelectorAll("[data-pestilo]").forEach((x) => x.setAttribute("aria-pressed", String(x === s))); armarPublicacion(); }
     };
     armarPublicacion();
   }
@@ -3622,13 +3683,17 @@
     $("dcAcciones").onclick = async (e) => {
       const id = e.target.closest("[id]")?.id;
       if (id === "phCompartir") {
-        try { await navigator.share({ files: [horarioListo.archivo], text: horarioListo.texto }); }
+        try { await navigator.share({ files: [horarioListo.archivo], text: horarioListo.texto });
+          if (pubDia === hoyISO()) { try { localStorage.setItem("publicado-" + pubDia, "1"); } catch {} pintarAvisoPublicar(); }
+          toast("¡Listo! Publicado"); }
         catch (err) { if (err?.name !== "AbortError") { try { await navigator.share({ text: horarioListo.texto }); } catch {} } }
       }
       if (id === "phCopiar") { try { await navigator.clipboard.writeText(horarioListo.texto); toast("Texto copiado"); } catch { prompt("Copia el texto:", horarioListo.texto); } }
     };
   }
   $("btnPublicarHorario").onclick = () => publicarHorario();
+  $("btnPublicarHoy").onclick = publicarHoyYa;
+  $("btnPublicarHoyInicio").onclick = publicarHoyYa;
 
 
   iniciar();
