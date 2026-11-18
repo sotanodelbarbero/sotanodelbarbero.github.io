@@ -2455,6 +2455,7 @@
         <button data-e="editar" data-bid="${b.id}">Cambiar nombre</button>
         ${p && !yo ? `<button class="danger" data-e="quitar" data-uid="${p.user_id}">Quitar acceso</button>` : ""}
         <button class="ghost${b.activo ? " danger" : ""}" data-e="baja" data-bid="${b.id}">${b.activo ? "Dar de baja" : "Reactivar"}</button>
+        ${!b.activo && esAdmin() ? `<button class="danger" data-e="eliminar" data-bid="${b.id}">Eliminar para siempre</button>` : ""}
       </div>`;
   }
 
@@ -2545,6 +2546,32 @@
       });
 
     if (a === "perfil") abrirPerfil(bid);
+
+    // Eliminar para siempre (solo si nunca cobró nada; si tiene historial se queda dado de baja)
+    if (a === "eliminar") {
+      const { count, error: e1 } = await db.from("visitas").select("id", { count: "exact", head: true }).eq("barbero_id", b.id);
+      if (e1) return toast("No se pudo revisar su historial: " + e1.message, { tipo: "error" });
+      if (count) return abrirSimple(`No se puede eliminar a ${b.nombre}`,
+        `<p style="margin:0">Tiene <b>${count} ${count === 1 ? "corte" : "cortes"}</b> en su historial. Si se borra, se descuadran la caja, las comisiones y los reportes de esos días.</p>
+         <p class="aviso-form">Ya está dado de baja: no aparece para citas, ni para atender, ni en la página de los clientes. Solo lo ves en Equipo → «Dados de baja».</p>`,
+        async () => null);
+      const cuenta = perfiles.find((x) => x.barbero_id === b.id && x.rol);
+      abrirSimple(`Eliminar a ${b.nombre}`,
+        `<p style="margin:0">Se borra por completo: su turno, sus días libres${cuenta ? " y su acceso al panel" : ""}. Sus citas pasan a «Por asignar».</p>
+         <p class="aviso-form" style="color:var(--bad)">No se puede deshacer.</p>`,
+        async () => {
+          if (cuenta) { const { error } = await db.from("perfiles").update({ rol: null }).eq("user_id", cuenta.user_id); if (error) return "No se pudo quitar su acceso: " + error.message; }
+          const r1 = await db.from("citas").update({ barbero_id: null }).eq("barbero_id", b.id);
+          if (r1.error) return "No se pudieron pasar sus citas a «Por asignar»: " + r1.error.message;
+          const { data, error } = await db.from("barberos").delete().eq("id", b.id).select("id");
+          if (error) return error.message.includes("foreign key") ? "Tiene registros ligados y no se puede borrar; se queda dado de baja." : "No se pudo eliminar: " + error.message;
+          if (!data?.length) return "No tienes permiso para eliminar barberos.";
+          toast(`${b.nombre} eliminado`);
+          if ($("dlgPerfil").open) $("dlgPerfil").close();
+          await cargarCatalogos(); await pintarEquipo(); cargarCitasHoy();
+          return null;
+        });
+    }
 
     if (a === "baja") {
       if (!b.activo) {

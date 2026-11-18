@@ -630,5 +630,30 @@ await db.exec(`drop schema realtime cascade`);
 const tR3 = await turno("Yael Paz", "5550505053");
 prueba("Y sin Realtime del todo, también", !!tR3?.token);
 
+
+seccion("EQUIPO: eliminar un barbero para siempre");
+await como(null);
+const BX = await uno(`insert into barberos (nombre, activo) values ('Barbero de prueba', true) returning id`);
+await db.exec(`insert into barbero_turno (barbero_id, dia, entra, sale) values (${BX}, 2, '10:00', '15:00');
+  insert into bloqueos (fecha_ini, fecha_fin, barbero_id, motivo) values ('2026-12-29', '2026-12-29', ${BX}, 'Libre');
+  insert into citas (fecha, hora, duracion_min, cliente_nombre, telefono, servicio_id, barbero_id) values ('2026-12-29', '12:00', 30, 'Zoe Paz', '5560606060', ${CORTE}, ${BX});`);
+await como(ADMIN);
+await q(`update citas set barbero_id = null where barbero_id = $1`, [BX]);
+prueba("Alejandro elimina a un barbero sin cortes: se borra", (await q(`delete from barberos where id = $1 returning id`, [BX])).length === 1);
+await como(null);
+prueba("Su turno y sus días libres se borran con él", (await uno(`select count(*)::int from barbero_turno where barbero_id = $1`, [BX])) === 0 && (await uno(`select count(*)::int from bloqueos where barbero_id = $1`, [BX])) === 0);
+prueba("Su cita sigue apartada, ahora «Por asignar»", (await uno(`select barbero_id from citas where cliente_nombre = 'Zoe Paz'`)) === null);
+const conCortes = await uno(`select barbero_id from visitas where estado = 'cobrado' and barbero_id is not null limit 1`);
+const BZ = await uno(`insert into barberos (nombre) values ('Otro de prueba') returning id`);
+await db.exec(`set role authenticated`);
+await como(ADMIN);
+prueba("Un barbero con cortes cobrados NO se puede borrar (no se descuadra la caja)", !!(await error(`delete from barberos where id = $1`, [conCortes])));
+await como(BARB);
+prueba("Un barbero no puede eliminar a otro", (await q(`delete from barberos where id = $1 returning id`, [BZ])).length === 0);
+await como(ADMIN);
+prueba("…Alejandro sí", (await q(`delete from barberos where id = $1 returning id`, [BZ])).length === 1);
+await db.exec(`reset role`);
+await como(null);
+
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }
