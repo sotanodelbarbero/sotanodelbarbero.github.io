@@ -774,7 +774,7 @@
         <p class="footnote" style="margin:10px 0 0">Toca uno o varios días para cambiarles el horario o cerrarlos. Los números en la esquina son las citas apartadas.</p>
         <div id="calBarra" class="cal-barra hidden">
           <b id="calSel"></b>
-          <button class="primary" id="calAbrir">Abrir con horario…</button>
+          <button class="primary" id="calAbrir">Horario y quién trabaja…</button>
           <button id="calCerrar" class="danger">Cerrar</button>
           <button id="calNormal">Volver al normal</button>
           <button class="ghost" id="calLimpiar">Quitar selección</button>
@@ -940,6 +940,7 @@
   const hoyISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
 
   let turnos = [];   // barbero_turno (12_turnos.sql): días y horas de cada barbero con turno propio
+  let turnosDia = [];   // barbero_turno_dia (13_turno_dia.sql): quién trabaja en una fecha específica
   let user = null, rol = null, miBarbero = null, servicios = [], barberos = [], visitas = [], canal = null;
   let productos = [], ventasHoy = [];
   // Importe de una venta de producto y suma de varias
@@ -1085,13 +1086,15 @@
 
   // ---------- Catálogos ----------
   async function cargarCatalogos() {
-    const [s, b, p, t] = await Promise.all([
+    const [s, b, p, t, td] = await Promise.all([
       db.from("servicios").select("*").order("orden").order("id"),
       db.from("barberos").select("*").order("nombre"),
       db.from("productos").select("*").order("nombre"),
       db.from("barbero_turno").select("*"),
+      db.from("barbero_turno_dia").select("*").gte("fecha", sumarDia(hoyISO(), -7)),
     ]);
     turnos = t?.error ? [] : t?.data || [];   // vacío si aún no se ejecuta 12_turnos.sql
+    turnosDia = td?.error ? [] : td?.data || [];
     servicios = s.data || []; barberos = b.data || [];
     productos = p.data || []; // vacío si aún no se ejecuta 06_productos.sql
   }
@@ -2563,14 +2566,14 @@
     const horas = [];
     for (let t = ini; t <= fin; t += 30) horas.push(`<span style="top:${(t - ini) * PX}px">${t % 60 ? "" : deMin(t)}</span>`);
 
-    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
     const fueraDe = (colId) => {   // franjas «Fuera de turno» del barbero
-      const b = colId && barbero(colId); if (!b?.usa_turno) return "";
-      const t = turnoDia(b, dow), franja = (a, z) => z > a ? `<div class="ag-bloqueo fuera" style="top:${(a - ini) * PX}px;height:${(z - a) * PX}px">Fuera de turno</div>` : "";
+      const b = colId && barbero(colId); if (!b) return "";
+      const t = turnoFecha(b, fecha); if (t && !t.entra) return "";
+      const franja = (a, z) => z > a ? `<div class="ag-bloqueo fuera" style="top:${(a - ini) * PX}px;height:${(z - a) * PX}px">Fuera de turno</div>` : "";
       if (!t) return franja(ini, fin).replace("Fuera de turno", "No trabaja hoy");
       return franja(ini, Math.min(aMin(t.entra), fin)) + franja(Math.max(aMin(t.sale), ini), fin);
     };
-    const subTurno = (k) => { const b = k.id && barbero(k.id); if (!b?.usa_turno) return ""; const t = turnoDia(b, dow); return t ? ` · ${t.entra}–${t.sale}` : " · descansa"; };
+    const subTurno = (k) => { const b = k.id && barbero(k.id); if (!b) return ""; const t = turnoFecha(b, fecha); return !t ? " · descansa" : t.entra ? ` · ${t.entra}–${t.sale}` : ""; };
     const bloquesDe = (colId) => fueraDe(colId) + bloqueosDia.filter((b) => !b.barbero_id || b.barbero_id === colId).map((b) => {
       const bi = b.hora_ini ? Math.max(aMin(b.hora_ini), ini) : ini, bf = b.hora_fin ? Math.min(aMin(b.hora_fin), fin) : fin;
       if (bf <= bi) return "";
@@ -3038,19 +3041,68 @@
     abrirSimple(fechas.length === 1 ? `Horario del ${fechaLarga(fechas[0])}` : `Horario de ${fechas.length} días`,
       `<div class="fila"><div><label for="cAbre">Abre</label><input type="time" id="cAbre" step="1800" value="${hhmm(d.abre) || "10:00"}"></div>
          <div><label for="cCierra">Cierra</label><input type="time" id="cCierra" step="1800" value="${hhmm(d.cierra) || "20:00"}"></div></div>
+       <h3 class="pf-t" style="margin:16px 0 2px">¿Quién trabaja${fechas.length === 1 ? " ese día" : ""}?</h3>
+       <p class="muted small" style="margin:0 0 4px">Palomea a quien viene y a qué hora entra y sale. Las citas con cada uno solo se apartan en su horario.</p>
+       <div id="cEquipo">${quienTrabajaFilas(fechas[0], hhmm(d.abre) || "10:00", hhmm(d.cierra) || "20:00")}</div>
        <label for="cNota">Nota (opcional)</label><input id="cNota" maxlength="60" placeholder="Horario de temporada, evento…">
        <p class="aviso-form">Las citas se ofrecen cada 30 minutos dentro de este horario.</p>`,
       async () => {
         const abre = $("cAbre").value, cierra = $("cCierra").value;
         if (!abre || !cierra || cierra <= abre) return "La hora de cierre debe ser después de la de apertura.";
+        const equipo = leerQuienTrabaja();
+        if (equipo.length && !equipo.some((x) => x.trabaja)) return "Palomea al menos a un barbero, o mejor cierra el día.";
+        const mal = equipo.find((x) => x.trabaja && (!x.entra || !x.sale || x.sale <= x.entra));
+        if (mal) return `${barbero(mal.barbero_id)?.nombre}: la hora de salida debe ser después de la de entrada.`;
+        const fuera = equipo.find((x) => x.trabaja && (x.entra < abre || x.sale > cierra));
+        if (fuera) return `${barbero(fuera.barbero_id)?.nombre} queda fuera del horario de la barbería (${abre} a ${cierra}).`;
         const ok = await guardarDias(fechas.map((fecha) => ({ fecha, abierto: true, abre, cierra, nota: $("cNota").value.trim() || null })), await citasEnDias(fechas, abre, cierra));
-        return ok ? null : "No se guardó.";
+        if (!ok) return "No se guardó.";
+        if (equipo.length) {
+          const { error } = await db.rpc("guardar_turno_dias", { p_fechas: fechas, p_turnos: equipo });
+          if (error) toast(error.message.includes("guardar_turno_dias") ? "El horario se guardó, pero falta ejecutar supabase/13_turno_dia.sql para guardar quién trabaja." : "No se guardó quién trabaja: " + error.message);
+          else { await cargarCatalogos(); prepararHoy(); if (visible("citas")) cargarCitas(); }
+        }
+        return null;
       });
+    // Si cambian la hora de la barbería, los que tenían esa misma hora se mueven con ella
+    let antes = { abre: $("cAbre").value, cierra: $("cCierra").value };
+    const mover = (campo, cual) => {
+      const nuevo = $(campo).value; if (!nuevo) return;
+      document.querySelectorAll(`#cEquipo [data-t="${cual === "abre" ? "entra" : "sale"}"]`).forEach((i) => { if (i.value === antes[cual]) i.value = nuevo; });
+      antes[cual] = nuevo;
+    };
+    $("cAbre").addEventListener("change", () => mover("cAbre", "abre"));
+    $("cCierra").addEventListener("change", () => mover("cCierra", "cierra"));
+    $("cEquipo").addEventListener("change", (e) => {
+      if (e.target.dataset.t !== "on") return;
+      e.target.closest("[data-qb]").querySelectorAll('input[type="time"]').forEach((i) => (i.disabled = !e.target.checked));
+    });
   };
+  // Filas «¿Quién trabaja?»: cada barbero activo con lo que ya tenía ese día (o su turno, o todo el horario)
+  function quienTrabajaFilas(fecha, abre, cierra) {
+    const lista = barberos.filter((b) => b.activo);
+    if (!lista.length) return `<p class="muted small">Agrega a tus barberos en <b>Equipo</b> para elegir quién trabaja.</p>`;
+    return lista.map((b) => {
+      const t = turnoFecha(b, fecha), trabaja = !!t;
+      const entra = t?.entra && t.entra >= abre && t.entra < cierra ? t.entra : abre, sale = t?.sale && t.sale <= cierra && t.sale > entra ? t.sale : cierra;
+      return `<div class="turno-fila" data-qb="${b.id}">
+        <label class="turno-dia"><input type="checkbox" data-t="on" ${trabaja ? "checked" : ""}> ${esc(b.nombre)}</label>
+        <input type="time" step="1800" data-t="entra" value="${entra}" ${trabaja ? "" : "disabled"} aria-label="Entra">
+        <input type="time" step="1800" data-t="sale" value="${sale}" ${trabaja ? "" : "disabled"} aria-label="Sale">
+      </div>`;
+    }).join("");
+  }
+  const leerQuienTrabaja = () => [...document.querySelectorAll("#cEquipo [data-qb]")].map((f) => {
+    const on = f.querySelector('[data-t="on"]').checked;
+    return on ? { barbero_id: Number(f.dataset.qb), trabaja: true, entra: f.querySelector('[data-t="entra"]').value, sale: f.querySelector('[data-t="sale"]').value }
+      : { barbero_id: Number(f.dataset.qb), trabaja: false };
+  });
   $("calNormal").onclick = async () => {
     const fechas = [...calSel];
     const { error } = await db.from("horario_especial").delete().in("fecha", fechas);
     if (error) return toast("Error: " + error.message);
+    await db.rpc("guardar_turno_dias", { p_fechas: fechas, p_turnos: null });   // quién trabaja vuelve a su turno de la semana
+    await cargarCatalogos(); prepararHoy();
     toast(fechas.length === 1 ? "El día vuelve a su horario normal" : "Los días vuelven a su horario normal");
     calSel.clear(); cargarCalendario();
   };
@@ -3087,6 +3139,12 @@
   function turnoDia(b, dia) {
     if (!b.usa_turno) return { entra: null, sale: null };
     const t = turnoDe(b.id, dia); return t ? { entra: hhmm(t.entra), sale: hhmm(t.sale) } : null;
+  }
+  // Igual, pero para una fecha: lo que Alejandro puso ese día manda sobre la semana
+  function turnoFecha(b, fecha) {
+    const x = turnosDia.find((t) => t.barbero_id === b.id && t.fecha === fecha);
+    if (x) return x.trabaja ? { entra: hhmm(x.entra), sale: hhmm(x.sale), delDia: true } : null;
+    return turnoDia(b, partesFecha(fecha).dow);
   }
   // "Mar a Vie 10:00–15:00 · Sáb 14:00–20:00"
   function turnoTxt(b) {
@@ -3361,7 +3419,7 @@
       ["#btnPublicarHoy", "Publicar en tu Estado", "Un toque: se abre WhatsApp con la imagen de tu horario de hoy, eliges «Mi estado» y listo. La imagen ya viene con los horarios libres para cita."],
       ["#btnPublicarHorario", "Otro día o estilo", "Para publicar el de mañana u otro día, o cambiar el diseño de la imagen. Hay 10 estilos."],
       ["#tab-horario .cal-cab", "Cambiar de mes", "Con las flechas ves el mes anterior o el siguiente."],
-      ["#calendario", "Días especiales", "Toca uno o varios días. Abajo salen los botones para cerrarlos (festivos, vacaciones), darles otro horario o regresarlos al normal."],
+      ["#calendario", "Días especiales", "Toca uno o varios días. Abajo salen los botones para cerrarlos (festivos, vacaciones), o darles otro horario y elegir quién trabaja y a qué hora. «Volver al normal» los regresa como estaban."],
       ["#tab-horario .cal-ley", "Los colores", "Azul: horario normal. Dorado con ★: horario especial. Rojo: cerrado. El número en la esquina son las citas apartadas ese día."],
       ["#listaTurnos", "Turnos de los barberos", "Si un barbero trabaja solo en la mañana o en la tarde, toca «Cambiar» y ponle su turno. Las citas con él solo se apartan dentro de su turno."],
       ["#listaHorario", "Horario de cada semana", "Palomea los días que abres y escribe a qué hora abres y cierras. Se repite todas las semanas; para un día distinto usa el calendario."],
@@ -3649,8 +3707,8 @@
     const notas = delDia.filter((b) => !b.barbero_id && b.hora_ini).map((b) => `${b.motivo || "Cerrado"} ${h12(b.hora_ini)} – ${h12(b.hora_fin)}`);
     if (e?.abierto && e.nota) notas.unshift(e.nota);
     const fueraTodoElDia = new Set(delDia.filter((b) => b.barbero_id && !b.hora_ini).map((b) => b.barbero_id));
-    const equipo = barberos.filter((b) => b.activo && !fueraTodoElDia.has(b.id) && turnoDia(b, pf.dow)).map((b) => {
-      const t = turnoDia(b, pf.dow);
+    const equipo = barberos.filter((b) => b.activo && !fueraTodoElDia.has(b.id) && turnoFecha(b, f)).map((b) => {
+      const t = turnoFecha(b, f);
       return t.entra && abierto && (hhmm(t.entra) !== hhmm(abre) || hhmm(t.sale) !== hhmm(cierra)) ? `${b.nombre} ${h12(t.entra)}–${h12(t.sale)}` : b.nombre;
     });
     return { fecha: f, abierto, abre: abierto ? hhmm(abre) : null, cierra: abierto ? hhmm(cierra) : null, motivo, notas, equipo, especial: !!e };

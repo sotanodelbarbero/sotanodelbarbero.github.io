@@ -33,12 +33,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -554,6 +554,41 @@ prueba("Su lista pública ya no trae turno", (await uno(`select barberos_publico
 await db.exec(`set role anon`);
 prueba("Un visitante no ve la tabla de turnos", (await error(`select * from barbero_turno`)) !== null || (await q(`select * from barbero_turno`)).length === 0);
 prueba("Un visitante no puede guardar turnos", !!(await error(`select guardar_turno(1, false, null)`)));
+await db.exec(`reset role`);
+
+
+seccion("TURNO DEL DÍA: quién trabaja en una fecha específica");
+await como(null);
+await db.exec(`update citas set estado = 'cancelada' where fecha >= '2026-12-14'`);
+await como(ADMIN);
+await uno(`select guardar_turno(1, true, $1)`, [JSON.stringify([1, 2, 3, 4, 5, 6].map((d) => ({ dia: d, entra: "10:00", sale: "15:00" })))]);
+await uno(`select guardar_turno(2, false, null)`);
+const F1 = "2026-12-16", F2 = "2026-12-17";   // miércoles y jueves
+await como(null);
+prueba("Antes: el miércoles con Juan solo de 10:00 a 14:30 (su turno de la semana)", (await libres(F1, CORTE, 1)).at(-1) === "14:30");
+await como(ADMIN);
+prueba("Alejandro dice que el miércoles y jueves Juan viene de 15:00 a 20:00 y Pedro no viene",
+  await uno(`select guardar_turno_dias($1, $2)`, [[F1, F2], JSON.stringify([{ barbero_id: 1, trabaja: true, entra: "15:00", sale: "20:00" }, { barbero_id: 2, trabaja: false }])]) === true);
+prueba("Se guardó una fila por barbero y por día", (await uno(`select count(*)::int from barbero_turno_dia`)) === 4);
+prueba("No acepta que salga antes de entrar",
+  (await error(`select guardar_turno_dias($1, $2)`, [[F1], JSON.stringify([{ barbero_id: 1, trabaja: true, entra: "18:00", sale: "10:00" }])]))?.includes("después"));
+prueba("Tras el error se conserva lo anterior", (await uno(`select count(*)::int from barbero_turno_dia`)) === 4);
+await como(BARB);
+prueba("Un barbero no puede cambiarlo", (await error(`select guardar_turno_dias($1, null)`, [[F1]]))?.includes("administrador"));
+await como(null);
+const m1 = await libres(F1, CORTE, 1);
+prueba("El miércoles Juan sale de 15:00 a 19:30 (el día manda sobre la semana)", m1[0] === "15:00" && m1.at(-1) === "19:30", JSON.stringify(m1));
+prueba("Pedro ese día no tiene horarios", (await libres(F1, CORTE, 2)).length === 0);
+prueba("Con cualquiera, en la mañana no hay nadie", !(await libres(F1, CORTE)).includes("11:00") && (await libres(F1, CORTE)).includes("16:00"));
+prueba("No se puede apartar con Pedro ese día", (await error(`select agendar_cita('Ulises Paz','5541414141',$1,2,$2,'16:00')`, [CORTE, F1]))?.includes("no está disponible"));
+prueba("El viernes sigue igual: Juan en su turno de la semana, Pedro todo el día", (await libres("2026-12-18", CORTE, 1)).at(-1) === "14:30" && (await libres("2026-12-18", CORTE, 2)).length === 20);
+await como(ADMIN);
+prueba("«Volver al normal» quita lo del miércoles", await uno(`select guardar_turno_dias($1, null)`, [[F1]]) === true);
+await como(null);
+prueba("…y el miércoles regresa al turno de la semana", (await libres(F1, CORTE, 1)).at(-1) === "14:30" && (await libres(F1, CORTE, 2)).length === 20);
+prueba("El jueves conserva su cambio", (await libres(F2, CORTE, 2)).length === 0);
+await db.exec(`set role anon`);
+prueba("Un visitante no ve quién trabaja cada día", (await error(`select * from barbero_turno_dia`)) !== null || (await q(`select * from barbero_turno_dia`)).length === 0);
 await db.exec(`reset role`);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
