@@ -39,6 +39,7 @@
     dialog { background: #121211; border: 1px solid var(--line); }
     input[type="date"], input[type="time"] { color-scheme: dark; }
     .seg button[aria-pressed="true"] { background: var(--oro); color: #08131f; box-shadow: none; }
+    .seg-pulgar { background: var(--oro) !important; box-shadow: 0 2px 8px rgba(111,168,220,.25) !important; }   /* la pastilla que se desliza (movimiento.js) */
     @media (max-width: 768px) {
       .tabs { overflow-x: auto; scrollbar-width: none; }
       .tabs::-webkit-scrollbar { display: none; }
@@ -285,6 +286,13 @@
     .publicar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: rgba(37,211,102,.35);
       background: linear-gradient(160deg, rgba(37,211,102,.1), rgba(37,211,102,.02)), var(--surface); }
     .publicar-txt { flex: 1; }
+    .consejo { background: rgba(111,168,220,.1); border: 1px solid rgba(111,168,220,.3); border-radius: 14px; padding: 10px 12px; margin: 4px 0 12px; }
+    .consejo-t { display: flex; align-items: center; gap: 8px; }
+    .consejo-t svg { width: 18px; height: 18px; color: var(--oro-2); flex: none; }
+    .consejo-t b { flex: 1; font-size: .9375rem; }
+    .consejo-x { padding: 2px 8px; font-size: .8125rem; color: var(--muted); }
+    .consejo ol { margin: 6px 0 0; padding-left: 20px; font-size: .875rem; line-height: 1.45; color: var(--text); }
+    .consejo li + li { margin-top: 3px; }
     .turno-fila { display: grid; grid-template-columns: minmax(0, 1fr) 100px 100px; gap: 6px; align-items: center; margin-top: 6px; }
     .turno-fila .turno-dia { margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px; min-width: 0; }
     .turno-fila input[type="time"] { width: 100%; min-width: 0; padding-left: 8px; padding-right: 4px; }
@@ -3043,6 +3051,11 @@
     abrirSimple(fechas.length === 1 ? `Horario del ${fechaLarga(fechas[0])}` : `Horario de ${fechas.length} días`,
       `<div class="fila"><div><label for="cAbre">Abre</label><input type="time" id="cAbre" step="1800" value="${hhmm(d.abre) || "10:00"}"></div>
          <div><label for="cCierra">Cierra</label><input type="time" id="cCierra" step="1800" value="${hhmm(d.cierra) || "20:00"}"></div></div>
+       ${consejo("dia", "Cómo funciona", [
+        "Arriba: a qué hora abre y cierra la barbería ese día.",
+        "Abajo: palomea a quien viene y a qué hora entra y sale. Ya viene llenado con su turno normal.",
+        "Si cambias la hora de la barbería, los que tenían esa hora se mueven con ella.",
+        "Solo cambia este día. «Volver al normal» lo regresa como estaba."])}
        <h3 class="pf-t" style="margin:16px 0 2px">¿Quién trabaja${fechas.length === 1 ? " ese día" : ""}?</h3>
        <p class="muted small" style="margin:0 0 4px">Palomea a quien viene y a qué hora entra y sale. Las citas con cada uno solo se apartan en su horario.</p>
        <div id="cEquipo">${quienTrabajaFilas(fechas[0], hhmm(d.abre) || "10:00", hhmm(d.cierra) || "20:00")}</div>
@@ -3187,6 +3200,11 @@
       </div>`;
     };
     abrirSimple(`Horario de ${b.nombre}`, `
+      ${consejo("turno", "Cómo poner su turno", [
+        "Elige «Su propio horario» si no trabaja todo el horario de la barbería.",
+        "Palomea los días que viene y escribe a qué hora entra y sale.",
+        "Atajo: palomea los días y toca «Mañana» o «Tarde»; las horas se llenan solas.",
+        "Las citas con él solo se apartan dentro de su turno. Para un solo día distinto, usa el calendario."])}
       <div class="seg" id="tModo" role="group" aria-label="Tipo de horario">
         <button type="button" data-modo="tienda" aria-pressed="${!b.usa_turno}">Igual que la barbería</button>
         <button type="button" data-modo="propio" aria-pressed="${!!b.usa_turno}">Su propio horario</button>
@@ -3423,7 +3441,9 @@
       ["#tab-horario .cal-cab", "Cambiar de mes", "Con las flechas ves el mes anterior o el siguiente."],
       ["#calendario", "Días especiales", "Toca uno o varios días. Abajo salen los botones para cerrarlos (festivos, vacaciones), o darles otro horario y elegir quién trabaja y a qué hora. «Volver al normal» los regresa como estaban."],
       ["#tab-horario .cal-ley", "Los colores", "Azul: horario normal. Dorado con ★: horario especial. Rojo: cerrado. El número en la esquina son las citas apartadas ese día."],
-      ["#listaTurnos", "Turnos de los barberos", "Si un barbero trabaja solo en la mañana o en la tarde, toca «Cambiar» y ponle su turno. Las citas con él solo se apartan dentro de su turno."],
+      ["#listaTurnos", "Turnos de los barberos", "Aquí ves el horario de cada barbero. Si uno trabaja solo en la mañana o en la tarde, ponle su turno: las citas con él solo se apartan dentro de su turno."],
+      ["#listaTurnos [data-turno]", "Cambiar el turno", "Toca «Cambiar». Elige «Su propio horario», palomea los días que viene y escribe a qué hora entra y sale. Los botones Mañana y Tarde llenan las horas solos."],
+      ["#calendario", "Un día distinto", "¿Un día cambia quién viene? Toca ese día en el calendario y luego «Horario y quién trabaja…». Ahí palomeas a quién viene ese día y a qué hora. Solo cambia ese día."],
       ["#listaHorario", "Horario de cada semana", "Palomea los días que abres y escribe a qué hora abres y cierras. Se repite todas las semanas; para un día distinto usa el calendario."],
     ],
     equipo: () => [
@@ -3441,12 +3461,44 @@
   // «Ya lo vi»: se guarda en este celular y en la cuenta (así no se repite en otro celular)
   const tourVisto = (clave) => !!user && (leerLocal(`tour-${clave}-${user.id}`) === "1" || (clave === "visto" && leerLocal("tour-visto-" + user.id) === "1") || (user.user_metadata?.tours || []).includes(clave));
   function marcarTour(clave) {
-    if (!user || tourVisto(clave)) return;
+    if (!user) return;
     guardarLocal(`tour-${clave}-${user.id}`, "1");
-    const tours = [...new Set([...(user.user_metadata?.tours || []), clave])];
+    const ya = user.user_metadata?.tours || [];
+    if (ya.includes(clave)) return;
+    guardarTours([...ya, clave]);
+  }
+  function guardarTours(lista) {
+    const tours = [...new Set(lista)];
     user.user_metadata = { ...(user.user_metadata || {}), tours };
     try { db.auth.updateUser({ data: { tours } })?.catch?.(() => {}); } catch {}
   }
+  // Antes de mostrar cualquier tutorial: leer de la cuenta (no de la sesión guardada, que puede ser vieja)
+  // y subir a la cuenta lo que ya se vio en este celular. Así sale una sola vez por cuenta, en cualquier aparato.
+  let metaTours = null;
+  function cargarMetaTours() {
+    if (!user) return Promise.resolve();
+    return (metaTours ||= (async () => {
+      try { const { data } = await db.auth.getUser(); if (data?.user) user.user_metadata = data.user.user_metadata || {}; } catch {}
+      const cuenta = user.user_metadata?.tours || [], locales = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i), m = k && k.match(new RegExp(`^tour-(.+)-${user.id}$`));
+          if (m && localStorage.getItem(k) === "1") locales.push(m[1]);
+        }
+      } catch {}
+      if (locales.some((c) => !cuenta.includes(c))) guardarTours([...cuenta, ...locales]);
+    })());
+  }
+  const VER_TOUR = { horario: 3 };
+  // Consejo dentro de una ventana (como los «tips» de iPhone): sale una vez por cuenta
+  let verConsejos = false;   // «¿Cómo se usa?» los vuelve a mostrar en esta visita
+  function consejo(clave, titulo, pasos) {
+    if (!user || (!verConsejos && tourVisto("tip-" + clave))) return "";
+    marcarTour("tip-" + clave);
+    return `<div class="consejo" role="note"><div class="consejo-t">${icoFoco}<b>${esc(titulo)}</b><button type="button" class="ghost consejo-x" aria-label="Cerrar consejo" onclick="this.closest('.consejo').remove()">✕</button></div>
+      <ol>${pasos.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>`;
+  }
+  const claveTab = (tab) => `tab-${tab}-v${VER_TOUR[tab] || 2}`;
   const tabActual = () => TABS.find((t) => !$("tab-" + t).classList.contains("hidden")) || "inicio";
   const tourAbierto = () => $("tour") && !$("tour").classList.contains("hidden");
   // Recorrido de una pestaña (solo los pasos cuyo botón se ve)
@@ -3454,12 +3506,14 @@
     const visible = (sel) => { const el = document.querySelector(sel); return el && el.offsetParent !== null && el.offsetHeight > 0; };
     const pasos = (TOUR_TAB[tab]?.() || []).filter(([sel]) => !sel || visible(sel));
     if (!pasos.some(([sel]) => sel)) return false;
-    abrirTour(pasos, "tab-" + tab + "-v2");
+    abrirTour(pasos, claveTab(tab));
     return true;
   }
   // La primera vez que entras a una pestaña
-  function tourPrimeraVez(tab) {
-    if (!user || !TOUR_TAB[tab] || tourAbierto() || !tourVisto("visto") || tourVisto("tab-" + tab + "-v2")) return;
+  async function tourPrimeraVez(tab) {
+    if (!user || !TOUR_TAB[tab]) return;
+    await cargarMetaTours();
+    if (tourAbierto() || !tourVisto("visto") || tourVisto(claveTab(tab))) return;
     setTimeout(() => { if (tabActual() === tab && !tourAbierto()) abrirTourTab(tab); }, 600);
   }
 
@@ -3536,7 +3590,7 @@
   $("ayudaBtn").onclick = $("ayudaMovil").onclick = () => {
     // Volver a mostrar también las ayudas ocultas
     Object.keys(AYUDA).forEach((t) => guardarLocal("ayuda-oculta-" + t, null));
-    ponerAyudas();
+    ponerAyudas(); verConsejos = true;
     const t = tabActual();
     if (t === "inicio" || !abrirTourTab(t)) abrirTour();
   };
@@ -3560,6 +3614,7 @@
   async function arrancarAyuda() {
     ponerAyudas();
     pintarPrimerosPasos();
+    await cargarMetaTours();
     if (user && !tourVisto("visto")) setTimeout(() => abrirTour(), 700);
     else tourPrimeraVez(tabActual());
   }
