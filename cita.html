@@ -276,10 +276,26 @@
         cont.appendChild(x);
       }
       if (!barberos.length) { $("paso2").classList.add("hidden"); cont.classList.add("hidden"); cont.previousElementSibling.classList.add("hidden"); }
+      else if (!$("turnoBarbero")) { const p = document.createElement("p"); p.id = "turnoBarbero"; p.className = "muted small hidden"; p.style.margin = "8px 2px 0"; cont.after(p); }
+    }
+    // «Juan trabaja Mar a Vie de 10:00 am a 3:00 pm» (solo si tiene turno propio)
+    const DC = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    function turnoTexto(b) {
+      if (!b?.turno) return "";
+      const g = [];
+      for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+        const t = b.turno.find((x) => x.dia === d); if (!t) { g.push(null); continue; }
+        const h = `de ${hora12(t.entra)} a ${hora12(t.sale)}`, u = g.at(-1);
+        if (u && u.h === h) u.fin = d; else g.push({ ini: d, fin: d, h });
+      }
+      const partes = g.filter(Boolean).map((x) => `${DC[x.ini]}${x.ini !== x.fin ? " a " + DC[x.fin] : ""} ${x.h}`);
+      return partes.length ? `${b.nombre} trabaja ${partes.join(" · ")}.` : "";
     }
     $("barberos").addEventListener("click", (e) => {
       const b = e.target.closest("button"); if (!b) return;
       sel.barbero = b.dataset.id ? Number(b.dataset.id) : null;
+      const tt = turnoTexto(barberos.find((x) => x.id === sel.barbero));
+      if ($("turnoBarbero")) { $("turnoBarbero").textContent = tt; $("turnoBarbero").classList.toggle("hidden", !tt); }
       marcarBoton($("barberos"), b); vibrar(); cambio();
     });
 

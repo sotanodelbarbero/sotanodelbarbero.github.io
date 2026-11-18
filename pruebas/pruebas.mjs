@@ -33,12 +33,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -506,6 +506,55 @@ await como(BARB);
 const cE = await agendar("Quino Paz", "5535353535", CORTE, null, "2026-12-08", "19:00");
 prueba("El personal sigue pudiendo marcar «Llegó» desde el panel", typeof (await uno(`select llegada_cita(id) from citas where token = $1`, [cE.token])) === "number");
 await como(null);
+
+
+seccion("TURNOS: cada barbero con su horario");
+await como(null);
+await reloj("2026-12-14 08:00");   // lunes
+await db.exec(`delete from bloqueos; update citas set estado = 'cancelada' where fecha >= '2026-12-14';
+  update horario set abierto = true, abre = '10:00', cierra = '20:00' where dia between 1 and 6;
+  update barberos set activo = true, usa_turno = false where id in (1, 2); update barberos set activo = false where id > 2;
+  delete from horario_especial where fecha >= '2026-12-14';`);
+const DT = "2026-12-15";   // martes
+prueba("Sin turnos, los dos barberos trabajan todo el día (10:00 a 19:30)", (await libres(DT, CORTE)).length === 20, JSON.stringify(await libres(DT, CORTE)));
+await como(ADMIN);
+prueba("Alejandro guarda el turno de Juan: martes a viernes de 10:00 a 15:00",
+  await uno(`select guardar_turno(1, true, $1)`, [JSON.stringify([2, 3, 4, 5].map((d) => ({ dia: d, entra: "10:00", sale: "15:00" })))]) === true);
+prueba("…y el de Pedro: martes a sábado de 14:00 a 20:00",
+  await uno(`select guardar_turno(2, true, $1)`, [JSON.stringify([2, 3, 4, 5, 6].map((d) => ({ dia: d, entra: "14:00", sale: "20:00" })))]) === true);
+prueba("No se puede guardar un turno que sale antes de entrar",
+  (await error(`select guardar_turno(1, true, '[{"dia":1,"entra":"16:00","sale":"10:00"}]')`))?.includes("después"));
+prueba("Ni un turno propio sin días", (await error(`select guardar_turno(1, true, '[]')`))?.includes("al menos un día"));
+prueba("El turno de Juan sigue como estaba tras los errores", (await uno(`select count(*)::int from barbero_turno where barbero_id = 1`)) === 4);
+await como(BARB);
+prueba("Un barbero NO puede cambiar turnos", (await error(`select guardar_turno(1, false, '[]')`))?.includes("administrador"));
+prueba("Un barbero sí ve los turnos", (await q(`select * from barbero_turno`)).length === 9);
+await como(null);
+const lJ = await libres(DT, CORTE, 1), lP = await libres(DT, CORTE, 2), lT = await libres(DT, CORTE);
+prueba("Con Juan: solo de 10:00 a 14:30 (sale a las 15:00)", lJ[0] === "10:00" && lJ.at(-1) === "14:30" && lJ.length === 10, JSON.stringify(lJ));
+prueba("Con Pedro: solo de 14:00 a 19:30", lP[0] === "14:00" && lP.at(-1) === "19:30" && lP.length === 12, JSON.stringify(lP));
+prueba("Con cualquiera: todo el día (siempre hay alguien)", lT.length === 20, JSON.stringify(lT));
+const lJ60 = await libres(DT, await uno(`select id from servicios where nombre = 'Corte + barba'`), 1);
+prueba("Corte + barba (60 min) con Juan: la última es 14:00 para salir a tiempo", lJ60.at(-1) === "14:00", JSON.stringify(lJ60));
+prueba("No se puede apartar con Juan a las 17:00 (ya salió)", (await error(`select agendar_cita('Raúl Paz','5540404040',$1,1,$2,'17:00')`, [CORTE, DT]))?.includes("no está disponible"));
+prueba("Con Pedro a las 17:00 sí", !!(await agendar("Raúl Paz", "5540404040", CORTE, 2, DT, "17:00")).token);
+prueba("A las 17:00 ya no queda nadie más (solo Pedro trabaja y está ocupado)", !(await libres(DT, CORTE)).includes("17:00"));
+prueba("A las 11:00 caben 1 (solo Juan trabaja en la mañana)", !!(await agendar("Sara Paz", "5540404041", CORTE, null, DT, "11:00")).token
+  && !(await libres(DT, CORTE)).includes("11:00"));
+prueba("Entre 14:00 y 14:30 trabajan los dos: caben dos citas", !!(await agendar("Tere Paz", "5540404042", CORTE, null, DT, "14:00")).token
+  && (await libres(DT, CORTE)).includes("14:00"));
+prueba("El lunes Juan y Pedro no trabajan: no hay horarios aunque la barbería abra", (await libres("2026-12-14", CORTE)).length === 0 && (await libres("2026-12-21", CORTE)).length === 0);
+const pub = await uno(`select barberos_publicos()`);
+prueba("La lista pública trae el turno de cada barbero", pub.find((b) => b.nombre === "Juan")?.turno?.length === 4 && pub.find((b) => b.nombre === "Pedro")?.turno?.[0]?.entra === "14:00");
+await como(ADMIN);
+prueba("Juan vuelve al horario de la barbería", await uno(`select guardar_turno(1, false, null)`) === true);
+await como(null);
+prueba("…y otra vez se le puede apartar a cualquier hora, también el lunes", (await libres(DT, CORTE, 1)).includes("18:00") && (await libres("2026-12-21", CORTE)).length === 20);
+prueba("Su lista pública ya no trae turno", (await uno(`select barberos_publicos()`)).find((b) => b.nombre === "Juan").turno === null);
+await db.exec(`set role anon`);
+prueba("Un visitante no ve la tabla de turnos", (await error(`select * from barbero_turno`)) !== null || (await q(`select * from barbero_turno`)).length === 0);
+prueba("Un visitante no puede guardar turnos", !!(await error(`select guardar_turno(1, false, null)`)));
+await db.exec(`reset role`);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }
