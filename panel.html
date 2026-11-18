@@ -288,6 +288,17 @@
     .wa-btn { display: inline-flex !important; align-items: center; justify-content: center; gap: 10px; flex: none;
       background: #25d366 !important; color: #062b14 !important; border-color: transparent !important; font-weight: 700; padding: 12px 20px; }
     .wa-btn:hover { background: #3ee07a !important; filter: none; }
+    .pub-dias, .pub-estilos { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 10px; padding-bottom: 2px; }
+    .pub-dias::-webkit-scrollbar, .pub-estilos::-webkit-scrollbar { display: none; }
+    .pub-dias button, .pub-estilos button { flex: none; padding: 7px 14px; font-size: .875rem; border-radius: 999px; border: 1px solid var(--line); color: var(--text); background: transparent; }
+    .pub-dias button[aria-pressed="true"], .pub-estilos button[aria-pressed="true"] { background: #25d366; border-color: #25d366; color: #062b14; font-weight: 700; }
+    .pub-estilos button { display: inline-flex; align-items: center; gap: 8px; }
+    .mu { width: 18px; height: 18px; border-radius: 50%; flex: none; border: 1px solid rgba(255,255,255,.3); }
+    .mu-dorado { background: linear-gradient(135deg, #050505 50%, #d4a64a 50%); }
+    .mu-poste { background: repeating-linear-gradient(-45deg, #c8102e 0 4px, #f4efe6 4px 8px, #1c3f8c 8px 12px, #f4efe6 12px 16px); }
+    .mu-neon { background: radial-gradient(circle, #ff3ea5 30%, #090b18 70%); box-shadow: 0 0 8px #3ee6ff; }
+    .pub-prev { position: relative; }
+    .pub-cargando { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); border-radius: 14px; font-size: .9375rem; }
     .prev-horario { display: block; width: 100%; max-height: 52vh; object-fit: contain; border-radius: 14px; background: #000; border: 1px solid var(--line); }
     .prev-texto { margin-top: 10px; font-size: .8125rem; }
     .prev-texto summary { cursor: pointer; color: var(--muted); }
@@ -2837,7 +2848,7 @@
     if (afectadas.length && !confirm(`Hay ${afectadas.length} ${afectadas.length === 1 ? "cita apartada" : "citas apartadas"} que quedan fuera de este horario. Siguen apartadas, pero conviene avisarles. ¿Guardar de todos modos?`)) return false;
     const { error } = await db.from("horario_especial").upsert(filas, { onConflict: "fecha" });
     if (error) { toast("No se pudo guardar: " + error.message); return false; }
-    toast(filas.length === 1 ? "Día actualizado en la web" : `${filas.length} días actualizados en la web`, { accion: { texto: "Publicar en WhatsApp", fn: publicarHorario } });
+    toast(filas.length === 1 ? "Día actualizado en la web" : `${filas.length} días actualizados en la web`, { accion: { texto: "Publicar en WhatsApp", fn: () => publicarHorario(filas[0]?.fecha) } });
     calSel.clear(); horarioSemana = []; cargarCalendario();
     if (afectadas.length) setTimeout(() => avisarAfectadas(afectadas.map((c) => ({ id: c.id, fecha: c.fecha, hora: hhmm(c.hora), nombre: c.cliente_nombre, telefono: c.telefono }))), 250);
     return true;
@@ -3190,33 +3201,279 @@
     catch (e) { if (conLogo) return imagenHorario(filas, especiales, false); throw e; }   // sin logo si el navegador no deja exportarlo
   }
 
-  // Abre la vista previa con los botones para publicar
-  let horarioListo = null;
-  async function publicarHorario() {
+  // =========================================================
+  //  Publicación POR DÍA: «Hoy abrimos…», barberos, horarios libres
+  //  Tres estilos: Dorado, Poste y Neón (tamaño Estado 1080×1920)
+  // =========================================================
+  const MESES_C = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const MESES_L = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const h12 = (t) => { const [h, m] = String(t).split(":").map(Number); const ap = h < 12 ? "AM" : "PM"; const hh = ((h + 11) % 12) + 1; return m ? `${hh}:${String(m).padStart(2, "0")} ${ap}` : `${hh} ${ap}`; };
+  const partesFecha = (iso) => { const [y, m, d] = iso.split("-").map(Number); const x = new Date(Date.UTC(y, m - 1, d)); return { dow: x.getUTCDay(), d, m: m - 1 }; };
+
+  // Datos para varios días (se cargan una vez al abrir)
+  let pubDatos = null;
+  async function cargarPubDatos() {
+    const hoy = hoyISO(), hasta = sumarDia(hoy, 21);
+    const [rs, re, rb] = await Promise.all([
+      db.from("horario").select("*"),
+      db.from("horario_especial").select("*").gte("fecha", hoy).lte("fecha", hasta),
+      db.from("bloqueos").select("*").lte("fecha_ini", hasta).gte("fecha_fin", hoy),
+    ]);
+    pubDatos = { semana: rs.data || [], especiales: re.error ? [] : re.data || [], bloqueos: rb.error ? [] : rb.data || [] };
+  }
+  // Cómo está la barbería ese día (sin pedir nada al servidor)
+  function infoDia(f) {
+    const { semana, especiales, bloqueos } = pubDatos, pf = partesFecha(f);
+    const w = semana.find((x) => x.dia === pf.dow), e = especiales.find((x) => x.fecha === f);
+    let abierto = e ? e.abierto : !!w?.abierto, abre = e?.abierto ? e.abre : w?.abre, cierra = e?.abierto ? e.cierra : w?.cierra;
+    const delDia = bloqueos.filter((b) => f >= b.fecha_ini && f <= b.fecha_fin);
+    const cierreTotal = delDia.find((b) => !b.barbero_id && !b.hora_ini);
+    let motivo = e && !e.abierto ? e.nota : null;
+    if (cierreTotal) { abierto = false; motivo = cierreTotal.motivo || motivo; }
+    const notas = delDia.filter((b) => !b.barbero_id && b.hora_ini).map((b) => `${b.motivo || "Cerrado"} ${h12(b.hora_ini)} – ${h12(b.hora_fin)}`);
+    if (e?.abierto && e.nota) notas.unshift(e.nota);
+    const fueraTodoElDia = new Set(delDia.filter((b) => b.barbero_id && !b.hora_ini).map((b) => b.barbero_id));
+    const equipo = barberos.filter((b) => b.activo && !fueraTodoElDia.has(b.id)).map((b) => b.nombre);
+    return { fecha: f, abierto, abre: abierto ? hhmm(abre) : null, cierra: abierto ? hhmm(cierra) : null, motivo, notas, equipo, especial: !!e };
+  }
+  function proximaApertura(f) {
+    for (let i = 1; i <= 21; i++) { const x = sumarDia(f, i); const d = infoDia(x); if (d.abierto) return d; }
+    return null;
+  }
+  // Horarios libres reales (para el servicio más básico)
+  async function libresDelDia(f) {
+    const base = servicios.filter((s) => s.activo).sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0];
+    if (!base) return [];
+    const { data, error } = await db.rpc("horarios_disponibles", { p_fecha: f, p_servicio_id: base.id, p_barbero_id: null });
+    return error ? [] : data || [];
+  }
+  const tituloDia = (f) => {
+    const pf = partesFecha(f), hoy = hoyISO();
+    return { cual: f === hoy ? "HOY" : f === sumarDia(hoy, 1) ? "MAÑANA" : NOMBRES_DIA[pf.dow].toUpperCase(),
+      dia: NOMBRES_DIA[pf.dow].toUpperCase(), num: pf.d, mes: MESES_C[pf.m].toUpperCase(), largo: `${NOMBRES_DIA[pf.dow].toLowerCase()} ${pf.d} de ${MESES_L[pf.m]}` };
+  };
+
+  function textoDia(info, libres) {
+    const t = tituloDia(info.fecha), cuando = t.cual === "HOY" ? "Hoy" : t.cual === "MAÑANA" ? "Mañana" : "El";
+    if (!info.abierto) {
+      const prox = proximaApertura(info.fecha);
+      return [`💈 *${cfg.nombre}*`, "", `🔒 ${cuando} ${t.largo} *cerramos*${info.motivo ? ` (${info.motivo})` : ""}.`,
+        prox ? `Te esperamos el ${tituloDia(prox.fecha).largo} desde las ${h12(prox.abre)}.` : "",
+        prox && libres.length ? `⏰ Horarios libres ese día: ${libres.slice(0, 8).map(h12).join(" · ")}${libres.length > 8 ? "…" : ""}` : "",
+        "", `📅 Aparta tu cita 👉 ${URL_CITAS}`].filter((x, i, a) => x !== "" || (a[i - 1] !== "" && i > 0)).join("\n");
+    }
+    return [
+      `💈 *${cfg.nombre}*`, "\u200b",
+      `✅ ${cuando} ${t.largo} abrimos de *${h12(info.abre)} a ${h12(info.cierra)}*`,
+      ...info.notas.map((n) => `⚠️ ${n}`),
+      info.equipo.length ? `✂️ Te atienden: ${info.equipo.join(", ")}` : "",
+      libres.length ? `⏰ Horarios libres para cita: ${libres.slice(0, 8).map(h12).join(" · ")}${libres.length > 8 ? "…" : ""}` : "⏰ Cupo de citas lleno; ven y tómate un turno",
+      "\u200b", `📅 Aparta el tuyo 👉 ${URL_CITAS}`,
+    ].filter((x) => x !== "").join("\n").replace(/\u200b/g, "");
+  }
+
+  // ---------- Estilos ----------
+  const ESTILOS = {
+    dorado: { nombre: "Dorado", fondo: "#050505", tinta: "#f2ede4", sub: "#a8a296", acento: "#d4a64a", acento2: "#f0cf85", malo: "#e0827a",
+      chip: "rgba(212,166,74,.12)", chipBorde: "rgba(212,166,74,.55)", chipTinta: "#f0cf85", cta: "#d4a64a", ctaTinta: "#1a1206", brillo: null },
+    poste: { nombre: "Poste", fondo: "#f4efe6", tinta: "#111111", sub: "#5c564c", acento: "#c8102e", acento2: "#1c3f8c", malo: "#c8102e",
+      chip: "#111111", chipBorde: "#111111", chipTinta: "#f4efe6", cta: "#c8102e", ctaTinta: "#ffffff", brillo: null },
+    neon: { nombre: "Neón", fondo: "#090b18", tinta: "#ffffff", sub: "#a9b0d6", acento: "#ff3ea5", acento2: "#3ee6ff", malo: "#ff5a6e",
+      chip: "rgba(62,230,255,.08)", chipBorde: "#3ee6ff", chipTinta: "#bff6ff", cta: "#ff3ea5", ctaTinta: "#ffffff", brillo: true },
+  };
+  let pubEstilo = (() => { try { return localStorage.getItem("pub-estilo") || "dorado"; } catch { return "dorado"; } })();
+  let pubDia = null;
+
+  async function imagenDia(info, libres, estiloId, conLogo = true) {
+    const E = ESTILOS[estiloId], W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
+    const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+    const t = tituloDia(info.fecha), ANCHO = estiloId === "poste" ? W - 280 : W - 150;
+    const brilla = (color, fuerza = 28) => { if (E.brillo) { g.shadowColor = color; g.shadowBlur = fuerza; } };
+    const sinBrillo = () => { g.shadowBlur = 0; g.shadowColor = "transparent"; };
+    const texto = (s, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(s, x, y); if (glow) { g.fillText(s, x, y); sinBrillo(); } };
+    // Ajusta el tamaño de letra para que quepa en un ancho
+    const ajusta = (s, peso, max, ancho, fam = DISP) => { let px = max; do { g.font = `${peso} ${px}px ${fam}`; px -= 4; } while (g.measureText(s).width > ancho && px > 20); return `${peso} ${px + 4}px ${fam}`; };
+
+    // ----- Fondo -----
+    g.fillStyle = E.fondo; g.fillRect(0, 0, W, H);
+    if (estiloId === "dorado") {
+      const l1 = g.createRadialGradient(W * .85, 380, 30, W * .85, 380, 900); l1.addColorStop(0, "rgba(212,166,74,.32)"); l1.addColorStop(.55, "rgba(143,29,29,.16)"); l1.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = l1; g.fillRect(0, 0, W, H);
+      const l2 = g.createRadialGradient(0, H, 20, 0, H, 800); l2.addColorStop(0, "rgba(143,29,29,.25)"); l2.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = l2; g.fillRect(0, 0, W, H);
+      // marco fino dorado
+      g.strokeStyle = "rgba(212,166,74,.55)"; g.lineWidth = 3; g.beginPath(); g.roundRect(44, 44, W - 88, H - 88, 36); g.stroke();
+    } else if (estiloId === "poste") {
+      // dos postes de barbero delgados en las orillas (no tapan el texto)
+      const postes = (x) => {
+        g.save(); g.beginPath(); g.roundRect(x, 90, 34, H - 180, 17); g.clip();
+        const col = ["#c8102e", "#f4efe6", "#1c3f8c", "#f4efe6"];
+        for (let y = 60, i = 0; y < H; y += 26, i++) { g.fillStyle = col[i % 4]; g.beginPath(); g.moveTo(x - 10, y); g.lineTo(x + 44, y - 40); g.lineTo(x + 44, y - 14); g.lineTo(x - 10, y + 26); g.fill(); }
+        g.restore(); g.strokeStyle = "#111"; g.lineWidth = 3; g.beginPath(); g.roundRect(x, 90, 34, H - 180, 17); g.stroke();
+      };
+      postes(78); postes(W - 112);
+      g.strokeStyle = "#111"; g.lineWidth = 8; g.strokeRect(36, 36, W - 72, H - 72);
+      g.lineWidth = 2; g.strokeRect(56, 56, W - 112, H - 112);
+    } else {
+      // pared oscura con ladrillos tenues + halo
+      g.strokeStyle = "rgba(255,255,255,.035)"; g.lineWidth = 2;
+      for (let y = 0, f = 0; y < H; y += 70, f++) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); for (let x = (f % 2) * 90; x < W; x += 180) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 70); g.stroke(); } }
+      const h1 = g.createRadialGradient(W / 2, 760, 50, W / 2, 760, 700); h1.addColorStop(0, "rgba(255,62,165,.18)"); h1.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = h1; g.fillRect(0, 0, W, H);
+    }
+
+    // Cuadrícula de horarios libres (hasta 8)
+    const dibujaLibres = (y, titulo, libres) => {
+      texto(titulo, W / 2, y, ajusta(titulo, 800, 46, ANCHO), estiloId === "poste" ? E.acento2 : E.acento, "center", E.brillo ? E.acento : null);
+      y += 36;
+      const cols = estiloId === "poste" ? 3 : 4, cw = estiloId === "poste" ? 220 : 200, ch = 86, gx = 16;
+      const LIMITE = H - 375;   // arriba del botón «Agenda tu cita»
+      const filasCaben = Math.max(1, Math.min(2, Math.floor((LIMITE - y - 20) / (ch + gx))));
+      const lista = libres.slice(0, cols * filasCaben);
+      lista.forEach((h, i) => {
+        const fila = Math.floor(i / cols), enFila = Math.min(cols, lista.length - fila * cols), col = i % cols;
+        const x0 = W / 2 - (enFila * cw + (enFila - 1) * gx) / 2 + col * (cw + gx), y0 = y + fila * (ch + gx);
+        g.fillStyle = estiloId === "poste" ? "#fff" : "rgba(255,255,255,.06)"; g.strokeStyle = estiloId === "poste" ? "#111" : E.chipBorde; g.lineWidth = 3;
+        if (E.brillo) brilla(E.chipBorde, 12);
+        g.beginPath(); g.roundRect(x0, y0, cw, ch, 22); g.fill(); g.stroke(); sinBrillo();
+        texto(h12(h), x0 + cw / 2, y0 + 58, `800 46px ${DISP}`, E.tinta);
+      });
+      const filasUsadas = Math.ceil(lista.length / cols);
+      const yMas = y + filasUsadas * (ch + gx) + 40;
+      if (libres.length > lista.length && yMas < LIMITE) texto(`y ${libres.length - lista.length} horarios más`, W / 2, yMas, `500 34px ${SANS}`, E.sub);
+    };
+
+    // ----- Encabezado: logo + nombre -----
+    const logo = conLogo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
+    if (logo) { g.save(); g.beginPath(); g.arc(W / 2, 210, 92, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - 92, 118, 184, 184); g.restore();
+      if (E.brillo) { g.strokeStyle = E.acento2; g.lineWidth = 5; brilla(E.acento2, 30); g.beginPath(); g.arc(W / 2, 210, 96, 0, Math.PI * 2); g.stroke(); sinBrillo(); } }
+    texto(cfg.nombre.toUpperCase(), W / 2, 370, `800 46px ${DISP}`, E.sub);
+
+    // ----- Fecha -----
+    const pill = `${t.dia} ${t.num} ${t.mes}`;
+    g.font = `800 44px ${DISP}`; const pw = g.measureText(pill).width + 80;
+    g.fillStyle = estiloId === "poste" ? "#111" : E.chip; g.strokeStyle = E.chipBorde; g.lineWidth = 3;
+    if (E.brillo) brilla(E.acento2, 20);
+    g.beginPath(); g.roundRect(W / 2 - pw / 2, 420, pw, 84, 42); g.fill(); g.stroke(); sinBrillo();
+    texto(pill, W / 2, 477, `800 44px ${DISP}`, estiloId === "poste" ? "#f4efe6" : E.chipTinta);
+
+    let y;
+    if (info.abierto) {
+      // ----- ABIERTO + horas -----
+      const palabra = t.cual === "HOY" ? "HOY ABRIMOS" : t.cual === "MAÑANA" ? "MAÑANA ABRIMOS" : "ABRIMOS";
+      texto(palabra, W / 2, 660, ajusta(palabra, 900, 150, ANCHO), E.tinta, "center", E.brillo ? E.acento : null);
+      const horas = `${h12(info.abre)} – ${h12(info.cierra)}`;
+      const fH = ajusta(horas, 900, 200, ANCHO);
+      if (estiloId === "dorado") { const gr = g.createLinearGradient(0, 700, 0, 880); gr.addColorStop(0, E.acento2); gr.addColorStop(.6, E.acento); gr.addColorStop(1, "#8a6220"); texto(horas, W / 2, 870, fH, gr); }
+      else texto(horas, W / 2, 870, fH, estiloId === "neon" ? E.acento2 : E.acento, "center", E.brillo ? E.acento2 : null);
+      y = 940;
+      // avisos (comida, nota especial)
+      for (const n of info.notas.slice(0, 2)) { texto(`⚠  ${n}`, W / 2, y + 20, ajusta(`⚠  ${n}`, 600, 40, W - 200, SANS), E.malo); y += 64; }
+      // ----- Barberos -----
+      if (info.equipo.length) {
+        y += 40; texto("TE ATIENDEN", W / 2, y, `800 42px ${DISP}`, E.sub); y += 34;
+        g.font = `700 40px ${SANS}`;
+        const anchos = info.equipo.slice(0, 6).map((n) => g.measureText(n).width + 64), gap = 18;
+        const filas = []; let fila = [], ancho = 0;
+        anchos.forEach((a, i) => { if (ancho + a > W - 200 && fila.length) { filas.push(fila); fila = []; ancho = 0; } fila.push(i); ancho += a + gap; });
+        if (fila.length) filas.push(fila);
+        for (const fl of filas) {
+          const total = fl.reduce((s, i) => s + anchos[i], 0) + gap * (fl.length - 1); let x = W / 2 - total / 2;
+          for (const i of fl) {
+            g.fillStyle = E.chip; g.strokeStyle = E.chipBorde; g.lineWidth = 3; if (E.brillo) brilla(E.chipBorde, 16);
+            g.beginPath(); g.roundRect(x, y, anchos[i], 76, 38); g.fill(); g.stroke(); sinBrillo();
+            texto(info.equipo[i], x + anchos[i] / 2, y + 52, `700 40px ${SANS}`, E.chipTinta); x += anchos[i] + gap;
+          }
+          y += 96;
+        }
+      }
+      // ----- Horarios libres -----
+      y += 70;
+      dibujaLibres(y, libres.length ? "HORARIOS LIBRES PARA CITA" : "CITAS LLENAS · VEN POR TU TURNO", libres);
+    } else {
+      // ----- CERRADO -----
+      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, 700, `900 140px ${DISP}`, E.tinta);
+      texto("CERRADO", W / 2, 900, ajusta("CERRADO", 900, 230, W - 140), E.malo, "center", E.brillo ? E.malo : null);
+      y = 990;
+      if (info.motivo) { texto(info.motivo, W / 2, y + 30, ajusta(info.motivo, 600, 54, W - 200, SANS), E.tinta); y += 90; }
+      const prox = proximaApertura(info.fecha);
+      if (prox) {
+        y += 60; texto("TE ESPERAMOS", W / 2, y, `800 46px ${DISP}`, E.sub); y += 80;
+        const pt = tituloDia(prox.fecha);
+        texto(`${pt.dia} ${pt.num} ${pt.mes}`, W / 2, y, `900 88px ${DISP}`, estiloId === "poste" ? E.acento2 : E.acento2, "center", E.brillo ? E.acento2 : null); y += 76;
+        texto(`desde las ${h12(prox.abre)}`, W / 2, y, `600 46px ${SANS}`, E.tinta);
+        if (libres.length) dibujaLibres(y + 110, `APARTA TU LUGAR PARA EL ${pt.dia}`, libres);
+      }
+    }
+
+    // ----- Llamado a agendar -----
+    const by = H - 360;
+    g.fillStyle = E.cta; if (E.brillo) brilla(E.cta, 40);
+    g.beginPath(); g.roundRect(150, by, W - 300, 132, 66); g.fill(); sinBrillo();
+    texto("AGENDA TU CITA", W / 2, by + 88, `900 68px ${DISP}`, E.ctaTinta);
+    texto(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200, `500 32px ${SANS}`, E.sub);
+    if (cfg.whatsapp) texto(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 248, `600 34px ${SANS}`, E.sub);
+
+    try { return await new Promise((ok, mal) => { try { c.toBlob(ok, "image/png"); } catch (e) { mal(e); } }); }
+    catch (e) { if (conLogo) return imagenDia(info, libres, estiloId, false); throw e; }
+  }
+
+  // ---------- Diálogo: elegir día y estilo, vista previa y compartir ----------
+  let horarioListo = null, pubPedido = 0;
+  async function publicarHorario(fechaInicial) {
     $("dcTitulo").textContent = "Publicar horario";
-    $("dcCuerpo").innerHTML = `<p class="muted" style="text-align:center;margin:20px 0">Preparando la imagen…</p>`;
+    $("dcCuerpo").innerHTML = `<p class="muted" style="text-align:center;margin:20px 0">Preparando…</p>`;
     $("dcAcciones").innerHTML = "";
     if (!$("dlgCita").open) $("dlgCita").showModal();
-    let semana, filas, especiales, texto, blob;
-    try {
-      ({ data: semana } = await db.from("horario").select("*"));
-      filas = filasSemana(semana || []); especiales = await especialesProximos();
-      texto = textoHorario(filas, especiales); blob = await imagenHorario(filas, especiales);
-    } catch (e) {
-      $("dcCuerpo").innerHTML = `<p class="error" style="text-align:center">No se pudo preparar la imagen. Revisa tu conexión e intenta otra vez.</p>`;
-      return;
-    }
-    const archivo = new File([blob], "horario-barberia.png", { type: "image/png" });
-    horarioListo = { texto, archivo, url: URL.createObjectURL(blob) };
-    const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [archivo] }));
+    try { await cargarPubDatos(); } catch { $("dcCuerpo").innerHTML = `<p class="error" style="text-align:center">No se pudo cargar el horario. Revisa tu conexión.</p>`; return; }
+    const hoy = hoyISO();
+    pubDia = typeof fechaInicial === "string" ? fechaInicial : hoy;
+    const dias = [...Array(7)].map((_, i) => sumarDia(hoy, i));
+    const etiqueta = (f, i) => i === 0 ? "Hoy" : i === 1 ? "Mañana" : `${CORTO_DIA[partesFecha(f).dow]} ${partesFecha(f).d}`;
     $("dcCuerpo").innerHTML = `
-      <p class="muted small" style="margin:0 0 10px;text-align:center">La página web ya tiene este horario. Ahora publícalo en WhatsApp.</p>
-      <img src="${horarioListo.url}" alt="Imagen del horario" class="prev-horario">
-      <details class="prev-texto"><summary>Ver el texto que se manda</summary><pre>${esc(texto)}</pre></details>`;
+      <div class="pub-dias" role="group" aria-label="Día">${dias.map((f, i) => `<button type="button" data-pdia="${f}" aria-pressed="${f === pubDia}">${etiqueta(f, i)}</button>`).join("")}
+        <button type="button" data-pdia="semana" aria-pressed="false">Semana</button></div>
+      <div class="pub-estilos" role="group" aria-label="Estilo">${Object.entries(ESTILOS).map(([k, e]) => `<button type="button" data-pestilo="${k}" aria-pressed="${k === pubEstilo}"><span class="mu mu-${k}"></span>${e.nombre}</button>`).join("")}</div>
+      <div class="pub-prev"><img alt="Vista previa de la publicación" class="prev-horario" id="pubImg"><div class="pub-cargando" id="pubCargando">Armando la imagen…</div></div>
+      <details class="prev-texto"><summary>Ver el texto que se manda</summary><pre id="pubTexto"></pre></details>`;
+    $("dcCuerpo").onclick = (e) => {
+      const d = e.target.closest("[data-pdia]"), s = e.target.closest("[data-pestilo]");
+      if (d) { pubDia = d.dataset.pdia; $("dcCuerpo").querySelectorAll("[data-pdia]").forEach((x) => x.setAttribute("aria-pressed", String(x === d))); armarPublicacion(); }
+      if (s) { pubEstilo = s.dataset.pestilo; try { localStorage.setItem("pub-estilo", pubEstilo); } catch {} $("dcCuerpo").querySelectorAll("[data-pestilo]").forEach((x) => x.setAttribute("aria-pressed", String(x === s))); armarPublicacion(); }
+    };
+    armarPublicacion();
+  }
+
+  async function armarPublicacion() {
+    const n = ++pubPedido;
+    $("pubCargando").classList.remove("hidden");
+    $("dcCuerpo").querySelector(".pub-estilos").classList.toggle("hidden", pubDia === "semana");
+    let texto, blob;
+    try {
+      if (pubDia === "semana") {
+        const filas = filasSemana(pubDatos.semana), especiales = await especialesProximos();
+        texto = textoHorario(filas, especiales); blob = await imagenHorario(filas, especiales);
+      } else {
+        const info = infoDia(pubDia), prox = info.abierto ? null : proximaApertura(pubDia);
+        const libres = info.abierto ? await libresDelDia(pubDia) : prox ? await libresDelDia(prox.fecha) : [];
+        texto = textoDia(info, libres); blob = await imagenDia(info, libres, pubEstilo);
+      }
+    } catch { if (n === pubPedido) $("pubCargando").textContent = "No se pudo armar la imagen. Intenta otra vez."; return; }
+    if (n !== pubPedido) return;   // ya eligió otra cosa
+    if (horarioListo?.url) URL.revokeObjectURL(horarioListo.url);
+    const nombre = pubDia === "semana" ? "horario-semana.png" : `horario-${pubDia}.png`;
+    horarioListo = { texto, archivo: new File([blob], nombre, { type: "image/png" }), url: URL.createObjectURL(blob), nombre };
+    $("pubImg").src = horarioListo.url; $("pubTexto").textContent = texto;
+    $("pubCargando").classList.add("hidden");
+    pintarBotonesPub();
+  }
+
+  function pintarBotonesPub() {
+    const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [horarioListo.archivo] }));
     $("dcAcciones").innerHTML = `
       ${puedeCompartir ? `<button class="ancho wa-btn" id="phCompartir">Compartir en WhatsApp</button>`
-        : `<a class="boton ancho wa-btn" id="phWa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">Mandar texto por WhatsApp</a>`}
-      <a class="boton" id="phDescargar" href="${horarioListo.url}" download="horario-barberia.png" style="color:var(--text);border-color:var(--line)">Descargar imagen</a>
+        : `<a class="boton ancho wa-btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(horarioListo.texto)}">Mandar texto por WhatsApp</a>`}
+      <a class="boton" href="${horarioListo.url}" download="${horarioListo.nombre}" style="color:var(--text);border-color:var(--line)">Descargar imagen</a>
       <button id="phCopiar">Copiar texto</button>
       <p class="aviso-form ancho" style="text-align:center">${puedeCompartir ? "Elige WhatsApp y luego «Mi estado», un grupo o tu lista de difusión." : "En la computadora: descarga la imagen y súbela a tu Estado desde el celular."}</p>`;
     $("dcAcciones").onclick = async (e) => {
@@ -3225,12 +3482,11 @@
         try { await navigator.share({ files: [horarioListo.archivo], text: horarioListo.texto }); }
         catch (err) { if (err?.name !== "AbortError") { try { await navigator.share({ text: horarioListo.texto }); } catch {} } }
       }
-      if (id === "phCopiar") {
-        try { await navigator.clipboard.writeText(horarioListo.texto); toast("Texto copiado"); } catch { prompt("Copia el texto:", horarioListo.texto); }
-      }
+      if (id === "phCopiar") { try { await navigator.clipboard.writeText(horarioListo.texto); toast("Texto copiado"); } catch { prompt("Copia el texto:", horarioListo.texto); } }
     };
   }
-  $("btnPublicarHorario").onclick = publicarHorario;
+  $("btnPublicarHorario").onclick = () => publicarHorario();
+
 
   iniciar();
   </script>
