@@ -3429,12 +3429,14 @@
         ancla.after(el);
       }
       el.innerHTML = `${icoFoco}<span>${esc(typeof txt === "function" ? txt() : txt)}</span><button type="button" class="ghost" data-entendido="${tab}">Entendido</button>`;
-      el.classList.toggle("hidden", leerLocal("ayuda-oculta-" + tab) === "1");
+      const visto = leerLocal("ayuda-oculta-" + tab) === "1" || (typeof tourVisto === "function" && (tourVisto("ayuda-" + tab) || tourVisto(claveTab(tab))));
+      el.classList.toggle("hidden", visto);
     }
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-entendido]"); if (!b) return;
     guardarLocal("ayuda-oculta-" + b.dataset.entendido, "1");
+    marcarTour("ayuda-" + b.dataset.entendido);   // en la cuenta: no vuelve a salir en ningún aparato
     b.closest(".ayuda").classList.add("hidden");
   });
 
@@ -3445,7 +3447,7 @@
 
   async function pintarPrimerosPasos() {
     const cont = $("primerosPasos");
-    if (!esAdmin() || leerLocal("pasos-ocultos") === "1") { cont.classList.add("hidden"); return; }
+    if (!esAdmin() || leerLocal("pasos-ocultos") === "1" || (typeof tourVisto === "function" && tourVisto("pasos-ocultos"))) { cont.classList.add("hidden"); return; }
     const { data: pf } = await db.from("perfiles").select("rol,barbero_id");
     const pasos = [
       ["Agrega a tus barberos", "Para asignarles clientes y citas.", barberos.some((b) => b.activo), "equipo"],
@@ -3463,7 +3465,7 @@
       <p class="muted small" style="margin:6px 0 10px">${hechos} de ${pasos.length} listos. Toca uno para ir directo.</p>
       ${pasos.map(([t, d, ok, tab], i) => `<button type="button" class="paso-inicio ${ok ? "hecho" : ""}" data-ir="${tab}">
         <span class="num">${ok ? "✓" : i + 1}</span><span class="txt"><b>${t}</b><span class="muted small">${d}</span></span><span class="flecha">›</span></button>`).join("")}`;
-    $("pasosOcultar").onclick = (e) => { e.stopPropagation(); guardarLocal("pasos-ocultos", "1"); cont.classList.add("hidden"); };
+    $("pasosOcultar").onclick = (e) => { e.stopPropagation(); guardarLocal("pasos-ocultos", "1"); marcarTour("pasos-ocultos"); cont.classList.add("hidden"); };
   }
 
   // ---------- Recorrido guiado ----------
@@ -3680,6 +3682,7 @@
   function moverTour(d) { tourI += d; if (tourI >= tourPasos.length) return cerrarTour(true); if (tourI < 0) tourI = 0; pintarTour(); }
   function cerrarTour(seguir = false) {
     $("tour")?.classList.add("hidden");
+    ponerAyudas();
     if (seguir && tourClave === "visto") tourPrimeraVez(tabActual());   // después de la bienvenida, el de la pestaña
   }
   function pintarTour() {
@@ -3730,8 +3733,7 @@
   addEventListener("resize", () => { if ($("tour") && !$("tour").classList.contains("hidden")) pintarTour(); });
   $("ayudaBtn").onclick = $("ayudaMovil").onclick = () => {
     // Volver a mostrar también las ayudas ocultas
-    Object.keys(AYUDA).forEach((t) => guardarLocal("ayuda-oculta-" + t, null));
-    ponerAyudas(); verConsejos = true;
+    verConsejos = true;
     const t = tabActual();
     if (t === "inicio" || !abrirTourTab(t)) abrirTour();
   };
@@ -3801,6 +3803,7 @@
     pintarPrimerosPasos();
     await cargarMetaTours();
     aparienciaDeCuenta();
+    ponerAyudas(); pintarPrimerosPasos();
     if (user && !tourVisto("visto")) setTimeout(() => abrirTour(), 700);
     else tourPrimeraVez(tabActual());
   }
