@@ -3099,58 +3099,108 @@
   }
   // Recorrido corto de cada pestaña: se presenta solo la primera vez que entras a ella
   const TOUR_TAB = {
+    inicio: () => [
+      [null, "Tu Inicio", "Es el resumen de tu día. De un vistazo ves cómo va la barbería sin entrar a cada sección. Te enseño qué es cada cosa."],
+      ["#avisoPublicar", "Publica tu horario", "Este aviso sale cada día hasta que publiques. Tócalo, elige WhatsApp y luego «Mi estado». Desaparece solo cuando ya publicaste."],
+      ["#primerosPasos", "Primeros pasos", "Lo que falta para dejar todo listo. Toca cada punto y te lleva directo. Se van palomeando solos."],
+      ["#alertas", "Avisos", "Cuando algo necesita tu atención (alguien lleva mucho esperando, una cita por llegar, productos por agotarse) sale aquí en color. Tócalo y te lleva a resolverlo."],
+      ["#tab-inicio .kpis", "Los números de hoy", esAdmin() ? "Lo vendido hoy, clientes atendidos, cuántos esperan ahora y las citas que faltan. Abajo de cada número te dice cómo vas contra ayer." : "Tus ventas de hoy, clientes atendidos, cuántos esperan ahora y las citas que faltan."],
+      ["#grafica", "Ventas de la semana", "Cada barra es un día. Así ves rápido cuál fue tu mejor día."],
+      ["#iProximas", "Próximas citas", "Las siguientes citas, con hora y nombre. «Ver agenda» te lleva a la sección Citas."],
+      ["#tab-inicio .accesos", "Atajos", "Lo que más se usa, a un toque: meter a alguien a la fila, agendar una cita, bloquear un rato o vender un producto."],
+    ],
     hoy: () => [
-      ["#cola", "La fila de hoy", "Aquí aparecen los clientes en orden. Toca «Atender» cuando pase a la silla y «Cobrar» al terminar. La ✕ cancela el turno."],
-      ["#btnAgregar", "+ Cliente", "Si alguien llega sin celular, anótalo tú aquí y entra a la fila."],
-      ["#btnVenta", "+ Venta", "Para vender una pomada o un producto sin corte."],
+      [null, "La fila de hoy", "Aquí se juntan los que se forman con el QR, los que anotas tú y las citas que ya llegaron. Se actualiza sola, no hace falta recargar."],
+      ["#tab-hoy .kpis", "Cómo va el día", "Cuántos esperan, cuántos se están atendiendo, cuántos ya pagaron y cuánto se ha vendido hoy."],
+      ["#btnAgregar", "+ Cliente", "Si alguien llega sin celular o te pide turno en persona, anótalo aquí con su nombre. Entra al final de la fila."],
+      ["#cola", "Cómo atender", "Cada tarjeta es un cliente, en orden de llegada. 1) Toca «Atender» cuando pase a la silla. 2) Al terminar toca «Cobrar». 3) La ✕ lo saca de la fila si se fue."],
+      ["#cola", "Al cobrar", "Eliges quién lo atendió, el servicio, cuánto pagó, la propina y si fue efectivo, tarjeta o transferencia. Con eso se calculan solas las comisiones y el corte de caja."],
+      ["#btnVenta", "+ Venta", "Para vender una pomada, cera u otro producto a alguien que no se cortó. Las piezas se descuentan solas del inventario."],
+      ["#tab-hoy label:has(#verTodos)", "Ver cobrados", "Marca esta casilla para ver también a los que ya pagaron o se cancelaron. Sirve para revisar o corregir un cobro."],
+      ["#bloqueCitasHoy", "Citas de hoy", "Las citas que aún no llegan. Cuando llegue el cliente toca «Llegó» y pasa a la fila."],
     ],
     citas: () => [
-      ["#btnNuevaCita", "+ Cita", "Aparta una cita a quien te llama o te escribe."],
-      ["#citaFecha", "Cambia de día", "Con las flechas o tocando la fecha ves las citas de otro día. «Hoy» te regresa."],
-      ["#agenda", "La agenda", "Toca un espacio vacío para apartar. Toca una cita para marcar que llegó, moverla o cancelarla."],
-      ["#btnBloquear", "Bloquear horario", "Aparta un rato sin citas: la comida, un pendiente o un día libre."],
+      [null, "Citas", "Aquí ves y apartas las citas. Los clientes también las apartan solos desde la página; aparecen aquí al momento."],
+      ["#btnNuevaCita", "+ Cita", "Para apartarle a quien te llama o te escribe. Pones nombre, teléfono, servicio, barbero, día y hora. Solo te deja elegir horas que estén libres."],
+      ["#btnBloquear", "Bloquear horario", "Para que nadie aparte en un rato: la comida, una salida o el día libre de un barbero. Los clientes ya no verán esas horas."],
+      ["#tab-citas .fila:has(#citaFecha)", "Cambiar de día", "Las flechas ‹ › pasan al día anterior o al siguiente. Toca la fecha para elegir cualquier día. «Hoy» te regresa a hoy."],
+      ["#citaVista", "Agenda o lista", "«Agenda» muestra las horas por barbero, como un cuaderno. «Lista» las pone una debajo de otra, y ahí puedes ver también las canceladas."],
+      ["#agenda", "La agenda", "Cada columna es un barbero y cada renglón una hora. Toca un espacio vacío para apartar ahí mismo."],
+      ["#agenda", "Toca una cita", "Ves sus datos y puedes: «Llegó» (pasa a la fila), «Mover» (cambiar día u hora), escribirle por WhatsApp o cancelarla."],
+      ["#listaBloqueos", "Bloqueos próximos", "Los ratos que bloqueaste. Si cambias de planes, quítalo y esas horas se vuelven a abrir."],
     ],
     corte: () => esAdmin() ? [
-      ["#fechaCorte", "El día", "Elige qué día quieres revisar. Empieza en hoy."],
-      ["#cTotal", "Total del día", "Todo lo que entró hoy. Arriba ves cuánto fue en efectivo, tarjeta y transferencia."],
-      ["#cajaFondo", "Fondo de caja", "Escribe con cuánto dinero abriste la caja."],
-      ["#cajaContado", "Cuenta la caja", "Escribe lo que hay al cerrar y el sistema te dice si cuadra."],
-      ["#tablaBarberos", "Pago a barberos", "Cuánto le toca a cada uno de comisión y propinas."],
-      ["#cajaCerrar", "Cerrar caja", "Al final del día, para dejarlo guardado."],
+      [null, "Corte de caja", "Aquí cierras el día: cuánto entró, cuánto debe haber en la caja y cuánto le toca a cada barbero. Te explico en orden."],
+      ["#fechaCorte", "El día", "Empieza en hoy. Cambia la fecha para revisar un día pasado."],
+      ["#imprimir", "Imprimir", "Saca el corte en papel o guárdalo como PDF."],
+      ["#tab-corte .kpis", "Lo que entró", "Efectivo, tarjeta, transferencia y el total. Solo el efectivo debe estar en la caja."],
+      ["#cajaFondo", "1. Fondo inicial", "Escribe con cuánto dinero abriste la caja (el cambio). Se guarda solo."],
+      ["#formGasto", "2. Gastos", "Si sacaste dinero de la caja (navajas, garrafón, limpieza), escribe qué fue y cuánto, y toca +. Se resta de lo que debe haber."],
+      ["#tablaCaja", "3. Lo que debe haber", "El sistema suma el fondo más el efectivo cobrado, le resta los gastos y te dice cuánto debería haber."],
+      ["#cajaContado", "4. Cuenta la caja", "Cuenta billetes y monedas y escribe el total. Abajo te dice si cuadra, si sobra o si falta."],
+      ["#cajaCerrar", "5. Cerrar caja", "Al terminar el día. Queda guardado el corte con tus notas."],
+      ["#tablaBarberos", "Pago a barberos", "Cuántos cortes hizo cada uno, su comisión y sus propinas. Es lo que hay que pagarle."],
+      ["#tablaDetalle", "Detalle de cobros", "Cada cobro del día con hora, barbero y forma de pago. Útil para encontrar un error."],
     ] : [
-      ["#cTotal", "Tus ventas", "Lo que cobraste hoy."],
-      ["#tablaBarberos", "Lo que te toca", "Tu comisión y tus propinas del día."],
+      [null, "Mis ventas", "Aquí ves lo que cobraste y lo que te toca."],
+      ["#fechaCorte", "El día", "Cambia la fecha para ver un día pasado."],
+      ["#tab-corte .kpis", "Lo que cobraste", "En efectivo, tarjeta y transferencia, y el total."],
+      ["#tablaBarberos", "Mi comisión", "Tus cortes, tu comisión y tus propinas del día."],
+      ["#tablaDetalle", "Detalle", "Cada cobro con su hora y forma de pago."],
     ],
     clientes: () => [
-      ["#buscarCliente", "Buscar", "Escribe el nombre o el teléfono."],
-      ["#ordenClientes", "Ordenar", "Por ejemplo, ver primero a los que hace tiempo no vienen."],
-      ["#listaClientes", "Tus clientes", "Toca uno para ver sus visitas o mandarle un WhatsApp para que regrese."],
+      [null, "Clientes", "Todos los que han venido, juntados por su teléfono. Sirve para conocer a tus clientes y traer de vuelta a los que ya no vienen."],
+      ["#tab-clientes .kpis", "Tus números", "Cuántos clientes tienes, los nuevos de este mes, los frecuentes (3 visitas o más) y los que llevan más de 30 días sin venir."],
+      ["#buscarCliente", "Buscar", "Escribe parte del nombre o del teléfono."],
+      ["#ordenClientes", "Ordenar", "Elige «No han vuelto» para ver primero a los que hace tiempo no vienen. «Más gastado» te muestra a tus mejores clientes."],
+      ["#listaClientes", "Cada cliente", "Ves cuántas veces vino, cuánto ha gastado y su última visita. Con «WhatsApp» le mandas un mensaje para invitarlo a regresar."],
     ],
     reportes: () => [
-      ["#repRango", "Periodo", "Elige semana, mes o las fechas que quieras."],
-      ["#rUtilidad", "Ganancia", "Lo que queda después de comisiones y gastos."],
-      ["#repBarberos", "Por barbero", "Cuánto vendió y cuánto ganó cada uno."],
-      ["#repCsv", "Exportar a Excel", "Descarga todo en una hoja de cálculo."],
+      [null, "Reportes", "Cómo va el negocio en la semana o el mes: lo que vendes, lo que pagas y lo que ganas."],
+      ["#repRango", "Periodo", "Esta semana, este mes o el mes pasado, de un toque."],
+      ["#repDesde", "Fechas a tu gusto", "O elige desde y hasta para ver cualquier periodo."],
+      ["#tab-reportes .kpis", "El resumen", "Ventas de servicios y de productos, comisiones, gastos, clientes atendidos y lo que gasta cada cliente en promedio."],
+      ["#tab-reportes .kpi:has(#rUtilidad)", "Ganancia del negocio", "Lo que le queda a la barbería: ventas menos comisiones y gastos. Las propinas son de los barberos y no cuentan aquí."],
+      ["#repDias", "Ventas por día", "Para ver qué días se trabaja más y cuáles flojean."],
+      ["#repBarberos", "Por barbero", "Cuánto vendió, cuántos cortes hizo y cuánto ganó cada uno."],
+      ["#repServicios", "Por servicio", "Qué servicio se vende más y cuánto deja."],
+      ["#repCsv", "Exportar a Excel", "Descarga todo en una hoja de cálculo para guardarlo o mandárselo al contador."],
     ],
-    precios: () => [
-      ["#tablaPrecios", "Tus servicios", esAdmin() ? "Cambia el precio y cuánto tarda. Los clientes lo ven al momento." : "Los servicios y sus precios. Solo Alejandro los puede cambiar."],
-      ["#formServicio", "Nuevo servicio", "Agrega un servicio con su precio."],
+    precios: () => esAdmin() ? [
+      [null, "Servicios y precios", "Lo que cobras y cuánto tarda cada servicio. Lo que cambies aquí lo ven los clientes al momento."],
+      ["#tablaPrecios", "Cambiar un precio", "Toca el precio, escribe el nuevo y listo, se guarda solo. Igual con el nombre."],
+      ["#tablaPrecios", "La duración importa", "Con los minutos se calculan los horarios libres para citas. Un servicio de 60 minutos ocupa dos espacios de 30."],
+      ["#tablaPrecios", "Visible u oculto", "Toca «Visible» para ocultar un servicio que ya no das. No se borra; lo puedes volver a mostrar cuando quieras."],
+      ["#formServicio", "Nuevo servicio", "Escribe el nombre y el precio y toca «Agregar». Luego ajusta cuánto tarda."],
+    ] : [
+      ["#tablaPrecios", "Servicios y precios", "Los servicios con su precio y cuánto tardan. Solo Alejandro los puede cambiar."],
     ],
     productos: () => [
-      ["#tablaProductos", "Tu inventario", "Lo que se vende se descuenta solo. Cuando llegue mercancía toca «+ Entrada»."],
-      ["#formProducto", "Nuevo producto", "Escribe nombre, precio, costo y cuántas piezas tienes."],
+      [null, "Productos", "Pomadas, ceras y todo lo que vendes. Lleva el inventario solo: cada venta descuenta las piezas."],
+      ["#tab-productos .kpis", "Tu inventario en números", "Cuántos productos tienes a la venta, las piezas en existencia, cuánto vale tu mercancía y cuántos se están acabando."],
+      ["#tablaProductos", "Tus productos", "Precio de venta, lo que te costó y las piezas que quedan."],
+      ...(esAdmin() ? [["#tablaProductos", "+ Entrada", "Cuando llegue mercancía toca «+ Entrada» en ese producto y escribe cuántas piezas llegaron."]] : []),
+      ["#formProducto", "Nuevo producto", "Nombre, precio de venta, lo que te costó y cuántas piezas tienes. Con el costo se calcula tu ganancia."],
     ],
     horario: () => [
-      ["#btnPublicarHoy", "Publicar en WhatsApp", "Un toque y subes tu horario de hoy a tu Estado. La imagen ya está lista."],
-      ["#calendario", "Calendario", "Toca uno o varios días para cerrarlos (festivos) o darles otro horario."],
-      ["#listaHorario", "Horario de cada semana", "Los días y horas normales. Es lo que ven los clientes al agendar."],
+      [null, "Horario", "Aquí decides qué días y a qué hora abres. La página de los clientes se actualiza sola con lo que marques."],
+      ["#btnPublicarHoy", "Publicar en tu Estado", "Un toque: se abre WhatsApp con la imagen de tu horario de hoy, eliges «Mi estado» y listo. La imagen ya viene con los horarios libres para cita."],
+      ["#btnPublicarHorario", "Otro día o estilo", "Para publicar el de mañana u otro día, o cambiar el diseño de la imagen. Hay 10 estilos."],
+      ["#tab-horario .cal-cab", "Cambiar de mes", "Con las flechas ves el mes anterior o el siguiente."],
+      ["#calendario", "Días especiales", "Toca uno o varios días. Abajo salen los botones para cerrarlos (festivos, vacaciones), darles otro horario o regresarlos al normal."],
+      ["#tab-horario .cal-ley", "Los colores", "Azul: horario normal. Dorado con ★: horario especial. Rojo: cerrado. El número en la esquina son las citas apartadas ese día."],
+      ["#listaHorario", "Horario de cada semana", "Palomea los días que abres y escribe a qué hora abres y cierras. Se repite todas las semanas; para un día distinto usa el calendario."],
     ],
     equipo: () => [
-      ["#btnNuevoBarbero", "+ Agregar barbero", "Agrégalo y créale su cuenta para que entre con su correo."],
-      ["#listaEquipo", "Tu equipo", "Toca a un barbero para cambiar su comisión o su contraseña, o para desactivarlo."],
+      [null, "Equipo", "Tus barberos: sus cuentas para entrar al panel, sus comisiones y sus números."],
+      ["#btnNuevoBarbero", "+ Agregar barbero", "Escribe su nombre y su comisión. Luego créale su cuenta con correo y contraseña para que entre desde su celular."],
+      ["#eqFiltro", "Activos y de baja", "Si alguien deja de trabajar, dalo de baja en vez de borrarlo: así no se pierden sus ventas pasadas."],
+      ["#eqOrden", "Ordenar", "Mira quién hizo más cortes o vendió más este mes."],
+      ["#listaEquipo", "Cada barbero", "Tócalo para ver sus números, sus citas y sus días libres, cambiar su comisión, cambiar su contraseña o darlo de baja."],
+      ["#bloquePendientes", "Cuentas por aprobar", "Cuentas que alguien creó y todavía no tienen acceso. Apruébalas solo si sabes de quién son."],
     ],
     ajustes: () => [
-      ['#tab-ajustes a[href="qr.html"]', "Código QR", "Imprímelo y pégalo en la entrada. Los clientes lo escanean y se forman solos."],
+      ['#tab-ajustes a[href="qr.html"]', "Código QR", "Ábrelo, imprímelo y pégalo en la entrada o en el espejo. Los clientes lo escanean con la cámara, escriben su nombre y entran solos a la fila. En «Hoy» los ves aparecer."],
     ],
   };
   // «Ya lo vi»: se guarda en este celular y en la cuenta (así no se repite en otro celular)
@@ -3166,21 +3216,22 @@
   const tourAbierto = () => $("tour") && !$("tour").classList.contains("hidden");
   // Recorrido de una pestaña (solo los pasos cuyo botón se ve)
   function abrirTourTab(tab) {
-    const visible = (sel) => { const el = document.querySelector(sel); return el && el.offsetParent !== null; };
-    const pasos = (TOUR_TAB[tab]?.() || []).filter(([sel]) => visible(sel));
-    if (!pasos.length) return false;
-    abrirTour(pasos, "tab-" + tab);
+    const visible = (sel) => { const el = document.querySelector(sel); return el && el.offsetParent !== null && el.offsetHeight > 0; };
+    const pasos = (TOUR_TAB[tab]?.() || []).filter(([sel]) => !sel || visible(sel));
+    if (!pasos.some(([sel]) => sel)) return false;
+    abrirTour(pasos, "tab-" + tab + "-v2");
     return true;
   }
   // La primera vez que entras a una pestaña
   function tourPrimeraVez(tab) {
-    if (!user || !TOUR_TAB[tab] || tourAbierto() || !tourVisto("visto") || tourVisto("tab-" + tab)) return;
+    if (!user || !TOUR_TAB[tab] || tourAbierto() || !tourVisto("visto") || tourVisto("tab-" + tab + "-v2")) return;
     setTimeout(() => { if (tabActual() === tab && !tourAbierto()) abrirTourTab(tab); }, 600);
   }
 
   let tourI = 0, tourPasos = [];
+  let tourClave = "visto";
   function abrirTour(pasos, clave = "visto") {
-    tourPasos = pasos || pasosTour(); tourI = 0;
+    tourPasos = pasos || pasosTour(); tourI = 0; tourClave = clave;
     marcarTour(clave);   // se presenta una sola vez, aunque lo cierres a la mitad
     if (!$("tour")) {
       const t = document.createElement("div"); t.id = "tour"; t.className = "tour"; t.setAttribute("role", "dialog"); t.setAttribute("aria-modal", "true"); t.setAttribute("aria-label", "Recorrido del panel");
@@ -3190,14 +3241,17 @@
         const b = e.target.closest("[data-tour]"); if (!b) return;
         if (b.dataset.tour === "sig") moverTour(1);
         if (b.dataset.tour === "ant") moverTour(-1);
-        if (b.dataset.tour === "fin") cerrarTour();
+        if (b.dataset.tour === "fin") cerrarTour(tourI === tourPasos.length - 1);
       });
     }
     $("tour").classList.remove("hidden");
     pintarTour();
   }
-  function moverTour(d) { tourI += d; if (tourI >= tourPasos.length) return cerrarTour(); if (tourI < 0) tourI = 0; pintarTour(); }
-  function cerrarTour() { $("tour")?.classList.add("hidden"); }
+  function moverTour(d) { tourI += d; if (tourI >= tourPasos.length) return cerrarTour(true); if (tourI < 0) tourI = 0; pintarTour(); }
+  function cerrarTour(seguir = false) {
+    $("tour")?.classList.add("hidden");
+    if (seguir && tourClave === "visto") tourPrimeraVez(tabActual());   // después de la bienvenida, el de la pestaña
+  }
   function pintarTour() {
     const [sel, titulo, texto] = tourPasos[tourI];
     const el = sel ? document.querySelector(sel) : null;
@@ -3208,7 +3262,7 @@
       if (alto > innerHeight * .45) scrollBy(0, -90);
     }
     const foco = $("tourFoco"), bur = $("tourBurbuja");
-    const ultimo = tourI === tourPasos.length - 1, general = tourPasos[0][0] === null;
+    const ultimo = tourI === tourPasos.length - 1, general = tourClave === "visto";
     bur.innerHTML = `<div class="tour-paso">Paso ${tourI + 1} de ${tourPasos.length}</div><h3>${esc(titulo)}</h3><p>${esc(texto)}</p>
       <div class="tour-botones">
         ${ultimo ? "" : `<button type="button" class="ghost" data-tour="fin">${general ? "Saltar" : "Cerrar"}</button>`}
