@@ -156,3 +156,13 @@ body { background: radial-gradient(700px 420px at 50% -120px, rgba(143,29,29,.45
 
 /* Los mensajes de error no ocupan espacio mientras están vacíos */
 .error:empty { display: none; }
+
+/* «Volver al inicio» cuando el turno ya terminó */
+.volver-inicio {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; margin-top: 12px; padding: 12px 18px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text); font-weight: 600; text-decoration: none;
+  transition: transform .32s var(--resorte, ease), background-color .15s ease;
+}
+.volver-inicio::before { content: "‹"; font-size: 1.25rem; line-height: 1; margin-top: -2px; }
+.volver-inicio:active { transform: scale(.96); transition-duration: .08s; }

@@ -1321,7 +1321,7 @@
       const acc = {
         espera: `<button data-a="atender" data-id="${v.id}">Atender</button><button class="primary" data-a="cobrar" data-id="${v.id}">Cobrar</button><button class="ghost danger" data-a="cancelar" data-id="${v.id}" title="Cancelar turno" aria-label="Cancelar turno">✕</button>`,
         atendiendo: `<button class="primary" data-a="cobrar" data-id="${v.id}">Cobrar</button><button class="ghost danger" data-a="cancelar" data-id="${v.id}" title="Cancelar turno" aria-label="Cancelar turno">✕</button>`,
-        cobrado: esAdmin() ? `<button class="ghost" data-a="cobrar" data-id="${v.id}">Editar</button>` : "",
+        cobrado: esAdmin() ? `<button class="ghost" data-a="cobrar" data-id="${v.id}">Editar</button><button class="ghost danger" data-a="borrar" data-id="${v.id}">Borrar</button>` : "",
         cancelado: `<button class="ghost" data-a="reabrir" data-id="${v.id}">Reabrir</button>`,
       }[v.estado];
       return `<div class="visita ${v.estado}">
@@ -1350,6 +1350,7 @@
     const a = btn.dataset.a;
     if (a === "cobrar") abrirCobro(v);
     if (a === "atender") abrirAtender(v);
+    if (a === "borrar") borrarCorte(v);
     if (a === "cancelar") {
       const antes = v.estado;
       if (await actualizar(v.id, { estado: "cancelado" }))
@@ -1756,10 +1757,29 @@
     $("tablaServicios").innerHTML = `<thead><tr><th>Servicio</th><th class="num">Cant.</th><th class="num">Importe</th></tr></thead>
       <tbody>${gs.map((g) => `<tr><td>${esc(g.nombre)}</td><td class="num">${g.n}</td><td class="num">${peso(g.servicio)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">Sin cobros</td></tr>'}</tbody>`;
 
-    $("tablaDetalle").innerHTML = `<thead><tr><th>#</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Barbero</th><th>Método</th><th class="num">Monto</th><th class="num">Propina</th></tr></thead>
-      <tbody>${cob.map((v) => `<tr><td>${v.turno}</td><td>${hora(v.cobrado_en)}</td><td>${esc(v.cliente_nombre)}</td><td>${esc(servicio(v.servicio_id)?.nombre)}</td><td>${esc(barbero(v.barbero_id)?.nombre)}</td><td>${METODOS[v.metodo_pago]}</td><td class="num">${peso(v.monto)}</td><td class="num">${peso(v.propina)}</td></tr>`).join("") || '<tr><td colspan="8" class="muted">Sin cobros este día</td></tr>'}</tbody>
-      <tfoot><tr><td colspan="6">Total</td><td class="num">${peso(tot(cob) - prop)}</td><td class="num">${peso(prop)}</td></tr></tfoot>`;
+    $("tablaDetalle").innerHTML = `<thead><tr><th>#</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Barbero</th><th>Método</th><th class="num">Monto</th><th class="num">Propina</th>${esAdmin() ? '<th class="no-print"></th>' : ""}</tr></thead>
+      <tbody>${cob.map((v) => `<tr><td>${v.turno}</td><td>${hora(v.cobrado_en)}</td><td>${esc(v.cliente_nombre)}</td><td>${esc(servicio(v.servicio_id)?.nombre)}</td><td>${esc(barbero(v.barbero_id)?.nombre)}</td><td>${METODOS[v.metodo_pago]}</td><td class="num">${peso(v.monto)}</td><td class="num">${peso(v.propina)}</td>${esAdmin() ? `<td class="no-print"><button class="ghost danger" style="padding:2px 10px" data-borrar-corte="${v.id}" aria-label="Borrar el corte de ${esc(v.cliente_nombre)}" title="Borrar este corte">Borrar</button></td>` : ""}</tr>`).join("") || `<tr><td colspan="${esAdmin() ? 9 : 8}" class="muted">Sin cobros este día</td></tr>`}</tbody>
+      <tfoot><tr><td colspan="6">Total</td><td class="num">${peso(tot(cob) - prop)}</td><td class="num">${peso(prop)}</td>${esAdmin() ? "<td></td>" : ""}</tr></tfoot>`;
+    cobrosDia = cob;
   }
+
+  // ---------- Borrar un corte (solo Alejandro): se quita de la caja, de las comisiones y de los reportes ----------
+  let cobrosDia = [];
+  async function borrarCorte(v) {
+    if (!v || !esAdmin()) return;
+    const prods = ventasDe(v.id);
+    const total = Number(v.monto) + Number(v.propina) + sumaVentas(prods);
+    if (!confirm(`¿Borrar el corte de ${v.cliente_nombre} (turno ${v.turno}, ${peso(total)})?\n\nSe quita de la caja, de la comisión de ${barbero(v.barbero_id)?.nombre || "el barbero"} y de los reportes.${prods.length ? " Los productos de ese cobro regresan al inventario." : ""}\n\nNo se puede deshacer.`)) return;
+    const { data, error } = await db.from("visitas").delete().eq("id", v.id).select("id");
+    if (error || !data?.length) return toast(error ? "No se pudo borrar: " + error.message : "No tienes permiso para borrar cortes", { tipo: "error" });
+    toast(`Corte de ${v.cliente_nombre.split(" ")[0]} borrado`);
+    await Promise.all([cargarHoy(), cargarCatalogos()]);
+    if (visible("corte")) cargarCorte();
+  }
+  $("tablaDetalle").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-borrar-corte]"); if (!b) return;
+    borrarCorte(cobrosDia.find((x) => x.id === Number(b.dataset.borrarCorte)));
+  });
 
   $("tablaProductosDia").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-borrar-venta]");

@@ -305,14 +305,18 @@
             Síguenos en Instagram</a>` : ""}`;
         acc.innerHTML = `<a href="cita.html?nueva=1" style="display:flex;align-items:center;justify-content:center;min-height:52px;padding:14px 18px;text-decoration:none;border-radius:999px;margin-top:20px;font-weight:600;background:var(--oro);color:#1a1206">Agenda tu próximo corte</a>
           <p class="muted small" style="text-align:center;margin:8px 0 0">Aparta tu día y hora y llegas directo a la silla.</p>
-          <button id="btnOtro" class="big">Tomar otro turno</button>`;
+          <button id="btnOtro" class="big">Tomar otro turno</button>
+          <a href="index.html" class="volver-inicio" id="btnInicio">Volver al inicio</a>`;
         $("btnOtro").onclick = () => { guardar("turno", null); irAlFormulario(); };
+        $("btnInicio").onclick = () => guardar("turno", null);   // ya terminó: la próxima vez empieza limpio
       } else {
         card.innerHTML = `
           <h2>Turno cancelado</h2>
           <p class="muted" style="margin:10px 0 0">Tu turno ${d.turno} ya no está en la fila.</p>`;
-        acc.innerHTML = `<button id="btnOtro" class="primary big">Tomar turno de nuevo</button>`;
+        acc.innerHTML = `<button id="btnOtro" class="primary big">Tomar turno de nuevo</button>
+          <a href="index.html" class="volver-inicio" id="btnInicio">Volver al inicio</a>`;
         $("btnOtro").onclick = () => { guardar("turno", null); irAlFormulario(); };
+        $("btnInicio").onclick = () => guardar("turno", null);
       }
     }
 
