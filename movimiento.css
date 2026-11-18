@@ -1,0 +1,65 @@
+/* =========================================================
+   Movimiento estilo Apple (lo usan el panel y las páginas del cliente)
+   - Resortes reales (curvas linear() calculadas con la física de un resorte)
+   - Respuesta al toque inmediata, hojas que se arrastran, controles que se deslizan
+   - Con «reducir movimiento» del teléfono, todo se vuelve un fundido suave
+   ========================================================= */
+:root {
+  /* Resorte sin rebote (amortiguamiento 1.0): lo normal para casi todo */
+  --resorte: linear(0, .0301, .1012, .1925, .2905, .387, .4774, .5591, .6313, .6939, .7474, .7927, .8307, .8622, .8883, .9097, .9272, .9415, .9531, .9625, .97, .9761, .981, .9849, .988, .9905, .9925, .994, 1);
+  /* Resorte con un poco de rebote (0.72): solo cuando hubo impulso o algo «llega» */
+  --resorte-rebote: linear(0, .0277, .0978, .1938, .3028, .4153, .5243, .6252, .7152, .7928, .8578, .9106, .9521, .9835, 1.0063, 1.0219, 1.0316, 1.0367, 1.0384, 1.0376, 1.035, 1.0314, 1.0272, 1.0229, 1.0187, 1.0148, 1.0113, 1.0083, 1.0057, 1.0036, 1.002, 1.0007, .9998, .9992, .9988, .9986, 1);
+  --salida: cubic-bezier(.4, 0, 1, 1);
+}
+@supports not (transition-timing-function: linear(0, 1)) {
+  :root { --resorte: cubic-bezier(.2, .9, .3, 1); --resorte-rebote: cubic-bezier(.2, 1.25, .4, 1); }
+}
+
+/* ---------- Respuesta al toque: se hunde al presionar, al instante ---------- */
+html.mov button, html.mov .boton, html.mov a.boton {
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, filter .15s ease, transform .32s var(--resorte), box-shadow .2s ease;
+}
+html.mov button:active:not(:disabled), html.mov .boton:active { transform: scale(.96); transition-duration: .15s, .15s, .15s, .15s, .08s, .2s; }
+html.mov .tabs button:active { transform: scale(.92); }
+html.mov .miembro.clic:active, html.mov .accesos button:active, html.mov .serv:active, html.mov .opcion:active,
+html.mov .hora:active, html.mov .chip:active { transform: scale(.97); }
+html.mov #cola .visita { transition: transform .32s var(--resorte), background-color .3s ease; }
+
+/* ---------- Hojas y ventanas: las anima movimiento.js (entran y salen por el mismo camino) ---------- */
+html.mov dialog[open] { animation: none; }
+html.mov dialog::backdrop { transition: opacity .3s ease; }
+html.mov dialog.saliendo::backdrop { opacity: 0; }
+html.mov dialog { will-change: transform; overscroll-behavior: contain; }
+@media (max-width: 620px) {
+  /* La barrita de arriba se ve «agarrable» */
+  html.mov dialog::before { width: 40px; background: rgba(255,255,255,.28); margin: -10px auto 14px; }
+}
+
+/* ---------- Control segmentado con «pastilla» que se desliza ---------- */
+.seg.con-pulgar { position: relative; isolation: isolate; }
+.seg.con-pulgar > button { position: relative; z-index: 1; transition: color .2s ease, transform .32s var(--resorte); }
+.seg.con-pulgar > button[aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
+.seg-pulgar {
+  position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 0; border-radius: 7px; pointer-events: none;
+  background: var(--surface); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04);
+  transition: transform .42s var(--resorte), width .42s var(--resorte), opacity .2s ease;
+}
+@media (prefers-color-scheme: dark) { .seg-pulgar { background: #636366; } }
+.seg-pulgar.sin-anim { transition: none; }
+
+/* ---------- Avisos (toast): bajan con un pequeño rebote ---------- */
+html.mov .toast { animation: none; }
+
+/* ---------- Cliente nuevo en la fila: entra y brilla un momento ---------- */
+@keyframes llegaBrillo { 0% { box-shadow: 0 0 0 0 rgba(111,168,220,.55); } 100% { box-shadow: 0 0 0 14px rgba(111,168,220,0); } }
+#cola .visita.llega { animation: llegaBrillo 1.1s ease-out 1; }
+
+/* ---------- Páginas del cliente: lo que está más abajo aparece al llegar ---------- */
+.mov-revelar { opacity: 0; transform: translateY(18px); }
+.mov-revelar.mov-visto { opacity: 1; transform: none; transition: opacity .5s ease, transform .7s var(--resorte); }
+
+/* ---------- Reducir movimiento: fundidos cortos en lugar de deslizar ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .mov-revelar { opacity: 1; transform: none; }
+  .seg-pulgar { transition: none; }
+}
