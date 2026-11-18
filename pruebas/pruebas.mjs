@@ -33,12 +33,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -590,6 +590,45 @@ prueba("El jueves conserva su cambio", (await libres(F2, CORTE, 2)).length === 0
 await db.exec(`set role anon`);
 prueba("Un visitante no ve quién trabaja cada día", (await error(`select * from barbero_turno_dia`)) !== null || (await q(`select * from barbero_turno_dia`)).length === 0);
 await db.exec(`reset role`);
+
+
+seccion("TIEMPO REAL: avisos públicos sin datos personales");
+prueba("Sin Realtime instalado, todo se guarda igual (las pruebas de arriba ya corrieron con los avisos puestos)", true);
+// Realtime de mentiras: guarda cada aviso que se manda
+await db.exec(`
+  create schema if not exists realtime;
+  create table realtime.avisos (id serial, payload jsonb, evento text, tema text, privado boolean);
+  create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void
+    language sql as $$ insert into realtime.avisos (payload, evento, tema, privado) values (payload, event, topic, private) $$;
+`);
+const avisos = async () => q(`select tema, evento, privado, payload from realtime.avisos order by id`);
+await reloj("2026-12-22 11:00");
+await como(null);
+await db.exec(`delete from realtime.avisos`);
+const tR = await turno("Vale Paz", "5550505050");
+let av = await avisos();
+prueba("Cuando alguien toma turno, se avisa en el tema 'fila'", av.some((a) => a.tema === "fila" && a.evento === "cambio"), JSON.stringify(av));
+prueba("El aviso es público (para que lo oigan los clientes sin cuenta)", av.every((a) => a.privado === false));
+prueba("El aviso no trae nombres ni teléfonos", !JSON.stringify(av).includes("Vale") && !JSON.stringify(av).includes("5550505050"));
+await db.exec(`delete from realtime.avisos`);
+await agendar("Wen Paz", "5550505051", CORTE, null, "2026-12-23", "12:00");
+av = await avisos();
+prueba("Cuando alguien aparta una cita, se avisa en 'agenda' (para quitar esa hora a los demás)", av.some((a) => a.tema === "agenda"));
+prueba("…y en 'fila'", av.some((a) => a.tema === "fila"));
+prueba("Tampoco trae datos del cliente", !JSON.stringify(av).includes("Wen"));
+await db.exec(`delete from realtime.avisos`);
+await db.exec(`update horario set cierra = '19:00' where dia = 2`);
+prueba("Cambiar el horario avisa en 'agenda'", (await avisos()).some((a) => a.tema === "agenda"));
+await db.exec(`update horario set cierra = '20:00' where dia = 2; delete from realtime.avisos`);
+await db.exec(`update servicios set precio = precio where nombre = 'Corte'`);
+prueba("Cambiar un servicio avisa en 'agenda'", (await avisos()).some((a) => a.tema === "agenda"));
+// Si Realtime falla, el cambio se guarda igual
+await db.exec(`create or replace function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void language plpgsql as $$ begin raise exception 'Realtime caído'; end $$`);
+const tR2 = await turno("Ximena Paz", "5550505052");
+prueba("Con Realtime caído, tomar turno sigue funcionando", !!tR2?.token, JSON.stringify(tR2));
+await db.exec(`drop schema realtime cascade`);
+const tR3 = await turno("Yael Paz", "5550505053");
+prueba("Y sin Realtime del todo, también", !!tR3?.token);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }

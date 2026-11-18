@@ -365,13 +365,14 @@
 
     // ---------- Horas libres ----------
     let pedido = 0;
-    async function cargarHoras() {
+    async function cargarHoras(suave = false) {
       const cont = $("horas");
+      const elegida = suave ? sel.hora : null;
       sel.hora = null;
       if (!sel.servicio) { cont.innerHTML = '<div class="aviso-horas">Elige primero un servicio para ver los horarios libres.</div>'; return; }
       if (!sel.fecha) { cont.innerHTML = '<div class="aviso-horas">No hay días abiertos en las próximas dos semanas.</div>'; return; }
       const n = ++pedido;
-      cont.innerHTML = '<div class="cargando"></div>';
+      if (!suave) cont.innerHTML = '<div class="cargando"></div>';
       const { data, error } = await db.rpc("horarios_disponibles", { p_fecha: sel.fecha, p_servicio_id: sel.servicio, p_barbero_id: sel.barbero });
       if (n !== pedido) return; // llegó una respuesta vieja
       if (error) { cont.innerHTML = '<div class="aviso-horas">No se pudieron cargar los horarios. Revisa tu conexión.</div>'; return; }
@@ -386,8 +387,12 @@
       const grupos = [["Mañana", (h) => h < 12], ["Tarde", (h) => h >= 12 && h < 18], ["Noche", (h) => h >= 18]];
       cont.innerHTML = grupos.map(([nombre, f]) => {
         const lista = data.filter((t) => f(Number(t.slice(0, 2))));
-        return lista.length ? `<div class="seccion-hora">${nombre}</div>` + lista.map((t) => `<button type="button" class="hora" aria-pressed="false" data-hora="${t}">${hora12(t)}</button>`).join("") : "";
+        return lista.length ? `<div class="seccion-hora">${nombre}</div>` + lista.map((t) => `<button type="button" class="hora" aria-pressed="${t === elegida}" data-hora="${t}">${hora12(t)}</button>`).join("") : "";
       }).join("");
+      if (elegida) {
+        if (data.includes(elegida)) sel.hora = elegida;   // sigue libre: se queda elegida
+        else { $("msgHora").textContent = `Alguien acaba de apartar las ${hora12(elegida)}. Elige otra hora.`; try { navigator.vibrate?.([30, 50, 30]); } catch {} }
+      }
     }
     // Revisa los días siguientes (hasta 30) y salta al primero que tenga horarios
     async function buscarSiguiente() {
@@ -660,6 +665,19 @@
       a.download = "cita-barberia.ics";
       document.body.appendChild(a); a.click(); a.remove();
     }
+
+    // ---------- En vivo: si alguien aparta o cambia el horario, se ve al momento ----------
+    let vivoTimer = null;
+    async function refrescarEnVivo() {
+      if (!listo || $("vistaForm")?.classList.contains("hidden")) return;
+      const { data } = await db.rpc("calendario_publico", { p_desde: hoyISO(), p_hasta: sumarDias(hoyISO(), 30) });
+      if (Array.isArray(data)) { for (const d of data) diasCal[d.fecha] = d; pintarMes(); }
+      if (sel.servicio && sel.fecha) { await cargarHoras(true); resumen(); }
+    }
+    const enVivo = () => { clearTimeout(vivoTimer); vivoTimer = setTimeout(refrescarEnVivo, 250); };
+    try { db.channel("agenda", { config: { private: false } }).on("broadcast", { event: "cambio" }, enVivo).subscribe(); } catch {}
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) enVivo(); });
+    setInterval(() => { if (!document.hidden) enVivo(); }, 60000);   // respaldo
 
     // ---------- Inicio ----------
     let listo = false;

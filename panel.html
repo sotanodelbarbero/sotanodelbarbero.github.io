@@ -459,6 +459,17 @@
     }
     @media (min-width: 769px) { .nav-titulo { display: none; } }
 
+    /* ---------- En vivo ---------- */
+    .en-vivo { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: .75rem; color: var(--muted); }
+    .en-vivo i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+    .en-vivo.conectado i { background: var(--ok); animation: latido 2.4s ease-out infinite; }
+    .en-vivo.conectado span { color: var(--ok); }
+    .en-vivo.reconectando i { background: var(--warn); }
+    .en-vivo.reconectando span { color: var(--warn); }
+    .en-vivo:not(.conectado):not(.reconectando) { display: none; }
+    @keyframes latido { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 6px transparent; } }
+    @media (max-width: 768px) { .en-vivo span { display: none; } .en-vivo { margin-left: 6px; } }
+
     /* ---------- Sección Personalizar ---------- */
     .ajuste { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: .5px solid var(--line); flex-wrap: wrap; }
     .ajuste:first-of-type { border-top: 0; }
@@ -542,7 +553,7 @@
     <aside class="sidebar no-print">
       <div class="brand">
         <img class="brand-logo" src="logo.jpg" alt="" style="width:40px;height:40px">
-        <div><h1 class="txt-negocio">Barbería</h1><div class="muted small"><span class="txt-rol"></span></div></div>
+        <div><h1 class="txt-negocio">Barbería</h1><div class="muted small"><span class="txt-rol"></span><span class="en-vivo" aria-live="polite"><i></i><span>En vivo</span></span></div></div>
       </div>
       <div class="tabs" role="tablist" aria-label="Secciones del panel">
         <div class="tabs-grupo" role="presentation">Día a día</div>
@@ -599,7 +610,7 @@
       <div class="nav-titulo" id="navTitulo" aria-hidden="true"></div>
       <div class="brand">
         <img class="brand-logo" src="logo.jpg" alt="" style="width:36px;height:36px">
-        <div><h1 class="txt-negocio">Barbería</h1><div class="muted small"><span class="txt-rol"></span><span class="sep"> · </span><span class="txt-hoy"></span></div></div>
+        <div><h1 class="txt-negocio">Barbería</h1><div class="muted small"><span class="txt-rol"></span><span class="en-vivo" aria-live="polite"><i></i><span>En vivo</span></span><span class="sep"> · </span><span class="txt-hoy"></span></div></div>
       </div>
       <div style="display:flex;gap:4px;flex:none">
         <button class="ghost" id="ayudaMovil" style="padding:8px 6px" aria-label="¿Cómo se usa?" title="¿Cómo se usa?"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg></button>
@@ -1345,25 +1356,86 @@
   }
 
   // Realtime: cuando un cliente se registra por QR aparece solo
+  // Junta varios avisos seguidos en una sola recarga (un cobro cambia varias tablas a la vez)
+  const pendientes = new Map();
+  const pronto = (clave, fn, ms = 180) => { clearTimeout(pendientes.get(clave)); pendientes.set(clave, setTimeout(() => { pendientes.delete(clave); fn(); }, ms)); };
+  // Vuelve a pintar lo que se esté viendo después de un cambio en catálogos (precios, barberos, turnos)
+  async function refrescarCatalogos() {
+    await cargarCatalogos();
+    pintarHoy();
+    if (visible("precios")) pintarPrecios();
+    if (visible("productos")) pintarProductos();
+    if (visible("equipo")) pintarEquipo();
+    if (visible("horario")) pintarTurnos();
+    if (visible("citas")) cargarCitas();
+    if (visible("inicio")) cargarInicio();
+    prepararHoy();
+  }
+  function refrescarHorario() {
+    horarioSemana = [];
+    if (visible("horario")) { pintarHorario(); cargarCalendario(); }
+    if (visible("citas")) cargarCitas();
+    if (visible("inicio")) cargarInicio();
+    prepararHoy();
+  }
+  // Todo lo que se está viendo, de nuevo (al volver a la app o al reconectar)
+  function ponerseAlDia() {
+    cargarHoy(); cargarCitasHoy();
+    if (visible("inicio")) cargarInicio();
+    if (visible("citas")) cargarCitas();
+    if (visible("corte")) cargarCorte();
+    if (visible("horario")) { pintarHorario(); cargarCalendario(); }
+    cargarCatalogos().then(() => { if (visible("productos")) pintarProductos(); if (visible("precios")) pintarPrecios(); });
+  }
+
+  // ---------- En vivo: el punto verde de arriba dice si estás conectado ----------
+  function estadoVivo(ok) {
+    document.querySelectorAll(".en-vivo").forEach((el) => {
+      el.classList.toggle("conectado", ok); el.classList.toggle("reconectando", !ok);
+      el.title = ok ? "En vivo: todo se actualiza solo" : "Reconectando… (los cambios llegarán en cuanto vuelva la conexión)";
+      el.querySelector("span").textContent = ok ? "En vivo" : "Reconectando…";
+    });
+  }
+
   function suscribir() {
     if (canal) return;
-    canal = db.channel("visitas")
-      .on("postgres_changes", { event: "*", schema: "public", table: "visitas" }, () => cargarHoy())
-      .on("postgres_changes", { event: "*", schema: "public", table: "ventas_productos" }, () => cargarHoy())
-      .on("postgres_changes", { event: "*", schema: "public", table: "citas" }, (pl) => {
+    const t = (tabla, fn) => ["postgres_changes", { event: "*", schema: "public", table: tabla }, fn];
+    const escuchas = [
+      t("visitas", () => pronto("hoy", cargarHoy)),
+      t("ventas_productos", () => pronto("hoy", cargarHoy)),
+      t("citas", (pl) => {
         avisarLlegada(pl);
-        cargarCitasHoy();
-        if (visible("citas")) cargarCitas();
-        if (visible("inicio")) cargarInicio();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "bloqueos" }, () => {
-        if (visible("citas")) cargarCitas();
-        if (visible("inicio")) cargarInicio();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "productos" }, () => cargarCatalogos().then(() => {
-        if (!$("tab-productos").classList.contains("hidden")) pintarProductos();
-      }))
-      .subscribe();
+        pronto("citasHoy", cargarCitasHoy);
+        if (visible("citas")) pronto("citas", cargarCitas);
+        if (visible("inicio")) pronto("inicio", cargarInicio);
+        if (visible("horario")) pronto("cal", cargarCalendario);
+      }),
+      t("bloqueos", () => {
+        if (visible("citas")) pronto("citas", cargarCitas);
+        if (visible("inicio")) pronto("inicio", cargarInicio);
+        if (visible("equipo")) pronto("equipo", pintarEquipo);
+      }),
+      t("productos", () => pronto("cat", refrescarCatalogos)),
+      t("servicios", () => pronto("cat", refrescarCatalogos)),
+      t("barberos", () => pronto("cat", refrescarCatalogos)),
+      t("barbero_turno", () => pronto("cat", refrescarCatalogos)),
+      t("barbero_turno_dia", () => pronto("cat", refrescarCatalogos)),
+      t("horario", () => pronto("horario", refrescarHorario)),
+      t("horario_especial", () => pronto("horario", refrescarHorario)),
+      t("gastos", () => { if (visible("corte")) pronto("corte", cargarCorte); if (visible("reportes")) pronto("rep", cargarReportes); }),
+      t("cortes", () => { if (visible("corte")) pronto("corte", cargarCorte); }),
+    ];
+    canal = escuchas.reduce((c, e) => c.on(...e), db.channel("panel"));
+    let antes = null;
+    canal.subscribe((estado) => {
+      const ok = estado === "SUBSCRIBED";
+      estadoVivo(ok);
+      if (ok && antes && antes !== "SUBSCRIBED") ponerseAlDia();   // volvió la conexión: traer lo que se perdió
+      antes = estado;
+    });
+    // Al volver a la app (el celular duerme la conexión en segundo plano): ponerse al día al instante
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) ponerseAlDia(); });
+    addEventListener("online", ponerseAlDia);
     // Respaldo por si se cae la conexión en vivo
     setInterval(() => { if (!document.hidden) { cargarHoy(); cargarCitasHoy(); } }, 60000);
   }

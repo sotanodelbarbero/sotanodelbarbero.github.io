@@ -261,6 +261,12 @@
       timer = setTimeout(() => { if (!document.hidden) seguirTurno(); else programar(estado); }, 10000);
     }
     document.addEventListener("visibilitychange", () => { if (!document.hidden && leer("turno")) seguirTurno(); });
+    // En vivo: cuando la fila cambia, el turno y la fila se actualizan al momento (el aviso no trae datos de nadie)
+    let vivoT = null;
+    const filaCambio = () => { clearTimeout(vivoT); vivoT = setTimeout(() => {
+      if (leer("turno")) seguirTurno(); else if ($("vistaTurno").classList.contains("hidden")) cargarCola();
+    }, 300); };
+    try { db.channel("fila", { config: { private: false } }).on("broadcast", { event: "cambio" }, filaCambio).subscribe(); } catch {}
 
     function pintarTurno(d) {
       const card = $("tarjetaTurno"), acc = $("accionesTurno");

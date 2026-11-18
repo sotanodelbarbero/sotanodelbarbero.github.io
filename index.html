@@ -661,6 +661,8 @@
     cargarCola();
     cargarHorario();
     setInterval(() => { if (!document.hidden) cargarCola(); }, 30000);
+    // En vivo: la fila de la portada cambia al momento
+    try { let vt = null; db?.channel("fila", { config: { private: false } }).on("broadcast", { event: "cambio" }, () => { clearTimeout(vt); vt = setTimeout(cargarCola, 300); }).subscribe(); } catch {}
 
     // =========================================================
     // Poste de barbero 3D (Three.js)
