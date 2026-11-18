@@ -285,6 +285,12 @@
     .publicar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: rgba(37,211,102,.35);
       background: linear-gradient(160deg, rgba(37,211,102,.1), rgba(37,211,102,.02)), var(--surface); }
     .publicar-txt { flex: 1; }
+    .chips-propina { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .chips-propina button { flex: 1 1 auto; padding: 6px 10px; font-size: .875rem; }
+    .chips-propina button[aria-pressed="true"] { background: var(--accent); color: #0b0f13; border-color: var(--accent); }
+    .cambio-box { margin-top: 10px; align-items: center; justify-content: flex-end; gap: 10px; }
+    .cambio { min-width: 120px; text-align: right; color: var(--ok, #4cc38a); }
+    .cambio.falta { color: var(--bad); }
     .publicar-botones { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; }
     .publicar-botones .ghost { font-size: .875rem; padding: 6px; }
     .wa-btn { display: inline-flex !important; align-items: center; justify-content: center; gap: 10px; flex: none;
@@ -827,6 +833,9 @@
         <div><label for="cobroMonto">Monto</label><input id="cobroMonto" type="number" min="0" step="1" inputmode="decimal" required></div>
         <div><label for="cobroPropina">Propina</label><input id="cobroPropina" type="number" min="0" step="1" inputmode="decimal" value="0"></div>
       </div>
+      <div class="chips-propina" id="cobroChips" aria-label="Propina rápida">
+        <button type="button" data-p="0">Sin propina</button><button type="button" data-p="20">$20</button><button type="button" data-p="50">$50</button><button type="button" data-p="100">$100</button>
+      </div>
       <label>Método de pago</label>
       <div class="seg" id="cobroMetodo">
         <button type="button" data-m="efectivo" aria-pressed="true">Efectivo</button>
@@ -836,6 +845,11 @@
       <label>Productos</label>
       <div id="cobroProductos"></div>
       <div id="cobroTotal" style="margin-top:12px;text-align:right;font-weight:700;font-size:1.125rem"></div>
+      <div id="cobroCambioBox" class="fila cambio-box">
+        <label for="cobroRecibe" style="margin:0">¿Con cuánto paga?</label>
+        <input id="cobroRecibe" type="number" min="0" step="1" inputmode="decimal" placeholder="$" style="max-width:120px;text-align:right">
+        <b id="cobroCambio" class="cambio"></b>
+      </div>
       <div id="cobroError" class="error" role="alert"></div>
       <div class="fila" style="margin-top:8px">
         <button type="button" id="cobroCancelar">Cancelar</button>
@@ -1127,13 +1141,21 @@
         <div class="t">${v.turno}</div>
         <div>
           <div><b>${esc(v.cliente_nombre)}</b> <span class="badge ${v.estado}">${v.estado}</span>${v.hora_cita && v.estado === "espera" ? ` <span class="badge atendiendo">cita ${String(v.hora_cita).slice(0, 5)}</span>` : ""}</div>
-          <div class="muted small">${det} · llegó ${hora(v.creado_en)}${v.telefono ? " · " + esc(v.telefono) : ""}</div>
+          <div class="muted small">${det} · ${esperaTxt(v)}${v.telefono ? " · " + esc(v.telefono) : ""}</div>
         </div>
         <div class="acciones">${acc}</div>
       </div>`;
     }).join("") : `<div class="card muted" style="text-align:center">No hay clientes en espera.</div>`;
   }
   $("verTodos").onchange = pintarHoy;
+  // «espera 25 min» (en color si ya es mucho); para los demás, la hora de llegada
+  function esperaTxt(v) {
+    if (v.estado !== "espera") return "llegó " + hora(v.creado_en);
+    const m = Math.max(0, Math.round((Date.now() - new Date(v.creado_en)) / 60000));
+    const t = m < 1 ? "acaba de llegar" : m < 60 ? `espera ${m} min` : `espera ${Math.floor(m / 60)} h ${m % 60} min`;
+    return m >= 30 ? `<b style="color:var(--warn)">${t}</b>` : t;
+  }
+  setInterval(() => { if (!document.hidden && visible("hoy")) pintarHoy(); }, 60000);
 
   $("cola").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-a]"); if (!btn) return;
@@ -1141,12 +1163,12 @@
     const a = btn.dataset.a;
     if (a === "cobrar") abrirCobro(v);
     if (a === "atender") abrirAtender(v);
-    if (a === "cancelar" && confirm(`¿Cancelar el turno ${v.turno} de ${v.cliente_nombre}?`)) {
+    if (a === "cancelar") {
       const antes = v.estado;
       if (await actualizar(v.id, { estado: "cancelado" }))
         toast(`Turno ${v.turno} cancelado`, { deshacer: async () => { if (await actualizar(v.id, { estado: antes })) toast(`${v.cliente_nombre.split(" ")[0]} regresó a la fila`); } });
     }
-    if (a === "reabrir") actualizar(v.id, { estado: "espera" });
+    if (a === "reabrir" && await actualizar(v.id, { estado: "espera" })) toast(`${v.cliente_nombre.split(" ")[0]} regresó a la fila`);
   });
 
   async function actualizar(id, cambios) {
@@ -1198,20 +1220,37 @@
     if (msg) $("simpleError").textContent = msg; else $("dlgSimple").close();
   });
 
+  const faltanBarberos = () => esAdmin()
+    ? toast("Primero agrega a tus barberos", { tipo: "error", accion: { texto: "Ir a Equipo", fn: () => irTab("equipo") } })
+    : toast("Falta que Alejandro dé de alta a los barberos");
+  // Quién atiende sin preguntar: el que ya tiene asignado, el barbero que entró (no Alejandro, que reparte), o el único que hay
+  const barberoObvio = (v) => v.barbero_id ?? (!esAdmin() ? miBarbero : null) ?? (barberos.filter((b) => b.activo).length === 1 ? barberos.find((b) => b.activo).id : null);
+
   function abrirAtender(v) {
-    if (!barberos.some((b) => b.activo)) { toast("Alejandro debe dar de alta a los barberos en Ajustes."); return; }
+    if (!barberos.some((b) => b.activo)) { faltanBarberos(); return; }
+    const obvio = barberoObvio(v);
+    if (obvio) {
+      actualizar(v.id, { estado: "atendiendo", barbero_id: obvio }).then((ok) => ok && toast(`${v.cliente_nombre.split(" ")[0]} pasó a la silla`, {
+        deshacer: async () => { if (await actualizar(v.id, { estado: "espera" })) toast("Regresó a la fila"); } }));
+      return;
+    }
     abrirSimple(`Atender turno ${v.turno} · ${v.cliente_nombre}`,
       `<label for="sBarbero">¿Quién lo atiende?</label><select id="sBarbero">${opciones(barberos, v.barbero_id ?? miBarbero)}</select>`,
       async () => (await actualizar(v.id, { estado: "atendiendo", barbero_id: Number($("sBarbero").value) })) ? null : "No se pudo guardar.");
   }
 
   $("btnAgregar").onclick = () => abrirSimple("Agregar cliente",
-    `<label for="sNombre">Nombre</label><input id="sNombre" maxlength="80" required>
-     <label for="sServicio">Servicio</label><select id="sServicio">${opciones(servicios, null)}</select>`,
+    `<label for="sNombre">Nombre</label><input id="sNombre" maxlength="80" required autocomplete="off" autocapitalize="words">
+     <label for="sServicio">Servicio</label><select id="sServicio">${opciones(servicios, null)}</select>
+     <label for="sTel">Teléfono <span class="muted small">(opcional, para reconocerlo la próxima vez)</span></label>
+     <input id="sTel" type="tel" inputmode="tel" maxlength="15" placeholder="10 dígitos" autocomplete="off">`,
     async () => {
-      const { error } = await db.rpc("registrar_visita", { p_nombre: $("sNombre").value, p_telefono: null, p_servicio_id: Number($("sServicio").value) });
+      const nombre = $("sNombre").value.trim(), tel = $("sTel").value.replace(/\D/g, "").slice(-10);
+      if (!nombre) return "Escribe el nombre.";
+      if (tel && tel.length < 10) return "El teléfono debe tener 10 dígitos (o déjalo vacío).";
+      const { error } = await db.rpc("registrar_visita", { p_nombre: nombre, p_telefono: tel || null, p_servicio_id: Number($("sServicio").value) });
       if (error) return "No se pudo registrar: " + error.message;
-      await cargarHoy(); return null;
+      await cargarHoy(); toast(`${nombre.split(" ")[0]} entró a la fila`); return null;
     });
 
   // ---------- Carrito de productos (se usa en Cobrar y en + Venta) ----------
@@ -1260,16 +1299,24 @@
 
   // ---------- Cobro ----------
   let cobrando = null, metodo = "efectivo";
-  function setMetodo(m) { metodo = m; ponerMetodo("cobroMetodo", m); }
+  function setMetodo(m) { metodo = m; ponerMetodo("cobroMetodo", m); if ($("cobroTotal")) pintarTotalCobro(); }
   $("cobroMetodo").onclick = (e) => { const b = e.target.closest("button"); if (b) setMetodo(b.dataset.m); };
 
   const carritoCobro = crearCarrito($("cobroProductos"), () => pintarTotalCobro());
   function pintarTotalCobro() {
     const monto = Number($("cobroMonto").value || 0), propina = Number($("cobroPropina").value || 0), prod = carritoCobro.total();
-    $("cobroTotal").innerHTML = `Total a cobrar: ${peso(monto + propina + prod)}`
+    const total = monto + propina + prod;
+    $("cobroGuardar").textContent = `Cobrar ${peso(total)}`;
+    $("cobroChips").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.p) === propina)));
+    $("cobroCambioBox").classList.toggle("hidden", metodo !== "efectivo");
+    const recibe = Number($("cobroRecibe").value || 0);
+    $("cobroCambio").textContent = !recibe ? "" : recibe < total ? `Faltan ${peso(total - recibe)}` : `Cambio: ${peso(recibe - total)}`;
+    $("cobroCambio").classList.toggle("falta", !!recibe && recibe < total);
+    $("cobroTotal").innerHTML = `Total a cobrar: ${peso(total)}`
       + (prod ? `<div class="muted small" style="font-weight:400">servicio ${peso(monto)} + productos ${peso(prod)}${propina ? " + propina " + peso(propina) : ""}</div>` : "");
   }
-  $("cobroMonto").oninput = $("cobroPropina").oninput = pintarTotalCobro;
+  $("cobroMonto").oninput = $("cobroPropina").oninput = $("cobroRecibe").oninput = pintarTotalCobro;
+  $("cobroChips").onclick = (e) => { const b = e.target.closest("[data-p]"); if (b) { $("cobroPropina").value = b.dataset.p; pintarTotalCobro(); } };
 
   // Guarda los productos de una visita: borra los anteriores (regresan al inventario) y pone los nuevos
   async function guardarProductosVisita(v, items, metodoPago, barberoId) {
@@ -1322,17 +1369,19 @@
   });
 
   function abrirCobro(v) {
-    if (!barberos.some((b) => b.activo)) { toast("Primero agrega barberos en Ajustes."); return; }
+    if (!barberos.some((b) => b.activo)) { faltanBarberos(); return; }
     cobrando = v;
     $("cobroTitulo").textContent = `Cobrar turno ${v.turno} · ${v.cliente_nombre}`;
-    const quien = v.barbero_id ?? miBarbero;
+    const quien = barberoObvio(v) ?? miBarbero;
     $("cobroBarbero").innerHTML = `<option value="" disabled ${quien ? "" : "selected"}>Elige barbero…</option>` + opciones(barberos, quien);
     $("cobroServicio").innerHTML = opciones(servicios, v.servicio_id);
     $("cobroMonto").value = v.monto ?? servicio(v.servicio_id)?.precio ?? "";
     $("cobroPropina").value = v.propina || 0;
     setMetodo(v.metodo_pago || "efectivo");
+    $("cobroRecibe").value = "";
     carritoCobro.poner(ventasDe(v.id));
     $("cobroError").textContent = "";
+    pintarTotalCobro();
     $("dlgCobro").showModal();
   }
   $("cobroServicio").onchange = () => { const s = servicio(Number($("cobroServicio").value)); if (s) $("cobroMonto").value = s.precio; pintarTotalCobro(); };
@@ -1360,7 +1409,7 @@
     $("cobroGuardar").disabled = false;
     await Promise.all([cargarHoy(), cargarCatalogos()]);
     if (err) { $("cobroError").textContent = "El corte se cobró, pero los productos no se guardaron: " + err; return; }
-    $("dlgCobro").close(); toast("Cobro guardado");
+    $("dlgCobro").close(); toast(`Cobrado ${peso(monto + propina + sumaVentas(items))} · ${v.cliente_nombre.split(" ")[0]}`);
   });
 
   // ---------- Utilidades de cálculo (corte y reportes) ----------
