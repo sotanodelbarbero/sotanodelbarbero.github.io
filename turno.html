@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="es">
 <head>
+  <script>
+    // Si llegas desde la dirección vieja (nutrementeycuerpo.github.io), se traen tus datos guardados (tu cita, tu turno, tu nombre)
+    (function () { try { const m = location.hash.match(/^#migrar=(.+)$/); if (!m) return;
+      const d = JSON.parse(decodeURIComponent(m[1]));
+      for (const [k, v] of Object.entries(d)) if (typeof v === "string" && localStorage.getItem(k) === null) localStorage.setItem(k, v);
+      history.replaceState(null, "", location.pathname + location.search); } catch {} })();
+  </script>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Registro de turno</title>
