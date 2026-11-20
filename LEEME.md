@@ -26,12 +26,15 @@ Para publicar cambios: guarda los archivos y ejecuta en esta carpeta
 | `supabase/12_turnos.sql` | Turno de cada barbero (por ejemplo, uno en la mañana y otro en la tarde). Las citas solo se apartan cuando hay un barbero de turno. |
 | `supabase/13_turno_dia.sql` | Quién trabaja en un día específico: al darle horario a un día en el calendario, se elige quién viene y de qué hora a qué hora. |
 | `supabase/14_tiempo_real.sql` | Todo en tiempo real: el panel escucha precios, barberos, horario, turnos y caja; las páginas de los clientes reciben un aviso público (sin datos personales) y se actualizan al momento. |
+| `supabase/15_notificaciones.sql` | Avisos al celular de los barberos: cuando les agendan, cancelan o mueven una cita, aunque tengan el panel cerrado. |
+| `supabase/functions/avisos/index.ts` | Función de Supabase que manda esos avisos (ver **Avisos al celular** abajo). |
+| `sw.js`, `manifest.webmanifest`, `icono-*.png` | Permiten recibir avisos y agregar el panel a la pantalla de inicio del celular. |
 | `supabase/10_equipo.sql` | Guarda la comisión de cada cobro (cambiar el % no altera lo ya cobrado) y la hora en que empezó cada corte. |
 | `pruebas/` | Pruebas de los casos de uso de la base de datos (`cd pruebas && npm install && npm test`). No tocan tu Supabase. |
 | `config.js` | URL y clave del proyecto de Supabase, y la dirección, horario y WhatsApp que se ven en la página principal. |
 
 ## Cómo ponerlo en marcha
-1. Crea un proyecto en Supabase y en el **SQL Editor** ejecuta `supabase/schema.sql`. Después ejecuta `supabase/03_roles.sql`, cambiando antes `CORREO-DE-ALEJANDRO` por su correo. Ese archivo crea los roles: admin (Alejandro), barbero y cliente (QR, sin cuenta). Al final ejecuta `supabase/04_admin.sql`, que agrega comisiones, gastos, cierre de caja y el resumen de clientes, después `supabase/05_cliente.sql`, que permite al cliente seguir su turno en vivo, después `supabase/06_productos.sql`, que agrega la venta e inventario de productos (pomadas, ceras, etc.), después `supabase/07_citas.sql`, que activa las citas con día y hora, después `supabase/08_panel.sql`, que agrega los bloqueos de agenda y las citas desde el panel, después `supabase/09_calendario.sql`, que activa el calendario de apertura, después `supabase/10_equipo.sql`, que congela la comisión de cada cobro, después `supabase/11_llegada.sql`, para que el cliente con cita avise que llegó, después `supabase/12_turnos.sql`, que agrega el turno de cada barbero, después `supabase/13_turno_dia.sql`, para elegir quién trabaja en un día específico, y al final `supabase/14_tiempo_real.sql`, para que todo se actualice en tiempo real.
+1. Crea un proyecto en Supabase y en el **SQL Editor** ejecuta `supabase/schema.sql`. Después ejecuta `supabase/03_roles.sql`, cambiando antes `CORREO-DE-ALEJANDRO` por su correo. Ese archivo crea los roles: admin (Alejandro), barbero y cliente (QR, sin cuenta). Al final ejecuta `supabase/04_admin.sql`, que agrega comisiones, gastos, cierre de caja y el resumen de clientes, después `supabase/05_cliente.sql`, que permite al cliente seguir su turno en vivo, después `supabase/06_productos.sql`, que agrega la venta e inventario de productos (pomadas, ceras, etc.), después `supabase/07_citas.sql`, que activa las citas con día y hora, después `supabase/08_panel.sql`, que agrega los bloqueos de agenda y las citas desde el panel, después `supabase/09_calendario.sql`, que activa el calendario de apertura, después `supabase/10_equipo.sql`, que congela la comisión de cada cobro, después `supabase/11_llegada.sql`, para que el cliente con cita avise que llegó, después `supabase/12_turnos.sql`, que agrega el turno de cada barbero, después `supabase/13_turno_dia.sql`, para elegir quién trabaja en un día específico, después `supabase/14_tiempo_real.sql`, para que todo se actualice en tiempo real, y al final `supabase/15_notificaciones.sql`, para los avisos al celular (ver **Avisos al celular**).
 2. En **Project Settings > API**, copia la URL y la clave *publishable/anon* y pégalas en `config.js`.
 3. En **Authentication > Users > Add user**, crea solo el usuario de Alejandro. Las cuentas de los barberos se crean desde el panel, en **Equipo** (ver abajo).
 4. Publica la carpeta en un hosting estático (Netlify, Vercel o GitHub Pages) para que el QR funcione desde cualquier celular.
@@ -49,6 +52,7 @@ Para publicar cambios: guarda los archivos y ejecuta en esta carpeta
    - El sistema calcula cuánto efectivo debe haber en la caja. Alejandro escribe lo que contó y la diferencia sale sola.
    - Abajo aparece cuánto hay que pagarle a cada barbero (comisión más propinas).
    - Al final da clic en **Cerrar caja del día**.
+   - **Pasar libreta** (botón arriba en Caja): para registrar cortes de días anteriores apuntados en papel. Elige el día y el barbero y toca el servicio una vez por cada corte (sale con su precio; el monto y la propina se pueden cambiar). Avisa si ese barbero ya tiene cortes ese día para no pasarlos dos veces. Se guardan como cobros normales de ese día (caja, comisiones y reportes) a nombre de «Cliente de libreta», que no aparece en **Clientes**. Si te equivocas, se borran desde **Detalle de cobros** de ese día.
 5. En **Clientes** ve a todos los que han venido: cuántas veces vino cada uno, cuánto ha gastado y quién ya no ha regresado. Tiene un botón para mandarles WhatsApp.
 6. **Inicio**: al entrar al panel se ve el resumen del día (ventas contra ayer, atendidos, en espera, citas), la gráfica de la semana, las próximas citas y alertas: citas retrasadas, productos por agotarse, corte de ayer sin cerrar, cuentas por aprobar y bloqueos de hoy.
 7. **Citas**: la **Agenda** muestra una columna por barbero; toca un hueco para apartar una cita ahí (clientes que llaman o escriben) o toca una cita para marcar que llegó, moverla o cancelarla. **Bloquear horario** cierra días (vacaciones, festivos), horas (comida) o el tiempo de un barbero; si hay citas en ese tiempo, el panel te da la lista con WhatsApp para avisarles.
@@ -72,6 +76,27 @@ Crear cuentas y cambiar contraseñas de otros necesita la función `equipo` (se 
 3. Borra el ejemplo, pega todo el contenido de `supabase/functions/equipo/index.ts` y dale **Deploy**.
 
 La función usa la llave de administrador que Supabase le da por dentro; esa llave nunca va en las páginas. Antes de hacer algo revisa que quien la llama haya iniciado sesión y sea administrador.
+
+## Avisos al celular (barberos)
+A cada barbero le llega una notificación, aunque tenga el panel cerrado o el celular bloqueado, cuando:
+- le agendan una cita (el cliente o alguien desde el panel),
+- se cancela una cita suya,
+- se la mueven de día u hora, o se la pasan a otro barbero (al otro le llega «Ya no es tuya»).
+
+Las citas para «cualquier barbero» le llegan a todo el equipo. Quien hace el cambio desde el panel no recibe aviso de su propio cambio. Al tocar el aviso se abre el panel en **Citas**.
+
+**Instalar (una sola vez):**
+1. En Supabase → **SQL Editor** ejecuta `supabase/15_notificaciones.sql`.
+2. En **Edge Functions → Deploy a new function → Via Editor**, nombre `avisos` (exactamente así). Pega todo `supabase/functions/avisos/index.ts` y dale **Deploy**. **Después**, en la función → pestaña **Details**, apaga **«Verify JWT with legacy secret»** (o «Enforce JWT verification») y dale **Save changes**: la función revisa por su cuenta quién la llama.
+3. No hay llaves que copiar: la función crea las suyas la primera vez y las guarda en el esquema privado de la base de datos.
+
+**Cada barbero, en su celular:**
+- **Android (Chrome):** entra al panel, en **Inicio** toca **Activar avisos** y acepta el permiso. Le llega un aviso de prueba.
+- **iPhone (iOS 16.4 o más nuevo):** en Safari abre el panel, toca **Compartir → Agregar a pantalla de inicio**, abre el panel desde ese ícono, entra y toca **Activar avisos**. En iPhone solo funcionan así.
+- La campana de arriba muestra si están activados; desde ahí se manda una prueba o se desactivan. Al **cerrar sesión** se desactivan en ese celular.
+- Si el celular lo usa otra cuenta y activa los avisos, pasan a esa cuenta.
+
+Por privacidad, la base de datos solo le pasa a la función el número de cita (sin nombre ni teléfono); la función lee los datos y los manda cifrados al celular.
 
 ## El cliente guarda su cita
 En la pantalla de su cita tiene **Guarda tu cita**: Google Calendar, calendario del celular, enviársela por WhatsApp y **copiar enlace**. El enlace (`cita.html?c=…`) abre **su** cita en cualquier teléfono, para verla, avisar que llegó o cancelarla.

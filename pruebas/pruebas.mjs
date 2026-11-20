@@ -30,15 +30,23 @@ await db.exec(`
   alter default privileges in schema public grant all on tables to anon, authenticated;
   alter default privileges in schema public grant all on sequences to anon, authenticated;
   create publication supabase_realtime;
+  create role service_role nologin;
+  -- pg_net de mentiras: guarda las llamadas para revisarlas
+  create schema net;
+  create table net.llamadas (id serial primary key, url text, body jsonb, headers jsonb);
+  create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+    returns bigint language sql as $$ insert into net.llamadas (url, body, headers) values (url, body, headers) returning id $$;
+  grant usage on schema net to anon, authenticated;
+  grant all on all tables in schema net to anon, authenticated; grant all on all sequences in schema net to anon, authenticated;
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -654,6 +662,86 @@ await como(ADMIN);
 prueba("…Alejandro sí", (await q(`delete from barberos where id = $1 returning id`, [BZ])).length === 1);
 await db.exec(`reset role`);
 await como(null);
+
+seccion("CAJA: pasar la libreta (cortes de días anteriores)");
+await como(null);
+const DIA_LIB = "2026-11-09";
+await db.exec(`update barberos set comision_pct = 40 where id = 1`);
+const filaLib = (t, monto, propina) => [DIA_LIB, t, "Cliente de libreta", CORTE, 1, "cobrado", monto, propina, "efectivo", `${DIA_LIB}T12:00:00-06:00`, ADMIN];
+const insLib = `insert into visitas (fecha, turno, cliente_nombre, servicio_id, barbero_id, estado, monto, propina, metodo_pago, cobrado_en, cobrado_por)
+  values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id`;
+await db.exec(`set role authenticated`);
+await como(ADMIN);
+const base = (await uno(`select coalesce(max(turno),0)::int from visitas where fecha = $1`, [DIA_LIB]));
+const okLib = (await q(insLib, filaLib(base + 1, 150, 20))).length + (await q(insLib, filaLib(base + 2, 150, 0))).length;
+prueba("Alejandro pasa 2 cortes de la libreta de un día anterior", okLib === 2);
+prueba("Quedan en ese día, cobrados y con la comisión del barbero congelada",
+  (await uno(`select count(*)::int from visitas where fecha = $1 and estado = 'cobrado' and comision_pct = 40 and cliente_nombre = 'Cliente de libreta'`, [DIA_LIB])) === 2);
+prueba("Suman en la caja de ese día (servicio + propina)", Number(await uno(`select sum(monto + propina) from visitas where fecha = $1 and estado = 'cobrado'`, [DIA_LIB])) === 320);
+prueba("Un turno repetido ese día se rechaza (el panel reintenta con el siguiente)", !!(await error(insLib, filaLib(base + 1, 150, 0))));
+await como(BARB);
+prueba("Un barbero NO puede pasar cortes de la libreta", !!(await error(insLib, filaLib(base + 3, 150, 0))));
+await db.exec(`reset role`);
+await como(null);
+
+seccion("AVISOS AL CELULAR (notificaciones de citas)");
+await como(null);
+await reloj("2026-11-30 10:00");
+const llamadas = async () => q(`select body, headers from net.llamadas order by id`);
+const ultima = async () => (await llamadas()).at(-1);
+const secretoAv = await uno(`select valor from privado.ajustes where clave = 'avisos_secreto'`);
+prueba("Se crea sola la contraseña interna de los avisos", typeof secretoAv === "string" && secretoAv.length >= 32);
+await db.exec(`delete from net.llamadas`);
+await uno(`select agendar_cita('Vero Luna','5577777001',${CORTE},1,'2026-12-01','12:00')`);
+let ll = await ultima();
+prueba("Un cliente agenda con Juan → se avisa (tipo nueva)", ll?.body?.tipo === "nueva" && ll.body.cita > 0 && ll.body.actor === null, JSON.stringify(ll));
+prueba("El aviso lleva la contraseña interna", ll?.headers?.["x-avisos-secreto"] === secretoAv);
+prueba("Al aviso no salen nombres ni teléfonos", !/Vero|5577777001/.test(JSON.stringify(ll?.body)));
+const idAv = ll.body.cita;
+await db.exec(`set role authenticated`);
+await como(ADMIN);
+await uno(`select mover_cita(${idAv},'2026-12-01','13:00',1)`);
+ll = await ultima();
+prueba("Alejandro la mueve a las 13:00 → aviso «movida» con la hora de antes y quién la movió",
+  ll?.body?.tipo === "movida" && String(ll.body.antes?.hora).startsWith("12:00") && ll.body.actor === ADMIN, JSON.stringify(ll?.body));
+const nAntes = (await llamadas()).length;
+await q(`update citas set duracion_min = 45 where id = $1`, [idAv]);
+prueba("Cambiar algo que no es día, hora ni barbero no avisa", (await llamadas()).length === nAntes);
+await db.exec(`reset role`);
+await como(null);
+prueba("El cliente cancela → aviso «cancelada»", (await uno(`select cancelar_cita(token) from citas where id = ${idAv}`)) === true && (await ultima())?.body?.tipo === "cancelada");
+const nAntes2 = (await llamadas()).length;
+await db.exec(`update citas set estado = 'no_vino' where id = ${idAv}`);
+prueba("Otros cambios de estado no avisan", (await llamadas()).length === nAntes2);
+await db.exec(`delete from privado.ajustes where clave = 'avisos_url'`);
+prueba("Sin la dirección de la función, la cita se guarda igual (sin aviso)",
+  typeof (await uno(`select agendar_cita('Wen Sol','5577777002',${CORTE},null,'2026-12-01','12:00')`)) === "object" && (await llamadas()).length === nAntes2);
+await db.exec(`insert into privado.ajustes values ('avisos_url', 'https://x.supabase.co/functions/v1/avisos')`);
+
+const EP = "https://fcm.googleapis.com/fcm/send/prueba-123";
+const comoServidor = async (sql, params) => { await db.exec(`reset role`); const r = await uno(sql, params); await db.exec(`set role authenticated`); return r; };
+await db.exec(`set role authenticated`);
+await como(BARB);
+prueba("Juan activa avisos en su celular", !(await error(`select guardar_suscripcion($1, 'BPclave-publica-del-cel', 'secreto-auth-16b', 'Android')`, [EP])));
+prueba("Juan ve su suscripción", (await q(`select id from push_suscripciones`)).length === 1);
+prueba("Una dirección que no es https se rechaza", !!(await error(`select guardar_suscripcion('http://malo.com/x', 'BPclave-publica-del-cel', 'secreto-auth-16b')`)));
+prueba("Un barbero no puede leer los ajustes privados", !!(await error(`select ajuste_privado('avisos_secreto')`)));
+prueba("…ni la tabla privada", !!(await error(`select * from privado.ajustes`)));
+await como(ADMIN);
+prueba("Alejandro no ve la suscripción de Juan", (await q(`select id from push_suscripciones`)).length === 0);
+await q(`select borrar_suscripcion($1)`, [EP]);
+prueba("…ni la puede borrar", (await comoServidor(`select count(*)::int from push_suscripciones`)) === 1);
+await q(`select guardar_suscripcion($1, 'BPclave-publica-otra', 'secreto-auth-otro', 'Android')`, [EP]);
+prueba("Si Alejandro activa avisos en ese mismo celular, pasa a ser suyo",
+  (await comoServidor(`select user_id from push_suscripciones where endpoint = $1`, [EP])) === ADMIN);
+await q(`select borrar_suscripcion($1)`, [EP]);
+prueba("Al desactivar (o cerrar sesión) se borra", (await comoServidor(`select count(*)::int from push_suscripciones`)) === 0);
+await como(PEND);
+prueba("Una cuenta sin rol no puede activar avisos", !!(await error(`select guardar_suscripcion($1, 'BPclave-publica-del-cel', 'secreto-auth-16b')`, [EP])));
+await db.exec(`set role anon`);
+await como(null);
+prueba("Un cliente (sin sesión) tampoco", !!(await error(`select guardar_suscripcion($1, 'BPclave-publica-del-cel', 'secreto-auth-16b')`, [EP])));
+await db.exec(`reset role`);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }

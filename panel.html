@@ -7,7 +7,8 @@
   <meta name="theme-color" content="#0b0b0a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="icon" href="logo.jpg">
-  <link rel="apple-touch-icon" href="logo.jpg">
+  <link rel="apple-touch-icon" href="icono-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -180,7 +181,7 @@
     .sidebar .sesion-btn.salir { margin: 0; color: var(--bad); border-color: rgba(255,90,79,.35); }
     .sidebar .sesion-btn.salir:hover { background: rgba(255,90,79,.1); }
     .salir-movil { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: .875rem; color: var(--bad); border-color: rgba(255,90,79,.35); }
-    @media (max-width: 380px) { .salir-movil span { display: none; } .salir-movil { padding: 8px; } }
+    @media (max-width: 430px) { .salir-movil span { display: none; } .salir-movil { padding: 8px; } }
     @media (max-width: 768px) { .sidebar .sesion { display: none; } }
     /* Computadora: las pestañas se desplazan; el logo queda arriba y la sesión abajo */
     @media (min-width: 769px) {
@@ -287,6 +288,10 @@
     .publicar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: rgba(37,211,102,.35);
       background: linear-gradient(160deg, rgba(37,211,102,.1), rgba(37,211,102,.02)), var(--surface); }
     .publicar-txt { flex: 1; }
+    .aviso-push { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; border-color: color-mix(in srgb, var(--oro) 45%, transparent); }
+    .aviso-push h2 { font-size: 1.0625rem; }
+    @media (max-width: 560px) { .aviso-push { flex-direction: column; align-items: stretch; gap: 10px; } }
+    #avisosMovil.activo, #avisosBtn.activo { color: var(--oro); }
     .consejo { background: color-mix(in srgb, var(--oro) 10%, transparent); border: 1px solid color-mix(in srgb, var(--oro) 30%, transparent); border-radius: 14px; padding: 10px 12px; margin: 4px 0 12px; }
     .consejo-t { display: flex; align-items: center; gap: 8px; }
     .consejo-t svg { width: 18px; height: 18px; color: var(--oro-2); flex: none; }
@@ -299,6 +304,16 @@
     .turno-fila input[type="time"] { width: 100%; min-width: 0; padding-left: 8px; padding-right: 4px; }
     .turno-fila input[type="time"]:disabled { opacity: .35; }
     .ag-bloqueo.fuera { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 4%, transparent) 0 8px, color-mix(in srgb, var(--text) 7%, transparent) 8px 16px); color: var(--muted); }
+    .lib-servicios { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+    .lib-servicios button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; text-align: left; position: relative; min-height: 56px; padding-right: 34px; }
+    .lib-servicios button b { font-size: .9375rem; }
+    .lib-servicios button span { color: var(--muted); font-size: .8125rem; }
+    .lib-servicios button i { position: absolute; top: 6px; right: 8px; font-style: normal; font-weight: 800; color: var(--oro); }
+    .lib-lista { margin-top: 12px; max-height: 38vh; overflow-y: auto; }
+    .lib-fila { display: grid; grid-template-columns: 1fr 84px 72px auto; gap: 6px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+    .lib-fila input { padding: 6px 8px; text-align: right; }
+    .lib-fila .nom { font-size: .875rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lib-cab { font-size: .75rem; color: var(--muted); border-top: 0; padding-bottom: 0; }
     .chips-propina { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .chips-propina button { flex: 1 1 auto; padding: 6px 10px; font-size: .875rem; }
     .chips-propina button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -609,6 +624,7 @@
       <div class="sesion">
         <div class="sesion-quien"><span class="muted small">Sesión iniciada como</span><b class="txt-correo"></b></div>
         <button class="ghost sesion-btn" id="ayudaBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg>¿Cómo se usa?</button>
+        <button class="ghost sesion-btn" id="avisosBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg><span id="avisosBtnTxt">Avisos al celular</span></button>
         <button class="ghost sesion-btn" id="miPass"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>Mi contraseña</button>
         <button class="sesion-btn salir" id="salir"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg>Cerrar sesión</button>
       </div>
@@ -623,6 +639,7 @@
       </div>
       <div style="display:flex;gap:4px;flex:none">
         <button class="ghost" id="ayudaMovil" style="padding:8px 6px" aria-label="¿Cómo se usa?" title="¿Cómo se usa?"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg></button>
+        <button class="ghost" id="avisosMovil" style="padding:8px 6px" aria-label="Avisos al celular" title="Avisos al celular"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg></button>
         <button class="ghost" id="miPassMovil" style="padding:8px 6px" aria-label="Mi contraseña" title="Mi contraseña"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></button>
         <button class="salir-movil" id="salirMovil" aria-label="Cerrar sesión"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg><span>Cerrar sesión</span></button>
       </div>
@@ -633,6 +650,13 @@
       <div class="saludo">
         <h1 class="page-title" id="saludo">Hola</h1>
         <p class="muted" id="saludoFecha"></p>
+      </div>
+      <div id="avisoPush" class="card aviso-push hidden">
+        <div class="publicar-txt"><h2 id="avisoPushTitulo">Recibe tus citas en el celular</h2><p class="muted small" id="avisoPushTxt" style="margin:4px 0 0">Te avisamos cuando te agenden, cancelen o muevan una cita, aunque tengas el panel cerrado.</p></div>
+        <div class="publicar-botones">
+          <button type="button" class="primary" id="avisoPushActivar">Activar avisos</button>
+          <button type="button" class="ghost small" id="avisoPushLuego">Ahora no</button>
+        </div>
       </div>
       <div id="avisoPublicar" class="card publicar hidden">
         <div class="publicar-txt"><h2>Publica tu horario de hoy</h2><p class="muted small" style="margin:4px 0 0">Tu imagen ya está lista. Un toque y eliges «Mi estado».</p></div>
@@ -728,6 +752,7 @@
         <h1 class="page-title" style="margin:0"><span class="solo-admin">Corte de caja</span><span class="solo-barbero">Mis ventas</span></h1>
         <div class="fila no-print" style="flex:0 0 auto">
           <input type="date" id="fechaCorte" style="width:auto">
+          <button id="abrirLibreta" class="solo-admin" title="Registrar cortes de días anteriores apuntados en la libreta">Pasar libreta</button>
           <button id="imprimir" class="solo-admin">Imprimir</button>
         </div>
       </div>
@@ -1046,6 +1071,34 @@
     </form>
   </dialog>
 
+  <!-- ===== Pasar la libreta: cortes de días anteriores (solo admin) ===== -->
+  <dialog id="dlgLibreta" aria-label="Pasar cortes de la libreta">
+    <form id="formLibreta" method="dialog">
+      <h2>Pasar cortes de la libreta</h2>
+      <p class="muted small" style="text-align:center;margin:0 0 6px">Elige el día y el barbero, y toca el servicio una vez por cada corte apuntado.</p>
+      <div class="fila">
+        <div><label for="libFecha">Día</label><input id="libFecha" type="date" required></div>
+        <div><label for="libBarbero">Barbero</label><select id="libBarbero" required></select></div>
+      </div>
+      <div id="libYa" class="muted small" style="margin-top:6px"></div>
+      <label>Toca para agregar un corte</label>
+      <div class="lib-servicios" id="libServicios"></div>
+      <label>Cómo pagaron (casi siempre efectivo)</label>
+      <div class="seg" id="libMetodo">
+        <button type="button" data-m="efectivo" aria-pressed="true">Efectivo</button>
+        <button type="button" data-m="tarjeta" aria-pressed="false">Tarjeta</button>
+        <button type="button" data-m="transferencia" aria-pressed="false">Transferencia</button>
+      </div>
+      <div id="libLista" class="lib-lista"></div>
+      <div id="libTotal" style="margin-top:10px;text-align:right;font-weight:700;font-size:1.125rem"></div>
+      <div id="libError" class="error" role="alert"></div>
+      <div class="fila" style="margin-top:8px">
+        <button type="button" id="libCancelar">Cerrar</button>
+        <button type="submit" class="primary" id="libGuardar">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- ===== Diálogo de venta de productos (sin corte) ===== -->
   <dialog id="dlgVenta">
     <form id="formVenta" method="dialog">
@@ -1189,6 +1242,7 @@
       arrancarAyuda();
       if (esAdmin()) { pintarAvisoPublicar(); setTimeout(prepararHoy, 1500); }
       suscribir();
+      prepararPush();
     }
   }
 
@@ -1201,11 +1255,119 @@
   });
   async function cerrarSesion(preguntar = true) {
     if (preguntar && !confirm("¿Cerrar sesión en este dispositivo?")) return;
+    await apagarPush(true);   // sin sesión, este celular ya no recibe avisos de citas
     try { await db.auth.signOut(); } catch {}
     location.reload();
   }
   $("salir").onclick = $("salirMovil").onclick = () => cerrarSesion();
   $("salirPendiente").onclick = () => cerrarSesion(false);
+
+  // ---------- Avisos al celular (notificaciones push, aunque el panel esté cerrado) ----------
+  // Necesitan supabase/15_notificaciones.sql y la función «avisos». En iPhone solo funcionan
+  // si el panel se abre desde el ícono de la pantalla de inicio (iOS 16.4 o más nuevo).
+  const push = {
+    soportado: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+    ios: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
+    instalada: matchMedia("(display-mode: standalone)").matches || navigator.standalone === true,
+    reg: null, sus: null,
+  };
+  const b64uDe = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const b64uA = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  const pushLuego = () => { try { return localStorage.getItem("avisos-luego") === hoyISO(); } catch { return false; } };
+  async function llamarAvisos(cuerpo) {
+    let r;
+    try { r = await db.functions.invoke("avisos", { body: cuerpo }); }
+    catch { return { error: "Falta instalar la función «avisos» en Supabase (ver LEEME)." }; }
+    if (!r.error) return { data: r.data };
+    let msg = "";
+    try { const j = await r.error.context.json(); msg = j.error || j.message || ""; } catch {}
+    if (r.error.context?.status === 404 || r.error.name === "FunctionsFetchError" || r.error.name === "FunctionsRelayError")
+      return { error: "Falta instalar la función «avisos» en Supabase (ver LEEME)." };
+    return { error: msg || r.error.message || "No se pudo completar." };
+  }
+  async function guardarSuscripcion(sus) {
+    const j = sus.toJSON();
+    const { error } = await db.rpc("guardar_suscripcion", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_agente: navigator.userAgent.slice(0, 300) });
+    return error;
+  }
+  async function prepararPush() {
+    if (push.soportado) {
+      try {
+        push.reg = await navigator.serviceWorker.register("sw.js");
+        push.sus = await push.reg.pushManager.getSubscription();
+        // Este celular ya tenía avisos: quedan a nombre de quien entró ahora
+        if (push.sus && Notification.permission === "granted") await guardarSuscripcion(push.sus);
+      } catch {}
+    }
+    pintarPush();
+  }
+  function pintarPush() {
+    const activo = !!push.sus && push.soportado && Notification.permission === "granted";
+    ["avisosBtn", "avisosMovil"].forEach((id) => $(id)?.classList.toggle("activo", activo));
+    $("avisosBtnTxt").textContent = activo ? "Avisos activados" : "Avisos al celular";
+    const card = $("avisoPush");
+    const iosSinInstalar = push.ios && !push.instalada;
+    const mostrar = !activo && !pushLuego() && (push.soportado || iosSinInstalar) && window.Notification?.permission !== "denied";
+    card.classList.toggle("hidden", !mostrar);
+    if (!mostrar) return;
+    if (iosSinInstalar) {
+      $("avisoPushTitulo").textContent = "Recibe tus citas en el iPhone";
+      $("avisoPushTxt").innerHTML = "En Safari toca <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>. Abre el panel desde ese ícono y aquí podrás activar los avisos.";
+      $("avisoPushActivar").classList.add("hidden");
+    } else {
+      $("avisoPushActivar").classList.remove("hidden");
+    }
+  }
+  async function activarPush() {
+    if (push.ios && !push.instalada) {
+      return alert("En iPhone los avisos solo funcionan desde el ícono del panel:\n\n1. En Safari toca Compartir (el cuadro con la flecha).\n2. Elige «Agregar a pantalla de inicio».\n3. Abre el panel desde ese ícono, entra y toca «Activar avisos».");
+    }
+    if (!push.soportado) return toast("Este navegador no puede recibir avisos. Prueba con Chrome o Safari actualizados.", { tipo: "error" });
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      pintarPush();
+      return toast(permiso === "denied" ? "Bloqueaste los avisos. Actívalos en los ajustes del navegador para este sitio." : "No se activaron los avisos.", { tipo: "error" });
+    }
+    const { data, error } = await llamarAvisos({ accion: "clave" });
+    if (error || !data?.clave) return toast(error || "No se pudo preparar los avisos.", { tipo: "error" });
+    try {
+      push.reg = push.reg || await navigator.serviceWorker.register("sw.js");
+      await navigator.serviceWorker.ready;
+      let sus = await push.reg.pushManager.getSubscription();
+      // Si la suscripción vieja es de otras llaves, se cambia
+      if (sus && sus.options?.applicationServerKey && b64uDe(sus.options.applicationServerKey) !== data.clave) { await sus.unsubscribe(); sus = null; }
+      sus = sus || await push.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uA(data.clave) });
+      const e2 = await guardarSuscripcion(sus);
+      if (e2) return toast(/function|does not exist/i.test(e2.message) ? "Falta ejecutar 15_notificaciones.sql en Supabase." : "No se pudo guardar: " + e2.message, { tipo: "error" });
+      push.sus = sus;
+    } catch (e) { return toast("No se pudieron activar los avisos: " + (e.message || e), { tipo: "error" }); }
+    pintarPush();
+    toast("Avisos activados en este celular");
+    probarPush(true);
+  }
+  async function probarPush(callado = false) {
+    if (!push.sus) return;
+    const { data, error } = await llamarAvisos({ accion: "prueba", endpoint: push.sus.endpoint });
+    if (error) return toast(error, { tipo: "error" });
+    if (!callado) toast(data?.enviados ? "Aviso de prueba enviado: debe llegarte en unos segundos" : "El aviso no se pudo entregar. Desactiva y vuelve a activar.", data?.enviados ? {} : { tipo: "error" });
+  }
+  async function apagarPush(callado = false) {
+    if (!push.sus) return;
+    try { await db.rpc("borrar_suscripcion", { p_endpoint: push.sus.endpoint }); } catch {}
+    try { await push.sus.unsubscribe(); } catch {}
+    push.sus = null; pintarPush();
+    if (!callado) toast("Avisos desactivados en este celular");
+  }
+  function abrirAvisos() {
+    if (!(push.sus && Notification.permission === "granted")) return activarPush();
+    abrirSimple("Avisos en este celular", `<p style="margin:4px 0 12px">Están <b>activados</b>. Te llega un aviso cuando te agendan, cancelan o mueven una cita tuya o para «cualquier barbero», aunque el panel esté cerrado.</p>
+      <div class="fila"><button type="button" id="avProbar">Mandar prueba</button><button type="button" class="danger" id="avApagar">Desactivar</button></div>`, () => null);
+    $("avProbar").onclick = () => probarPush();
+    $("avApagar").onclick = async () => { await apagarPush(); $("dlgSimple").close(); };
+  }
+  $("avisosBtn").onclick = $("avisosMovil").onclick = abrirAvisos;
+  $("avisoPushActivar").onclick = activarPush;
+  $("avisoPushLuego").onclick = () => { try { localStorage.setItem("avisos-luego", hoyISO()); } catch {} $("avisoPush").classList.add("hidden"); };
 
   // ---------- Pestañas ----------
   const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
@@ -1789,6 +1951,118 @@
     borrarCorte(cobrosDia.find((x) => x.id === Number(b.dataset.borrarCorte)));
   });
 
+  // ---------- Pasar la libreta (solo Alejandro): cortes de días anteriores apuntados en papel ----------
+  // Cada toque a un servicio agrega un corte con su precio; el monto y la propina se pueden ajustar.
+  // Se guardan como cobros normales de ese día: salen en Caja, comisiones y reportes.
+  const LIBRETA_NOMBRE = "Cliente de libreta";
+  const lib = { items: [], metodo: "efectivo" };
+  function abrirLibreta() {
+    if (!esAdmin()) return;
+    const ayer = sumarDia(hoyISO(), -1);
+    const f = $("fechaCorte").value;
+    $("libFecha").max = ayer;
+    $("libFecha").value = f && f < hoyISO() ? f : ayer;
+    const act = barberos.filter((b) => b.activo);
+    const previo = $("libBarbero").value;
+    $("libBarbero").innerHTML = act.map((b) => `<option value="${b.id}">${esc(b.nombre)}</option>`).join("");
+    if (act.some((b) => String(b.id) === previo)) $("libBarbero").value = previo;
+    lib.items = []; lib.metodo = "efectivo"; ponerMetodo("libMetodo", "efectivo");
+    $("libError").textContent = "";
+    pintarLibreta(); contarLibreta();
+    $("dlgLibreta").showModal();
+  }
+  function pintarLibreta() {
+    const cuenta = (id) => lib.items.filter((x) => x.servicio_id === id).length;
+    $("libServicios").innerHTML = servicios.filter((x) => x.activo).map((x) => `<button type="button" data-lib-serv="${x.id}">
+        <b>${esc(x.nombre)}</b><span>${peso(x.precio)}</span>${cuenta(x.id) ? `<i>×${cuenta(x.id)}</i>` : ""}</button>`).join("")
+      || '<p class="muted small">No hay servicios activos.</p>';
+    $("libLista").innerHTML = lib.items.length
+      ? `<div class="lib-fila lib-cab"><span>Corte</span><span style="text-align:right">Monto</span><span style="text-align:right">Propina</span><span></span></div>`
+        + lib.items.map((x, i) => `<div class="lib-fila">
+          <span class="nom">${i + 1}. ${esc(servicio(x.servicio_id)?.nombre || "Corte")}</span>
+          <input type="number" min="0" step="1" inputmode="decimal" value="${x.monto}" data-lib-monto="${i}" aria-label="Monto del corte ${i + 1}">
+          <input type="number" min="0" step="1" inputmode="decimal" value="${x.propina || ""}" placeholder="0" data-lib-propina="${i}" aria-label="Propina del corte ${i + 1}">
+          <button type="button" class="ghost danger" style="padding:2px 8px" data-lib-quitar="${i}" aria-label="Quitar el corte ${i + 1}">✕</button></div>`).join("")
+      : '<p class="muted small" style="margin:8px 0 0">Todavía no agregas cortes.</p>';
+    totalLibreta();
+  }
+  function totalLibreta() {
+    const n = lib.items.length, t = lib.items.reduce((a, x) => a + Number(x.monto || 0) + Number(x.propina || 0), 0);
+    $("libTotal").textContent = n ? `${n} ${n === 1 ? "corte" : "cortes"} · ${peso(t)}` : "";
+    $("libGuardar").textContent = n ? `Guardar ${n} ${n === 1 ? "corte" : "cortes"}` : "Guardar";
+    $("libGuardar").disabled = !n;
+  }
+  // Cuántos cortes ya tiene ese barbero ese día (para no pasar dos veces la misma hoja)
+  async function contarLibreta() {
+    const fecha = $("libFecha").value, bid = Number($("libBarbero").value);
+    $("libYa").textContent = "";
+    if (!fecha || !bid) return;
+    const [{ count }, c] = await Promise.all([
+      db.from("visitas").select("id", { count: "exact", head: true }).eq("fecha", fecha).eq("barbero_id", bid).eq("estado", "cobrado"),
+      db.from("cortes").select("cerrado_en").eq("fecha", fecha).maybeSingle(),
+    ]);
+    if (fecha !== $("libFecha").value || bid !== Number($("libBarbero").value)) return;
+    const nom = barbero(bid)?.nombre || "Este barbero";
+    $("libYa").innerHTML = (count ? `⚠ ${esc(nom)} ya tiene <b>${count} ${count === 1 ? "corte" : "cortes"}</b> registrados el ${esc(fechaCorta(fecha))}. Revisa que no los pases dos veces.`
+      : `${esc(nom)} no tiene cortes registrados el ${esc(fechaCorta(fecha))}.`)
+      + (c.data?.cerrado_en ? " La caja de ese día ya está cerrada; los cortes se suman igual." : "");
+  }
+  $("abrirLibreta").onclick = abrirLibreta;
+  $("libCancelar").onclick = () => $("dlgLibreta").close();
+  $("libFecha").onchange = contarLibreta;
+  $("libBarbero").onchange = contarLibreta;
+  $("libMetodo").onclick = (e) => { const b = e.target.closest("button"); if (b) { lib.metodo = b.dataset.m; ponerMetodo("libMetodo", lib.metodo); } };
+  $("libServicios").onclick = (e) => {
+    const b = e.target.closest("[data-lib-serv]"); if (!b) return;
+    const x = servicio(Number(b.dataset.libServ)); if (!x) return;
+    lib.items.push({ servicio_id: x.id, monto: Number(x.precio), propina: 0 });
+    $("libError").textContent = "";
+    pintarLibreta();
+    $("libLista").scrollTop = $("libLista").scrollHeight;
+  };
+  $("libLista").addEventListener("input", (e) => {
+    const m = e.target.dataset.libMonto, p = e.target.dataset.libPropina;
+    if (m !== undefined) lib.items[Number(m)].monto = e.target.value;
+    if (p !== undefined) lib.items[Number(p)].propina = e.target.value;
+    totalLibreta();
+  });
+  $("libLista").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-lib-quitar]"); if (!b) return;
+    lib.items.splice(Number(b.dataset.libQuitar), 1); pintarLibreta();
+  });
+  $("formLibreta").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fecha = $("libFecha").value, bid = Number($("libBarbero").value);
+    if (!fecha || fecha >= hoyISO()) { $("libError").textContent = "Elige un día anterior a hoy (los de hoy se cobran en la fila)."; return; }
+    if (!bid) { $("libError").textContent = "Elige el barbero."; return; }
+    if (!lib.items.length) { $("libError").textContent = "Toca un servicio para agregar cortes."; return; }
+    if (lib.items.some((x) => x.monto === "" || !(Number(x.monto) >= 0) || !(Number(x.propina || 0) >= 0))) { $("libError").textContent = "Revisa los montos: no pueden quedar vacíos ni negativos."; return; }
+    $("libGuardar").disabled = true; $("libError").textContent = "";
+    const { data: { user } } = await db.auth.getUser();
+    let ok = false, ultimoError = null;
+    for (let intento = 0; intento < 3 && !ok; intento++) {
+      // El número de turno es por día: se siguen después del último de ese día
+      const { data: ult, error: e1 } = await db.from("visitas").select("turno").eq("fecha", fecha).order("turno", { ascending: false }).limit(1);
+      if (e1) { ultimoError = e1; break; }
+      const base = ult?.[0]?.turno || 0;
+      const filas = lib.items.map((x, i) => ({
+        fecha, turno: base + i + 1, cliente_nombre: LIBRETA_NOMBRE,
+        servicio_id: x.servicio_id, barbero_id: bid, estado: "cobrado",
+        monto: Number(x.monto), propina: Number(x.propina || 0), metodo_pago: lib.metodo,
+        creado_en: `${fecha}T12:00:00-06:00`, cobrado_en: `${fecha}T12:00:00-06:00`, cobrado_por: user?.id ?? null,
+      }));
+      const { error } = await db.from("visitas").insert(filas);
+      if (!error) ok = true; else { ultimoError = error; if (error.code !== "23505") break; }   // 23505: turno repetido, se reintenta
+    }
+    $("libGuardar").disabled = false;
+    if (!ok) { $("libError").textContent = "No se pudo guardar: " + (ultimoError?.message || "error desconocido"); return; }
+    const n = lib.items.length;
+    toast(`${n} ${n === 1 ? "corte guardado" : "cortes guardados"} · ${barbero(bid)?.nombre || ""} · ${fechaCorta(fecha)}`);
+    lib.items = []; pintarLibreta(); contarLibreta();   // el diálogo queda abierto para pasar otro día u otro barbero
+    $("fechaCorte").value = fecha;
+    if (visible("corte")) cargarCorte();
+  });
+
   $("tablaProductosDia").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-borrar-venta]");
     if (!b || !confirm("¿Borrar esta venta? Las piezas regresan al inventario.")) return;
@@ -1897,7 +2171,7 @@
   async function cargarClientes() {
     const { data, error } = await traerTodo(() => db.from("clientes_resumen").select("*"));
     if (error) { toast("Falta ejecutar 04_admin.sql en Supabase"); return; }
-    clientes = data;
+    clientes = data.filter((c) => c.clave !== "nombre:" + LIBRETA_NOMBRE.toLowerCase());   // los cortes de la libreta no son un cliente
     const hoy = hoyISO(), inicioMes = hoy.slice(0, 8) + "01";
     $("clTotal").textContent = clientes.length;
     $("clNuevos").textContent = clientes.filter((c) => c.primera_visita >= inicioMes).length;
