@@ -399,6 +399,18 @@
     .pub-sugerencias button, .pub-mostrar button { padding: 6px 12px; font-size: .8125rem; border-radius: 999px; min-height: 0; }
     .pub-mostrar button[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: var(--accent-ink); font-weight: 600; }
     .pub-mostrar button[aria-pressed="false"] { text-decoration: line-through; opacity: .65; }
+    .pub-letras button[aria-pressed="true"], .pub-colores .auto[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: var(--accent-ink); font-weight: 600; }
+    .pub-letras button { font-size: 1rem !important; }
+    .pub-colores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center; }
+    .pub-colores .auto { padding: 6px 12px; font-size: .8125rem; border-radius: 999px; min-height: 0; }
+    .pub-colores .sw { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--c); border: 2px solid var(--line); }
+    .pub-colores .sw[aria-pressed="true"] { outline: 3px solid var(--oro); outline-offset: 2px; }
+    .pub-colores .propio { position: relative; width: 34px; height: 34px; border-radius: 50%; margin: 0; overflow: hidden; border: 2px dashed var(--line); cursor: pointer;
+      background: conic-gradient(#f44, #fd4, #4d6, #4cf, #64f, #f4c, #f44); }
+    .pub-colores .propio[data-on="1"] { outline: 3px solid var(--oro); outline-offset: 2px; }
+    .pub-colores .propio input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .pub-velo { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+    .pub-velo input { flex: 1; accent-color: var(--oro); }
     .pub-cargando { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); border-radius: 14px; font-size: .9375rem; }
     .prev-horario { display: block; width: 100%; max-height: 52vh; object-fit: contain; border-radius: 14px; background: #000; border: 1px solid var(--line); }
     .prev-texto { margin-top: 10px; font-size: .8125rem; }
@@ -4886,64 +4898,75 @@
     ].join("\n");
   }
 
-  // Dibuja la imagen 1080×1920 con la marca (negro, latón, poste de barbero)
-  async function imagenHorario(filas, especiales, conLogo = true) {
+  // Imagen de la SEMANA (1080×1920) con el mismo estilo, color, letra y foto que la del día
+  async function imagenHorario(filas, especiales, conLogo = true, estiloId = pubEstilo, op = pubOp, foto = pubFoto) {
+    op = { ...PUB_DEF, ...op };
+    const E = estiloConColor(ESTILOS[estiloId] || ESTILOS.dorado, op.color), LT = LETRAS[op.letra] || LETRAS.clasica;
     const W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
     const g = c.getContext("2d");
-    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
+    await fuentesPub(LT);
     const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
-    const ORO = "#d4a64a", ORO2 = "#f0cf85", HUESO = "#f2ede4", GRIS = "#9a958b";
-    // Fondo con luz cálida
-    g.fillStyle = "#050505"; g.fillRect(0, 0, W, H);
-    const luz = g.createRadialGradient(W * .8, 260, 40, W * .8, 260, 900);
-    luz.addColorStop(0, "rgba(212,166,74,.28)"); luz.addColorStop(.5, "rgba(143,29,29,.16)"); luz.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = luz; g.fillRect(0, 0, W, H);
-    // Franjas de poste de barbero arriba y abajo
-    const poste = (y, alto) => { g.save(); g.beginPath(); g.rect(0, y, W, alto); g.clip();
-      const col = ["#c8102e", "#f5f1ea", "#1c3f8c", "#f5f1ea"];
-      for (let x = -alto * 2, i = 0; x < W + alto * 2; x += 34, i++) { g.fillStyle = col[i % 4]; g.beginPath(); g.moveTo(x, y + alto); g.lineTo(x + 34, y + alto); g.lineTo(x + 34 + alto, y); g.lineTo(x + alto, y); g.fill(); }
-      g.restore(); };
-    poste(0, 26); poste(H - 26, 26);
-    // Logo en un cuadro blanco redondeado
-    const logo = conLogo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
-    if (logo) { g.save(); g.beginPath(); g.roundRect(W / 2 - 110, 110, 220, 220, 48); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - 110, 110, 220, 220); g.restore(); }
-    // Título
-    g.textAlign = "center"; g.fillStyle = HUESO; g.font = `900 64px ${DISP}`;
-    g.fillText(cfg.nombre.toUpperCase(), W / 2, 420);
-    const grad = g.createLinearGradient(0, 470, 0, 620); grad.addColorStop(0, ORO2); grad.addColorStop(.6, ORO); grad.addColorStop(1, "#8a6220");
-    g.fillStyle = grad; g.font = `900 200px ${DISP}`; g.fillText("HORARIO", W / 2, 640);
+    const ANCHO = E.angosto ? W - 280 : W - 150, X = (W - ANCHO) / 2;
+    const brilla = (color, fuerza = 28) => { if (E.brillo && color) { g.shadowColor = color; g.shadowBlur = fuerza; } };
+    const sinBrillo = () => { g.shadowBlur = 0; g.shadowColor = "transparent"; };
+    const texto = (t, x, y, font, color, align = "center", glow) => { g.font = font; g.textAlign = align; g.fillStyle = color; if (glow) brilla(glow); g.fillText(t, x, y); if (glow && E.brillo) g.fillText(t, x, y); sinBrillo(); };
+    const ajusta = (t, peso, max, ancho, fam = DISP) => { let px = max; do { g.font = `${peso} ${px}px ${fam}`; px -= 4; } while (g.measureText(t).width > ancho && px > 20); return `${peso} ${px + 4}px ${fam}`; };
+    const relleno = (col, y0, y1) => { if (!Array.isArray(col)) return col; const gr = g.createLinearGradient(0, y0, 0, y1); col.forEach((cc, i) => gr.addColorStop(i / (col.length - 1), cc)); return gr; };
+    const caja = (x, y, w, h, r, fondo, borde) => { g.fillStyle = fondo; g.strokeStyle = borde; g.lineWidth = 3; if (E.gis) g.setLineDash([10, 6]); g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); g.stroke(); g.setLineDash([]); };
+    const unColor = (col) => Array.isArray(col) ? col[1] : col;
+
+    pintarFondo(g, E, W, H);
+    if (foto) pintarFoto(g, E, W, H, foto, op);
+    const logo = conLogo && op.logo ? await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = "logo.jpg"; }) : null;
+    const LIMITE = op.cta ? H - 400 : op.pie ? H - 240 : H - 120, m = op.mensaje.trim();
+    // Alto de cada parte, para centrar todo entre arriba y el botón
+    const nEsp = especiales.length, altoCab = (logo ? 246 : 0) + 280 + (m ? 110 : 0);
+    const filaH = Math.max(64, Math.min(150, Math.floor((LIMITE - 140 - altoCab - (nEsp ? 66 + 64 * nEsp + 30 : 0)) / Math.max(1, filas.length))));
+    const altoEsp = nEsp ? Math.min(66 + 64 * nEsp + 30, Math.max(0, LIMITE - 140 - altoCab - filaH * filas.length - 30)) : 0;
+    const total = altoCab + filaH * filas.length + 30 + (altoEsp ? 70 + altoEsp : 0);
+    let y = Math.max(150, 110 + (LIMITE - 110 - total) / 2);
+    if (logo) { const r = 88; y += r; g.save(); g.beginPath(); g.arc(W / 2, y, r, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.clip(); g.drawImage(logo, W / 2 - r, y - r, r * 2, r * 2); g.restore();
+      g.strokeStyle = E.pillBorde; g.lineWidth = 4; brilla(E.pillBorde, 30); g.beginPath(); g.arc(W / 2, y, r + 4, 0, Math.PI * 2); g.stroke(); sinBrillo(); y += r + 70; }
+    texto(cfg.nombre.toUpperCase(), W / 2, y, `800 46px ${DISP}`, E.sub);
+    const titulo = op.titulo.trim() ? (LT.mayus ? op.titulo.trim().toUpperCase() : op.titulo.trim()) : LT.mayus ? "HORARIO" : "Horario";
+    y += 200;
+    texto(titulo, W / 2, y, ajusta(titulo, LT.peso, 200, ANCHO, LT.fam), relleno(E.horas, y - 180, y), "center", E.tituloGlow || E.horasGlow);
+    y += 40;
+    // Mensaje o promoción
+    if (m) { g.font = `700 42px ${SANS}`; let t = m; while (g.measureText(t).width > ANCHO - 100 && t.length > 4) t = t.slice(0, -2); if (t !== m) t = t.trim() + "…";
+      const w = Math.min(ANCHO, g.measureText(t).width + 100); brilla(E.pillBorde, 24); caja(W / 2 - w / 2, y, w, 84, 42, E.pill, E.pillBorde); sinBrillo();
+      texto(t, W / 2, y + 57, `700 42px ${SANS}`, E.pillTinta); y += 110; }
     // Tarjeta con la semana
-    let y = 720;
-    const alto = 116 * filas.length + 40;
-    g.fillStyle = "rgba(255,255,255,.05)"; g.strokeStyle = "rgba(212,166,74,.45)"; g.lineWidth = 3;
-    g.beginPath(); g.roundRect(80, y, W - 160, alto, 40); g.fill(); g.stroke();
-    y += 20;
+    const alto = filaH * filas.length + 30;
+    brilla(E.cajaBorde, 12); caja(X, y, ANCHO, alto, 36, E.caja, E.cajaBorde); sinBrillo();
     filas.forEach((f, i) => {
-      const cy = y + 58 + i * 116;
-      if (i) { g.fillStyle = "rgba(255,255,255,.1)"; g.fillRect(130, cy - 58, W - 260, 2); }
-      g.textAlign = "left"; g.fillStyle = HUESO; g.font = `600 46px ${SANS}`; g.fillText(f.dias, 130, cy + 16);
-      g.textAlign = "right"; g.fillStyle = f.horas === "Cerrado" ? "#e0827a" : ORO2; g.font = `800 62px ${DISP}`; g.fillText(f.horas, W - 130, cy + 20);
+      const cy = y + 15 + filaH * i + filaH / 2;
+      if (i) { g.fillStyle = E.cajaBorde; g.globalAlpha = .35; g.fillRect(X + 40, cy - filaH / 2, ANCHO - 80, 2); g.globalAlpha = 1; }
+      const fd = Math.min(50, filaH * .42), fh = Math.min(72, filaH * .56);
+      texto(f.dias, X + 48, cy + fd * .36, ajusta(f.dias, 600, fd, ANCHO * .48, SANS), E.cajaTinta, "left");
+      texto(f.horas, X + ANCHO - 48, cy + fh * .36, ajusta(f.horas, 800, fh, ANCHO * .46), f.horas === "Cerrado" ? E.malo : unColor(E.horas), "right", E.horasGlow);
     });
-    y += alto + 40;
-    // Días especiales
-    if (especiales.length) {
-      g.textAlign = "center"; g.fillStyle = ORO; g.font = `800 52px ${DISP}`; g.fillText("DÍAS ESPECIALES", W / 2, y + 40); y += 80;
-      especiales.forEach((e) => {
-        g.textAlign = "left"; g.fillStyle = HUESO; g.font = `600 40px ${SANS}`; g.fillText(rangoPub(e), 150, y + 30);
-        g.textAlign = "right"; g.fillStyle = e.txt === "Cerrado" ? "#e0827a" : ORO2; g.font = `800 50px ${DISP}`;
-        g.fillText(e.txt + (e.nota ? `  ·  ${e.nota}`.slice(0, 26) : ""), W - 150, y + 32);
-        y += 72;
-      });
+    y += alto + 70;
+    // Días especiales (los que quepan)
+    if (especiales.length && y + 80 < LIMITE) {
+      texto("DÍAS ESPECIALES", W / 2, y, `800 48px ${DISP}`, E.libresT, "center", E.brillo ? E.libresT : null); y += 66;
+      for (const e of especiales) {
+        if (y + 20 > LIMITE) break;
+        texto(rangoPub(e), X + 30, y, ajusta(rangoPub(e), 600, 38, ANCHO * .45, SANS), E.tinta, "left");
+        const v = e.txt + (e.nota ? `  ·  ${e.nota}`.slice(0, 26) : "");
+        texto(v, X + ANCHO - 30, y + 2, ajusta(v, 800, 46, ANCHO * .52), e.txt === "Cerrado" ? E.malo : unColor(E.horas), "right");
+        y += 64;
+      }
     }
     // Llamado a agendar
-    const by = H - 330;
-    g.fillStyle = ORO; g.beginPath(); g.roundRect(140, by, W - 280, 130, 65); g.fill();
-    g.textAlign = "center"; g.fillStyle = "#1a1206"; g.font = `800 64px ${DISP}`; g.fillText("AGENDA TU CITA", W / 2, by + 86);
-    g.fillStyle = GRIS; g.font = `500 34px ${SANS}`;
-    g.fillText(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200);
-    if (cfg.whatsapp) g.fillText(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 250);
+    const by = op.cta ? H - 360 : H - 330;
+    if (op.cta) { brilla(E.cta, 40); caja(150, by, W - 300, 132, 66, E.cta, E.cta); sinBrillo(); texto("AGENDA TU CITA", W / 2, by + 88, `900 68px ${DISP}`, E.ctaTinta); }
+    if (op.pie) {
+      texto(URL_CITAS.replace(/^https?:\/\//, "").replace(/\/cita\.html$/, ""), W / 2, by + 200, `500 32px ${SANS}`, E.pie || E.sub);
+      if (cfg.whatsapp) texto(`WhatsApp ${String(cfg.whatsapp).replace(/(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3")}`, W / 2, by + 248, `600 34px ${SANS}`, E.pie || E.sub);
+    }
     try { return await new Promise((ok, mal) => { try { c.toBlob(ok, "image/png"); } catch (e) { mal(e); } }); }
-    catch (e) { if (conLogo) return imagenHorario(filas, especiales, false); throw e; }   // sin logo si el navegador no deja exportarlo
+    catch (e) { if (conLogo) return imagenHorario(filas, especiales, false, estiloId, op, foto); throw e; }   // sin logo si el navegador no deja exportarlo
   }
 
   // =========================================================
@@ -5065,7 +5088,62 @@
       caja: "#fff", cajaBorde: "#111", cajaTinta: "#111", cta: "#111", ctaTinta: "#fff", muestra: "linear-gradient(135deg,#fff 50%,#111 50%)" },
   };
   // Opciones de la imagen (título, mensaje, qué mostrar). La foto de fondo se guarda aparte (solo en este aparato).
-  const PUB_DEF = { titulo: "", mensaje: "", logo: true, barberos: true, libres: true, cta: true, pie: true };
+  const PUB_DEF = { titulo: "", mensaje: "", logo: true, barberos: true, libres: true, cta: true, pie: true, color: "", letra: "clasica", velo: 50 };
+  // Colores rápidos para «Color propio» (cambia horas, botón, etiquetas y bordes del estilo)
+  const COLORES_PUB = [["#d4a64a", "Dorado"], ["#c8102e", "Rojo"], ["#1c6fd1", "Azul"], ["#1f9d55", "Verde"], ["#ff3ea5", "Rosa"], ["#7b3fe4", "Morado"], ["#ff7a1a", "Naranja"], ["#3ee6ff", "Turquesa"], ["#ffffff", "Blanco"], ["#111111", "Negro"]];
+  // Letras para el título y las horas
+  const LETRAS = {
+    clasica: { nombre: "Clásica", fam: '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', peso: 900, mayus: true },
+    fuerte: { nombre: "Fuerte", fam: '"Anton", Impact, sans-serif', peso: 400, mayus: true, remota: true },
+    elegante: { nombre: "Elegante", fam: '"Playfair Display", Georgia, serif', peso: 900, mayus: true, remota: true },
+    firma: { nombre: "Firma", fam: '"Lobster", "Brush Script MT", cursive', peso: 400, mayus: false, remota: true },
+    moderna: { nombre: "Moderna", fam: '"Montserrat", -apple-system, "Segoe UI", Arial, sans-serif', peso: 900, mayus: true, remota: true },
+  };
+  let letrasPub = null;   // se descargan solo la primera vez que se necesitan
+  function fuentesPub(LT) {
+    const base = Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]).catch(() => {});
+    if (!LT?.remota) return base;
+    if (!letrasPub) letrasPub = new Promise((ok) => {
+      const l = document.createElement("link"); l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?family=Anton&family=Lobster&family=Montserrat:wght@900&family=Playfair+Display:wght@900&display=swap";
+      l.onload = ok; l.onerror = ok; setTimeout(ok, 5000); document.head.appendChild(l);
+    });
+    return Promise.all([base, letrasPub.then(() => Promise.race([document.fonts.load(`${LT.peso} 120px ${LT.fam.split(",")[0]}`), new Promise((ok) => setTimeout(ok, 4000))]).catch(() => {}))]);
+  }
+  const hexRgb = (h) => { h = String(h).replace("#", ""); if (h.length === 3) h = [...h].map((x) => x + x).join(""); const n = parseInt(h, 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+  const mezclar = (h, otro, t) => { const a = hexRgb(h), b = hexRgb(otro); return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
+  const luzHex = (h) => { const [r, g, b] = hexRgb(h); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
+  // El estilo elegido, pintado con el color propio (si hay)
+  function estiloConColor(E, col) {
+    if (!/^#[0-9a-f]{6}$/i.test(col || "")) return E;
+    const [r, g, b] = hexRgb(col), rgba = (a) => `rgba(${r},${g},${b},${a})`, sobreColor = luzHex(col) > .55 ? "#111111" : "#ffffff";
+    const fondoClaro = luzHex(E.base || E.grad?.[0] || "#000000") > .5;
+    // que se lea sobre el fondo: en fondo claro un color muy claro se oscurece, y al revés
+    const t = fondoClaro ? (luzHex(col) > .6 ? mezclar(col, "#000000", .5) : col) : (luzHex(col) < .22 ? mezclar(col, "#ffffff", .55) : col);
+    const pillSolida = /^#/.test(E.pill) && E.pill === E.pillBorde;
+    return { ...E,
+      horas: fondoClaro ? t : [mezclar(t, "#ffffff", .4), t, mezclar(t, "#000000", .3)], libresT: t,
+      tituloGlow: E.tituloGlow ? t : undefined, horasGlow: E.horasGlow ? t : undefined,
+      luces: E.luces ? [rgba(.3), E.luces[1]] : E.luces, halo: E.halo ? rgba(.18) : E.halo, marco: E.marco ? (fondoClaro ? t : rgba(.6)) : E.marco,
+      pill: pillSolida ? col : rgba(.14), pillBorde: t, pillTinta: pillSolida ? sobreColor : fondoClaro ? mezclar(t, "#000000", .3) : mezclar(t, "#ffffff", .45),
+      chipBorde: t, chipTinta: /^#/.test(E.chip) ? E.chipTinta : fondoClaro ? mezclar(t, "#000000", .3) : mezclar(t, "#ffffff", .45), cajaBorde: fondoClaro ? t : rgba(.75), cta: col, ctaTinta: sobreColor };
+  }
+  // Foto de fondo: cubre todo y se vela (oscura o clara según el estilo) para que el texto se lea. op.velo: 0 = casi sin tapar, 100 = muy tapada
+  function pintarFoto(g, E, W, H, foto, op) {
+    const k = Math.max(W / foto.width, H / foto.height), fw = foto.width * k, fh = foto.height * k;
+    g.drawImage(foto, (W - fw) / 2, (H - fh) / 2, fw, fh);
+    const luz = (col) => { col = String(col || ""); let r, gg, bb; const h = col.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+      if (h) { [r, gg, bb] = hexRgb(h[1]); }
+      else { const m = col.match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/); if (!m) return null; [r, gg, bb] = m.slice(1).map(Number); }
+      return (0.2126 * r + 0.7152 * gg + 0.0722 * bb) / 255; };
+    const tintaClara = (luz(E.tinta) ?? luz(Array.isArray(E.titulo) ? E.titulo[0] : E.titulo) ?? 1) > 0.5;
+    const velo = tintaClara ? "0,0,0" : "255,255,255", f = Math.max(0, Math.min(100, Number(op?.velo ?? 50))) / 50;
+    const a = (x) => Math.min(.95, x * f).toFixed(3);
+    g.fillStyle = `rgba(${velo},${a(tintaClara ? .5 : .62)})`; g.fillRect(0, 0, W, H);
+    const gr = g.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, `rgba(${velo},${a(.35)})`); gr.addColorStop(.35, `rgba(${velo},${a(.15)})`); gr.addColorStop(.7, `rgba(${velo},${a(.3)})`); gr.addColorStop(1, `rgba(${velo},${a(.75)})`);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  }
   let pubOp = (() => { try { return { ...PUB_DEF, ...JSON.parse(localStorage.getItem("pub-op") || "{}") }; } catch { return { ...PUB_DEF }; } })();
   let pubFoto = null;   // Image lista para dibujar
   (() => { try { const d = localStorage.getItem("pub-foto"); if (d) { const im = new Image(); im.onload = () => (pubFoto = im); im.src = d; } } catch {} })();
@@ -5141,11 +5219,12 @@
   // Dibuja la imagen del día. Se acomoda sola para que quepan TODOS los horarios libres:
   // con pocos horarios usa letras grandes; con muchos, achica el encabezado y la cuadrícula.
   async function imagenDia(info, libres, estiloId, conLogo = true, op = pubOp, foto = pubFoto) {
-    const E = ESTILOS[estiloId] || ESTILOS.dorado, W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
     op = { ...PUB_DEF, ...op };
+    const E = estiloConColor(ESTILOS[estiloId] || ESTILOS.dorado, op.color), LT = LETRAS[op.letra] || LETRAS.clasica, W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const may = (x) => LT.mayus ? x.toUpperCase() : x.charAt(0).toUpperCase() + x.slice(1).toLowerCase();
     if (!op.libres) libres = [];
     const g = c.getContext("2d");
-    try { await Promise.all([document.fonts.load('900 120px "Big Shoulders Display"'), document.fonts.load('800 60px "Big Shoulders Display"')]); } catch {}
+    await fuentesPub(LT);
     const DISP = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', SANS = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
     const t = tituloDia(info.fecha), ANCHO = E.angosto ? W - 280 : W - 150;
     const brilla = (color, fuerza = 28) => { if (E.brillo && color) { g.shadowColor = color; g.shadowBlur = fuerza; } };
@@ -5163,22 +5242,7 @@
     const LIMITE = op.cta ? H - 375 : op.pie ? H - 200 : H - 120;   // arriba del botón «Agenda tu cita»
 
     pintarFondo(g, E, W, H);
-    // Foto de fondo: cubre todo y se vela (oscura o clara según el estilo) para que el texto se lea
-    if (foto) {
-      const k = Math.max(W / foto.width, H / foto.height), fw = foto.width * k, fh = foto.height * k;
-      g.drawImage(foto, (W - fw) / 2, (H - fh) / 2, fw, fh);
-      // ¿El estilo escribe con letra clara u oscura? (acepta #abc, #aabbcc y rgb())
-      const luz = (col) => { col = String(col || ""); let r, gg, bb; const h = col.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-        if (h) { let x = h[1]; if (x.length === 3) x = [...x].map((ch) => ch + ch).join(""); const n = parseInt(x, 16); r = n >> 16; gg = n >> 8 & 255; bb = n & 255; }
-        else { const m = col.match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/); if (!m) return null; [r, gg, bb] = m.slice(1).map(Number); }
-        return (0.2126 * r + 0.7152 * gg + 0.0722 * bb) / 255; };
-      const tintaClara = (luz(E.tinta) ?? luz(Array.isArray(E.titulo) ? E.titulo[0] : E.titulo) ?? 1) > 0.5;
-      const velo = tintaClara ? "0,0,0" : "255,255,255";
-      g.fillStyle = `rgba(${velo},${tintaClara ? .5 : .62})`; g.fillRect(0, 0, W, H);
-      const gr = g.createLinearGradient(0, 0, 0, H);
-      gr.addColorStop(0, `rgba(${velo},.35)`); gr.addColorStop(.35, `rgba(${velo},.15)`); gr.addColorStop(.7, `rgba(${velo},.3)`); gr.addColorStop(1, `rgba(${velo},.75)`);
-      g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    }
+    if (foto) pintarFoto(g, E, W, H, foto, op);
 
     // Mensaje o promoción: franja destacada, hasta 2 renglones
     const mensajePub = (y) => {
@@ -5234,10 +5298,10 @@
 
     let y;
     if (info.abierto) {
-      const palabra = op.titulo.trim().toUpperCase() || (t.cual === "HOY" ? "HOY ABRIMOS" : t.cual === "MAÑANA" ? "MAÑANA ABRIMOS" : "ABRIMOS");
-      texto(palabra, W / 2, L.palY, ajusta(palabra, 900, L.palF, ANCHO), E.titulo, "center", E.tituloGlow);
+      const palabra = op.titulo.trim() ? (LT.mayus ? op.titulo.trim().toUpperCase() : op.titulo.trim()) : may(t.cual === "HOY" ? "HOY ABRIMOS" : t.cual === "MAÑANA" ? "MAÑANA ABRIMOS" : "ABRIMOS");
+      texto(palabra, W / 2, L.palY, ajusta(palabra, LT.peso, L.palF, ANCHO, LT.fam), E.titulo, "center", E.tituloGlow);
       const horas = `${h12(info.abre)} – ${h12(info.cierra)}`;
-      texto(horas, W / 2, L.horasY, ajusta(horas, 900, L.horasF, ANCHO), relleno(E.horas, L.horasY - L.horasF, L.horasY), "center", E.horasGlow);
+      texto(horas, W / 2, L.horasY, ajusta(horas, LT.peso, L.horasF, ANCHO, LT.fam), relleno(E.horas, L.horasY - L.horasF, L.horasY), "center", E.horasGlow);
       y = L.despues;
       y = mensajePub(y);
       for (const nota of info.notas.slice(0, 2)) { texto(`⚠  ${nota}`, W / 2, y + 18, ajusta(`⚠  ${nota}`, 600, compacto ? 34 : 40, ANCHO - 40, SANS), E.malo); y += compacto ? 50 : 64; }
@@ -5262,8 +5326,9 @@
       if (op.libres) dibujaLibres(y, n ? "HORARIOS LIBRES PARA CITA" : "CITAS LLENAS · VEN POR TU TURNO", libres);
     } else {
       const dY = compacto ? 520 : 700, cY = compacto ? 700 : 900;
-      texto(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia, W / 2, dY, ajusta(t.dia, 900, compacto ? 110 : 140, ANCHO), E.titulo);
-      texto("CERRADO", W / 2, cY, ajusta("CERRADO", 900, compacto ? 190 : 230, ANCHO), E.malo, "center", E.brillo ? E.malo : null);
+      const cual = may(t.cual === "HOY" ? "HOY" : t.cual === "MAÑANA" ? "MAÑANA" : t.dia), cerr = op.titulo.trim() ? (LT.mayus ? op.titulo.trim().toUpperCase() : op.titulo.trim()) : may("CERRADO");
+      texto(cual, W / 2, dY, ajusta(cual, LT.peso, compacto ? 110 : 140, ANCHO, LT.fam), E.titulo);
+      texto(cerr, W / 2, cY, ajusta(cerr, LT.peso, compacto ? 190 : 230, ANCHO, LT.fam), E.malo, "center", E.brillo ? E.malo : null);
       y = cY + 90;
       y = mensajePub(y - 20) + 20;
       if (info.motivo) { texto(info.motivo, W / 2, y, ajusta(info.motivo, 600, compacto ? 44 : 54, ANCHO - 40, SANS), E.tinta); y += compacto ? 60 : 90; }
@@ -5326,7 +5391,19 @@
   }
 
   // ---------- Diálogo: elegir día y estilo, vista previa y compartir ----------
-  let horarioListo = null, pubPedido = 0;
+  let horarioListo = null, pubPedido = 0, pubPromos = [];
+  function marcarColorPub() {
+    const c = pubOp.color || "";
+    $("dcCuerpo").querySelectorAll("[data-pcolor]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.pcolor === c)));
+    const pr = $("dcCuerpo").querySelector(".propio"); if (pr) pr.dataset.on = c && !COLORES_PUB.some(([x]) => x === c) ? "1" : "0";
+  }
+  // Si ese día hay una promo aceptada, la primera idea de mensaje es la promo
+  function pintarIdeaPromo() {
+    const el = $("pubPromoIdea"); if (!el) return;
+    const p = pubDia !== "semana" && pubPromos.find((x) => x.fecha === pubDia);
+    const txt = p ? `${descPromo(p)}${p.hora_ini ? ` de ${h12(hhmm(p.hora_ini))} a ${h12(hhmm(p.hora_fin))}` : ""}`.slice(0, 70) : "";
+    el.innerHTML = p ? `<button type="button" data-pmensaje="${esc(txt)}" style="border-color:var(--oro);color:var(--oro-2);font-weight:600">🔥 ${esc(txt)}</button>` : "";
+  }
   async function publicarHorario(fechaInicial) {
     $("dcTitulo").textContent = "Publicar horario";
     $("dcCuerpo").innerHTML = `<p class="muted" style="text-align:center;margin:20px 0">Preparando…</p>`;
@@ -5334,6 +5411,7 @@
     if (!$("dlgCita").open) $("dlgCita").showModal();
     try { await cargarPubDatos(); } catch { $("dcCuerpo").innerHTML = `<p class="error" style="text-align:center">No se pudo cargar el horario. Revisa tu conexión.</p>`; return; }
     const hoy = hoyISO();
+    try { const { data } = await db.from("promos").select("*").eq("estado", "aceptada").gte("fecha", hoy).lte("fecha", sumarDia(hoy, 7)); pubPromos = data || []; } catch { pubPromos = []; }
     pubDia = typeof fechaInicial === "string" ? fechaInicial : hoy;
     const dias = [...Array(7)].map((_, i) => sumarDia(hoy, i));
     const etiqueta = (f, i) => i === 0 ? "Hoy" : i === 1 ? "Mañana" : `${CORTO_DIA[partesFecha(f).dow]} ${partesFecha(f).d}`;
@@ -5347,6 +5425,15 @@
         <div class="pub-sugerencias" aria-label="Ideas de título">${["¡TE ESPERAMOS!", "AGENDA YA", "HOY SÍ HAY CORTE", "VEN POR TU CORTE"].map((x) => `<button type="button" data-ptitulo="${x}">${x}</button>`).join("")}</div>
         <label for="pubMensaje">Mensaje o promoción <span class="muted small">(opcional)</span></label>
         <input id="pubMensaje" maxlength="70" placeholder="Ej. 2x1 en barba hoy · Estudiantes 10% menos" value="${esc(pubOp.mensaje)}" autocomplete="off">
+        <div class="pub-sugerencias" aria-label="Ideas de mensaje"><span id="pubPromoIdea" style="display:contents"></span>${["Sin cita: ven por tu turno", "Estudiantes 10% menos", "2x1 en barba hoy", "Últimos lugares, ¡apúrate!"].map((x) => `<button type="button" data-pmensaje="${x}">${x}</button>`).join("")}${pubOp.mensaje ? `<button type="button" class="ghost" data-pmensaje="">Quitar mensaje</button>` : ""}</div>
+        <label style="margin-top:12px">Color</label>
+        <div class="pub-colores" id="pubColores" role="group" aria-label="Color">
+          <button type="button" class="auto" data-pcolor="" aria-pressed="${!pubOp.color}">Del estilo</button>
+          ${COLORES_PUB.map(([c, n]) => `<button type="button" class="sw" data-pcolor="${c}" style="--c:${c}" title="${n}" aria-label="${n}" aria-pressed="${pubOp.color === c}"></button>`).join("")}
+          <label class="propio" title="Otro color" data-on="${pubOp.color && !COLORES_PUB.some(([c]) => c === pubOp.color) ? 1 : 0}"><input type="color" id="pubColorPropio" value="${pubOp.color || "#d4a64a"}" aria-label="Otro color"></label>
+        </div>
+        <label style="margin-top:12px">Letra</label>
+        <div class="pub-sugerencias pub-letras" role="group" aria-label="Letra">${Object.entries(LETRAS).map(([k, l]) => `<button type="button" data-pletra="${k}" aria-pressed="${(pubOp.letra || "clasica") === k}" style="font-family:${l.fam.replace(/"/g, "'")};font-weight:${l.peso}">${l.mayus ? l.nombre.toUpperCase() : l.nombre}</button>`).join("")}</div>
         <label style="margin-top:12px">Mostrar</label>
         <div class="pub-mostrar" id="pubMostrar">${[["logo", "Logo"], ["barberos", "Barberos"], ["libres", "Horarios libres"], ["cta", "Botón de citas"], ["pie", "Página y WhatsApp"]].map(([k, t]) => `<button type="button" data-pmostrar="${k}" aria-pressed="${pubOp[k]}">${t}</button>`).join("")}</div>
         <label style="margin-top:12px">Foto de fondo</label>
@@ -5356,6 +5443,8 @@
           ${pubFoto ? `<button type="button" class="ghost danger" id="pubQuitarFoto" style="flex:0 0 auto">Quitar foto</button>` : ""}
         </div>
         <p class="muted small" style="margin:6px 0 0">Una foto de la barbería o de un corte. Se oscurece sola para que el texto se lea.</p>
+        ${pubFoto ? `<label for="pubVelo" style="margin-top:10px">Qué tanto se tapa la foto</label>
+        <div class="pub-velo"><span class="muted small">Se ve más</span><input type="range" id="pubVelo" min="0" max="100" step="5" value="${pubOp.velo ?? 50}"><span class="muted small">Se lee más</span></div>` : ""}
         <div class="fila" style="margin-top:10px;justify-content:flex-end"><button type="button" class="ghost" id="pubRestablecer" style="flex:0 0 auto">Volver a como venía</button></div>
       </details>
       <div class="pub-prev"><img alt="Vista previa de la publicación" class="prev-horario" id="pubImg"><div class="pub-cargando" id="pubCargando">Armando la imagen…</div></div>
@@ -5366,6 +5455,12 @@
       if (s) { pubEstilo = s.dataset.pestilo; try { localStorage.setItem("pub-estilo", pubEstilo); } catch {} prepararHoy(); $("dcCuerpo").querySelectorAll("[data-pestilo]").forEach((x) => x.setAttribute("aria-pressed", String(x === s))); armarPublicacion(); }
       const m = e.target.closest("[data-pmostrar]");
       if (m) { const k = m.dataset.pmostrar; pubOp[k] = !pubOp[k]; m.setAttribute("aria-pressed", String(pubOp[k])); cambioPub(true); }
+      const pm = e.target.closest("[data-pmensaje]");
+      if (pm) { $("pubMensaje").value = pm.dataset.pmensaje; pubOp.mensaje = pm.dataset.pmensaje; cambioPub(true); }
+      const pc = e.target.closest("[data-pcolor]");
+      if (pc) { pubOp.color = pc.dataset.pcolor; marcarColorPub(); cambioPub(true); }
+      const pl = e.target.closest("[data-pletra]");
+      if (pl) { pubOp.letra = pl.dataset.pletra; $("dcCuerpo").querySelectorAll("[data-pletra]").forEach((x) => x.setAttribute("aria-pressed", String(x === pl))); cambioPub(true); }
       const tt = e.target.closest("[data-ptitulo]");
       if (tt) { $("pubTitulo").value = tt.dataset.ptitulo; pubOp.titulo = tt.dataset.ptitulo; cambioPub(true); }
       if (e.target.closest("#pubQuitarFoto")) { pubFoto = null; try { localStorage.removeItem("pub-foto"); } catch {} publicarHorario(pubDia); prepararHoy(); }
@@ -5375,8 +5470,12 @@
     $("dcCuerpo").oninput = (e) => {
       if (e.target.id === "pubTitulo") { pubOp.titulo = e.target.value; cambioPub(); }
       if (e.target.id === "pubMensaje") { pubOp.mensaje = e.target.value; cambioPub(); }
+      if (e.target.id === "pubColorPropio") { pubOp.color = e.target.value; marcarColorPub(); cambioPub(); }
+      if (e.target.id === "pubVelo") { pubOp.velo = Number(e.target.value); cambioPub(); }
     };
-    $("pubPerso").ontoggle = () => guardarLocal("pub-perso-abierto", $("pubPerso").open ? "1" : "0");
+    // Que las letras se vean con su forma en los botones
+    if ($("pubPerso").open) fuentesPub(LETRAS.firma);
+    $("pubPerso").ontoggle = () => { guardarLocal("pub-perso-abierto", $("pubPerso").open ? "1" : "0"); if ($("pubPerso").open) fuentesPub(LETRAS.firma); };
     $("pubFotoArchivo").onchange = async (e) => {
       const f = e.target.files?.[0]; if (!f) return;
       try { await ponerFotoPub(f); } catch { toast("No se pudo usar esa foto. Prueba con otra.", { tipo: "error" }); return; }
@@ -5408,12 +5507,12 @@
   async function armarPublicacion() {
     const n = ++pubPedido;
     $("pubCargando").classList.remove("hidden");
-    $("dcCuerpo").querySelector(".pub-estilos").classList.toggle("hidden", pubDia === "semana");
+    pintarIdeaPromo();
     let texto, blob;
     try {
       if (pubDia === "semana") {
         const filas = filasSemana(pubDatos.semana), especiales = await especialesProximos();
-        texto = textoHorario(filas, especiales); blob = await imagenHorario(filas, especiales);
+        texto = textoHorario(filas, especiales); blob = await imagenHorario(filas, especiales, true, pubEstilo);
       } else {
         const info = infoDia(pubDia), prox = info.abierto ? null : proximaApertura(pubDia);
         const libres = info.abierto ? await libresDelDia(pubDia) : prox ? await libresDelDia(prox.fecha) : [];
