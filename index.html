@@ -97,7 +97,7 @@
       .nav-acciones .txt { display: none; }
     }
 
-    /* ---------- Hero: la palabra gigante con el modelo por delante ---------- */
+    /* ---------- Hero: la palabra gigante ---------- */
     .hero { position: relative; overflow: hidden; min-height: min(860px, calc(100svh - 106px)); display: flex; }
     .hero .contenedor { position: relative; width: 100%; display: grid; grid-template-rows: auto 1fr auto; padding-top: clamp(28px, 5vh, 56px); padding-bottom: clamp(28px, 5vh, 56px); }
     .hero-lema { line-height: 2.1; }
@@ -105,10 +105,6 @@
     .gigante { position: relative; z-index: 1; align-self: center; margin: clamp(20px, 4vh, 48px) 0; text-align: center; pointer-events: none;
       font: 600 clamp(84px, 21vw, 300px)/.8 var(--titulo); letter-spacing: -.02em; text-transform: uppercase; color: var(--tinta); white-space: nowrap; }
     .gigante span { display: inline-block; }
-    /* El modelo con su taper, por delante de la palabra (la camisa se desvanece hacia abajo) */
-    .escena { position: absolute; left: 50%; bottom: 0; height: 90%; aspect-ratio: 1000 / 1274; transform: translateX(-50%); z-index: 2; pointer-events: none; }
-    .escena img { width: 100%; height: 100%; object-fit: contain; object-position: bottom;
-      -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 96%); mask-image: linear-gradient(to bottom, #000 62%, transparent 96%); }
     .hero-abajo { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
     .ctas { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
     .estado { text-align: right; line-height: 2.1; }
@@ -119,7 +115,6 @@
     @media (max-width: 700px) {
       .hero { min-height: 640px; }
       .gigante { font-size: 23vw; }
-      .escena { height: auto; width: 76vw; bottom: auto; top: 118px; }
       .franja-cabeza span:last-child { display: none; }
       .hero-abajo { flex-direction: column; align-items: stretch; }
       .ctas { flex-direction: column; align-items: stretch; gap: 14px; }
@@ -135,9 +130,7 @@
       .gigante span:nth-child(2) { animation-delay: .05s; } .gigante span:nth-child(3) { animation-delay: .1s; }
       .gigante span:nth-child(4) { animation-delay: .15s; } .gigante span:nth-child(5) { animation-delay: .2s; } .gigante span:nth-child(6) { animation-delay: .25s; }
       .hero-lema, .hero-abajo { animation: subir .9s var(--facil) .35s both; }
-      .escena { animation: aparecer 1.4s var(--facil) .2s both; }
       @keyframes subir { from { opacity: 0; transform: translateY(30px); } }
-      @keyframes aparecer { from { opacity: 0; transform: translate(-50%, 24px) scale(.97); } to { transform: translateX(-50%); } }
       .revelar { opacity: 0; transform: translateY(26px); filter: blur(4px); transition: opacity .7s ease var(--d, 0s), transform 1s var(--resorte, var(--facil)) var(--d, 0s), filter .7s ease var(--d, 0s); }
       .revelar.visto { filter: none; }
       .revelar.visto { opacity: 1; transform: none; }
@@ -256,7 +249,6 @@
       <div class="contenedor">
         <div class="hero-lema mayus">Corte de caballero<br>que no te hace<br>esperar.</div>
         <h1 class="gigante" aria-label="Sótano del Barbero"><span>S</span><span>Ó</span><span>T</span><span>A</span><span>N</span><span>O</span></h1>
-        <div class="escena" id="escena"><img src="fotos/modelo-taper.webp" alt="Corte taper fade del Sótano del Barbero" width="1000" height="1274" fetchpriority="high"></div>
         <div class="hero-abajo">
           <div class="ctas" id="ctasHero">
             <a class="btn" href="turno.html">Tomar turno ahora</a>
