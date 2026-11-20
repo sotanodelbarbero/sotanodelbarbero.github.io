@@ -98,5 +98,10 @@ Las citas para «cualquier barbero» le llegan a todo el equipo. Quien hace el c
 
 Por privacidad, la base de datos solo le pasa a la función el número de cita (sin nombre ni teléfono); la función lee los datos y los manda cifrados al celular.
 
+## Respaldo y mantenimiento
+- **Respaldo:** en **Panel → Ajustes → Respaldo**, Alejandro descarga un Excel con todas las tablas (cortes, citas, ventas, caja, gastos, servicios, productos, equipo, horario). Guárdalo fuera de la computadora (Google Drive, USB). Si pasa una semana sin respaldar, **Inicio** lo recuerda. El Excel contiene teléfonos de clientes: no lo compartas.
+- **Que Supabase no se pause:** el plan gratis pausa el proyecto tras 7 días sin actividad. La tarea `.github/workflows/mantener-activo.yml` consulta la fila pública todos los días a las 8:17 a. m. Se ve en GitHub → **Actions**. Si un día falla, GitHub manda un correo; entra a supabase.com y reactiva el proyecto.
+- **Aviso de privacidad:** `privacidad.html`, enlazado desde la portada, el turno y la cita. Revísalo con quien lleve la parte legal y agrega el domicilio en `config.js` (`direccion`) para que aparezca.
+
 ## El cliente guarda su cita
 En la pantalla de su cita tiene **Guarda tu cita**: Google Calendar, calendario del celular, enviársela por WhatsApp y **copiar enlace**. El enlace (`cita.html?c=…`) abre **su** cita en cualquier teléfono, para verla, avisar que llegó o cancelarla.

@@ -1149,6 +1149,12 @@
           <div class="seg" data-ap="letra" role="group" aria-label="Tamaño de letra"><button type="button" data-v="normal">Normal</button><button type="button" data-v="grande">Grande</button><button type="button" data-v="muy">Más grande</button></div></div>
         <div class="fila" style="margin-top:10px;justify-content:flex-end"><button type="button" class="ghost" id="apRestablecer" style="flex:0 0 auto">Volver a como venía</button></div>
       </div>
+      <div class="card solo-admin hidden" style="margin-top:16px" id="cardRespaldo">
+        <h2>Respaldo</h2>
+        <p class="muted" style="margin:6px 0 12px">Descarga un Excel con toda la información: clientes, citas, cobros, caja, gastos, productos, horario y equipo. Guárdalo en tu computadora o en Google Drive. Hazlo cada semana: si algo se borra por error, ahí está todo.</p>
+        <p class="small" id="respaldoUltimo" style="margin:0 0 12px"></p>
+        <button class="primary" id="btnRespaldo">Descargar respaldo</button>
+      </div>
       <div class="card solo-admin hidden" style="margin-top:16px">
         <h2>QR para clientes</h2>
         <p class="muted">Imprime el código y pégalo en la entrada. Los clientes lo escanean y se registran solos.</p>
@@ -1493,6 +1499,51 @@
   $("avisoPushActivar").onclick = activarPush;
   $("avisoPushLuego").onclick = () => { try { localStorage.setItem("avisos-luego", hoyISO()); } catch {} $("avisoPush").classList.add("hidden"); };
 
+  // ---------- Respaldo: un Excel con todas las tablas (solo admin) ----------
+  const TABLAS_RESPALDO = [
+    ["visitas", "Cortes y turnos"], ["citas", "Citas"], ["ventas_productos", "Ventas de productos"], ["cortes", "Cierres de caja"],
+    ["gastos", "Gastos"], ["servicios", "Servicios"], ["productos", "Productos"], ["barberos", "Barberos"], ["perfiles", "Cuentas"],
+    ["horario", "Horario"], ["horario_especial", "Días especiales"], ["bloqueos", "Bloqueos"], ["barbero_turno", "Turnos"], ["barbero_turno_dia", "Turnos por día"],
+  ];
+  const ultimoRespaldo = () => { try { return user?.user_metadata?.ultimo_respaldo || localStorage.getItem("ultimo-respaldo") || null; } catch { return user?.user_metadata?.ultimo_respaldo || null; } };
+  function pintarRespaldo() {
+    const u = ultimoRespaldo();
+    $("respaldoUltimo").innerHTML = u ? `Último respaldo: <b>${esc(fechaLarga(u))}</b>${diasEntre(u, hoyISO()) >= 7 ? ' · <span style="color:var(--warn)">ya toca otro</span>' : ""}` : '<span style="color:var(--warn)">Todavía no has descargado ningún respaldo.</span>';
+  }
+  function cargarXlsx() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((ok, mal) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = ok; sc.onerror = () => mal(new Error("No se pudo cargar el generador de Excel. Revisa tu internet.")); document.head.appendChild(sc); });
+  }
+  async function descargarRespaldo() {
+    const btn = $("btnRespaldo"); btn.disabled = true; const txt = btn.textContent;
+    try {
+      btn.textContent = "Preparando…";
+      await cargarXlsx();
+      const libro = XLSX.utils.book_new(), resumen = [["Respaldo de", cfg.nombre], ["Fecha", new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" })], [], ["Hoja", "Registros"]];
+      let i = 0;
+      for (const [tabla, nombre] of TABLAS_RESPALDO) {
+        btn.textContent = `Descargando ${++i} de ${TABLAS_RESPALDO.length}…`;
+        const { data, error } = await traerTodo(() => db.from(tabla).select("*"));
+        if (error) { resumen.push([nombre, "No se pudo leer: " + error.message]); continue; }
+        const filas = data.length ? data : [{ "(sin registros)": "" }];
+        XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filas), nombre.slice(0, 31));
+        resumen.push([nombre, data.length]);
+      }
+      const hoja = XLSX.utils.aoa_to_sheet(resumen);
+      libro.SheetNames.unshift("Resumen"); libro.Sheets.Resumen = hoja;
+      XLSX.writeFile(libro, `respaldo-sotano-${hoyISO()}.xlsx`);
+      const hoy = hoyISO();
+      try { localStorage.setItem("ultimo-respaldo", hoy); } catch {}
+      if (user) { user.user_metadata = { ...(user.user_metadata || {}), ultimo_respaldo: hoy }; try { db.auth.updateUser({ data: { ultimo_respaldo: hoy } })?.catch?.(() => {}); } catch {} }
+      pintarRespaldo();
+      toast("Respaldo descargado. Guárdalo en un lugar seguro.");
+      if (visible("inicio")) cargarInicio();
+    } catch (e) {
+      toast("No se pudo hacer el respaldo: " + (e.message || e), { tipo: "error" });
+    } finally { btn.disabled = false; btn.textContent = txt; }
+  }
+  $("btnRespaldo").onclick = descargarRespaldo;
+
   // ---------- Pestañas ----------
   const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
   const botonTab = (t) => document.querySelector(`.tabs [data-tab="${t}"]`);
@@ -1507,6 +1558,7 @@
     if (tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
     if (tab === "horario") { pintarHorario(); pintarTurnos(); cargarCalendario(); prepararHoy(); }
     if (tab === "citas") cargarCitas();
+    if (tab === "ajustes" && esAdmin()) pintarRespaldo();
     if (tab === "corte") cargarCorte();
     if (tab === "clientes") cargarClientes();
     if (tab === "reportes") cargarReportes();
@@ -3728,6 +3780,10 @@
     for (const b of (rb.error ? [] : rb.data || [])) {
       if (b.barbero_id && !esAdmin() && b.barbero_id !== miBarbero) continue;
       al.push(["info", icoInfo, `<b>Hoy: ${esc(b.motivo || "bloqueo")}</b> · ${b.barbero_id ? esc(barbero(b.barbero_id)?.nombre || "") : "toda la barbería"} · ${b.hora_ini ? `${hhmm(b.hora_ini)}–${hhmm(b.hora_fin)}` : "todo el día"}`, "citas"]);
+    }
+    if (esAdmin()) {   // respaldo semanal
+      const u = ultimoRespaldo(), dias = u ? diasEntre(u, hoy) : null;
+      if (dias == null || dias >= 7) al.push(["info", icoInfo, dias == null ? `<b>Todavía no descargas un respaldo.</b> Tarda unos segundos y protege toda tu información.` : `<b>Hace ${dias} días que no descargas un respaldo.</b> Descárgalo para no perder nada.`, "ajustes"]);
     }
     $("alertas").innerHTML = al.map(([cls, ico, txt, tab]) => `<button class="alerta ${cls}" data-ir="${tab}">${ico}<span>${txt}</span></button>`).join("");
   }

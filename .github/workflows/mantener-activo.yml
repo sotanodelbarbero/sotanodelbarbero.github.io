@@ -1,0 +1,30 @@
+# Visita diaria a Supabase para que el plan gratis no pause el proyecto
+# (Supabase pausa los proyectos gratis tras 7 días sin actividad).
+# Solo consulta la fila pública, igual que la portada; usa la clave pública de config.js.
+name: Mantener activo Supabase
+
+on:
+  schedule:
+    - cron: "17 14 * * *"   # todos los días, 8:17 a. m. hora de la Ciudad de México
+  workflow_dispatch:         # también se puede correr a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  visita:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar la fila pública
+        run: |
+          URL="https://iqvdfhjonrricibdwchc.supabase.co"
+          KEY="sb_publishable_Tau2iEMQhp09lVaRfi4qow_bW-YRdUd"
+          for intento in 1 2 3; do
+            if curl -fsS -X POST "$URL/rest/v1/rpc/cola_publica" \
+                 -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{}'; then
+              echo; echo "Supabase respondió bien."; exit 0
+            fi
+            echo "Intento $intento falló; reintentando en 30 s…"; sleep 30
+          done
+          echo "Supabase no respondió. Revisa si el proyecto está pausado en supabase.com."; exit 1
