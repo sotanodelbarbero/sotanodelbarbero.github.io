@@ -30,6 +30,10 @@
       transition: transform 100ms ease-out, border-color .15s, background .15s;
     }
     .chip:active { transform: scale(.96); opacity: 1; }
+    .fotos-barbero { display: flex; gap: 8px; overflow-x: auto; margin: 10px 0 0; padding-bottom: 4px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .fotos-barbero a { flex: 0 0 auto; width: 96px; scroll-snap-align: start; text-decoration: none; color: inherit; }
+    .fotos-barbero img { width: 96px; height: 120px; object-fit: cover; display: block; border-radius: 10px; background: rgba(127,127,127,.15); }
+    .fotos-barbero span { display: block; font-size: .6875rem; margin-top: 4px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chip[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: #1a1206; font-weight: 600; }
     .nota-paso { color: var(--muted); font-size: .8125rem; margin: -6px 0 12px; }
 
@@ -296,6 +300,21 @@
       }
       if (!barberos.length) { $("paso2").classList.add("hidden"); cont.classList.add("hidden"); cont.previousElementSibling.classList.add("hidden"); }
       else if (!$("turnoBarbero")) { const p = document.createElement("p"); p.id = "turnoBarbero"; p.className = "muted small hidden"; p.style.margin = "8px 2px 0"; cont.after(p); }
+      if (barberos.length && !$("fotosBarbero")) { const d = document.createElement("div"); d.id = "fotosBarbero"; d.className = "fotos-barbero hidden"; d.setAttribute("aria-label", "Cortes de este barbero"); ($("turnoBarbero") || cont).after(d); }
+      // Fotos de los cortes de cada barbero (si ya instalaron 19_fotos_cortes.sql)
+      db.rpc("fotos_publicas").then(({ data }) => { fotosCortes = Array.isArray(data) ? data : []; pintarFotosBarbero(); }, () => {});
+      // Viene de «Agendar con Juan» en la página principal: cita.html?nueva&b=<id>
+      const pedido = Number(new URLSearchParams(location.search).get("b"));
+      const chip = pedido && cont.querySelector(`[data-id="${pedido}"]`);
+      if (chip) chip.click();
+    }
+    let fotosCortes = [];
+    const urlFoto = (ruta) => `${cfg.supabaseUrl}/storage/v1/object/public/cortes/${ruta.split("/").map(encodeURIComponent).join("/")}`;
+    function pintarFotosBarbero() {
+      const el = $("fotosBarbero"); if (!el) return;
+      const lista = sel.barbero ? fotosCortes.filter((f) => f.barbero_id === sel.barbero).slice(0, 10) : [];
+      el.innerHTML = lista.map((f) => `<a href="${esc(urlFoto(f.ruta))}" target="_blank" rel="noopener"><img src="${esc(urlFoto(f.ruta))}" alt="${esc(f.descripcion || "Corte")}" loading="lazy"><span>${esc(f.descripcion || "Corte")}</span></a>`).join("");
+      el.classList.toggle("hidden", !lista.length);
     }
     // «Juan trabaja Mar a Vie de 10:00 am a 3:00 pm» (solo si tiene turno propio)
     const DC = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -315,6 +334,7 @@
       sel.barbero = b.dataset.id ? Number(b.dataset.id) : null;
       const tt = turnoTexto(barberos.find((x) => x.id === sel.barbero));
       if ($("turnoBarbero")) { $("turnoBarbero").textContent = tt; $("turnoBarbero").classList.toggle("hidden", !tt); }
+      pintarFotosBarbero();
       marcarBoton($("barberos"), b); vibrar(); cambio();
     });
 

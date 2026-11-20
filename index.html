@@ -188,6 +188,30 @@
     .paso p { margin: 0; color: var(--gris); font-size: .875rem; }
     @media (max-width: 800px) { .pasos { grid-template-columns: 1fr; } .paso { min-height: 0; } .paso h3 { margin-top: 18px; } }
 
+    /* ---------- Nuestros cortes (fotos que suben los barberos) ---------- */
+    .tr-filtro { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: -8px 0 24px; }
+    .tr-filtro button { background: none; border: 0; padding: 6px 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--gris); cursor: pointer; border-bottom: 1.5px solid transparent; }
+    .tr-filtro button[aria-pressed="true"] { color: var(--tinta); border-color: var(--tinta); }
+    .tr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .tr-foto { background: none; border: 0; padding: 0; text-align: left; cursor: zoom-in; color: inherit; font: inherit; }
+    .tr-foto .img { aspect-ratio: 4 / 5; overflow: hidden; background: var(--papel); }
+    .tr-foto img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--resorte, ease); }
+    .tr-foto:hover img { transform: scale(1.04); }
+    .tr-foto b { display: block; margin-top: 10px; font: 500 .8125rem/1.2 var(--titulo); text-transform: uppercase; letter-spacing: .1em; }
+    .tr-foto span { font-size: .8125rem; color: var(--gris); }
+    .tr-mas { background: none; border: 1px solid var(--tinta); height: 44px; padding: 0 28px; cursor: pointer; color: var(--tinta); }
+    .tr-mas:hover { background: var(--tinta); color: #fff; }
+    @media (max-width: 900px) { .tr-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px) { .tr-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+    .tr-ver { border: 0; padding: 0; background: #0a0a0a; color: #fff; max-width: min(560px, calc(100vw - 24px)); width: 100%; max-height: calc(100dvh - 24px); overflow: auto; }
+    .tr-ver::backdrop { background: rgba(10,10,10,.82); }
+    .tr-ver img { width: 100%; max-height: 72dvh; object-fit: contain; display: block; background: #000; }
+    .tr-ver .tr-info { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 16px 18px 18px; flex-wrap: wrap; }
+    .tr-ver .tr-info b { display: block; font: 500 1rem/1.2 var(--titulo); text-transform: uppercase; letter-spacing: .1em; }
+    .tr-ver .tr-info span { color: #bdbdb9; font-size: .875rem; }
+    .tr-ver .btn { background: #fff; color: #0a0a0a; }
+    .tr-ver .tr-cerrar { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 1.1rem; cursor: pointer; }
+
     .visita { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 64px); }
     .grupo-titulo { margin-bottom: 14px; color: var(--gris); }
     .grupo { border-top: 1px solid var(--tinta); }
@@ -287,6 +311,23 @@
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="1.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg><div><b>Paga como quieras</b><span>Efectivo, tarjeta o transferencia</span></div></li>
       </ul>
     </section>
+
+    <section id="trabajos" class="seccion hidden">
+      <div class="contenedor">
+        <div class="cabeza revelar">
+          <div><h2>Nuestros cortes</h2><p>Trabajos reales de nuestros barberos. ¿Te gustó uno? Agenda con quien lo hizo.</p></div>
+          <a class="enlace" href="cita.html">Agendar cita <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <div class="tr-filtro mayus" id="trFiltro" role="group" aria-label="Barbero"></div>
+        <div class="tr-grid" id="trGrid"></div>
+        <div style="text-align:center;margin-top:32px"><button type="button" class="tr-mas mayus hidden" id="trMas">Ver más cortes</button></div>
+      </div>
+    </section>
+    <dialog id="trVer" class="tr-ver" aria-label="Foto del corte">
+      <img id="trImg" alt="">
+      <div class="tr-info"><div><b id="trDesc"></b><span id="trQuien"></span></div><a class="btn" id="trAgendar" href="cita.html">Agendar</a></div>
+      <button type="button" class="tr-cerrar" id="trCerrar" aria-label="Cerrar">✕</button>
+    </dialog>
 
     <section id="como-funciona" class="seccion">
       <div class="contenedor">
@@ -481,6 +522,49 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',  // peine
     ];
 
+    // ---------- Nuestros cortes: fotos que suben los barberos desde el panel ----------
+    let trabajos = [], trFiltro = "todos", trCuantos = 8;
+    const urlFoto = (ruta) => `${cfg.supabaseUrl}/storage/v1/object/public/cortes/${ruta.split("/").map(encodeURIComponent).join("/")}`;
+    async function cargarTrabajos() {
+      if (!db) return;
+      const { data, error } = await db.rpc("fotos_publicas");
+      if (error || !Array.isArray(data) || !data.length) return;
+      trabajos = data;
+      $("trabajos").classList.remove("hidden");
+      const quienes = [...new Map(data.map((f) => [f.barbero_id, f.barbero])).entries()];
+      $("trFiltro").innerHTML = quienes.length > 1 ? [`<button type="button" data-tr="todos" aria-pressed="true">Todos</button>`,
+        ...quienes.map(([id, n]) => `<button type="button" data-tr="${id}" aria-pressed="false">${esc(n)}</button>`)].join("") : "";
+      pintarTrabajos();
+      document.querySelectorAll("#trabajos .revelar").forEach(observar);
+    }
+    function pintarTrabajos() {
+      const lista = trabajos.filter((f) => trFiltro === "todos" || String(f.barbero_id) === trFiltro);
+      $("trGrid").innerHTML = lista.slice(0, trCuantos).map((f) => `
+        <button type="button" class="tr-foto" data-trf="${f.id}">
+          <div class="img"><img src="${esc(urlFoto(f.ruta))}" alt="${esc((f.descripcion || "Corte") + " de " + f.barbero)}" loading="lazy"></div>
+          <b>${esc(f.descripcion || "Corte")}</b><span>${esc(f.barbero)}</span>
+        </button>`).join("");
+      $("trMas").classList.toggle("hidden", lista.length <= trCuantos);
+    }
+    $("trFiltro").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-tr]"); if (!b) return;
+      trFiltro = b.dataset.tr; trCuantos = 8;
+      $("trFiltro").querySelectorAll("[data-tr]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      pintarTrabajos();
+    });
+    $("trMas").onclick = () => { trCuantos += 8; pintarTrabajos(); };
+    $("trGrid").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-trf]"); if (!b) return;
+      const f = trabajos.find((x) => x.id === Number(b.dataset.trf)); if (!f) return;
+      $("trImg").src = urlFoto(f.ruta); $("trImg").alt = (f.descripcion || "Corte") + " de " + f.barbero;
+      $("trDesc").textContent = f.descripcion || "Corte"; $("trQuien").textContent = "Por " + f.barbero;
+      $("trAgendar").textContent = "Agendar con " + f.barbero;
+      $("trAgendar").href = `cita.html?nueva&b=${f.barbero_id}`;
+      $("trVer").showModal();
+    });
+    $("trCerrar").onclick = () => $("trVer").close();
+    $("trVer").addEventListener("click", (e) => { if (e.target === $("trVer")) $("trVer").close(); });
+
     async function cargarServicios() {
       const cont = $("mosaicos");
       const vacio = '<div class="vacio">Pregunta por nuestros servicios en la barbería.</div>';
@@ -546,6 +630,7 @@
     }
 
     cargarServicios();
+    cargarTrabajos();
     cargarCola();
     cargarHorario();
     setInterval(() => { if (!document.hidden) cargarCola(); }, 30000);

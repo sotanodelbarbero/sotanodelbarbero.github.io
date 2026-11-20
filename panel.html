@@ -175,6 +175,19 @@
     .aviso-form { font-size: .8125rem; color: var(--muted); margin: 6px 0 0; }
 
     /* ===== Equipo ===== */
+    .fotos-filtro { margin: 0 0 14px; }
+    .fotos-filtro button[aria-pressed="true"] { background: var(--oro); border-color: var(--oro); color: var(--accent-ink); font-weight: 600; }
+    .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .fotos-grid .ft { position: relative; padding: 0; border: 0; border-radius: 14px; overflow: hidden; aspect-ratio: 4 / 5; background: var(--surface-2); min-height: 0; cursor: pointer; }
+    .fotos-grid .ft img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
+    .fotos-grid .ft:hover img { transform: scale(1.03); }
+    .fotos-grid .ft .pie { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 10px 8px; background: linear-gradient(transparent, rgba(0,0,0,.72)); color: #fff; font-size: .75rem; text-align: left; line-height: 1.3; }
+    .fotos-grid .ft .pie b { display: block; font-size: .8125rem; }
+    .fotos-grid .ft.oculta img { opacity: .35; filter: grayscale(1); }
+    .fotos-grid .ft .oculta-et { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.7); color: #fff; font-size: .6875rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+    .fotos-grid .subiendo { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 14px; background: var(--surface-2); color: var(--muted); font-size: .8125rem; text-align: center; padding: 10px; }
+    .fotos-vacio { grid-column: 1 / -1; text-align: center; padding: 36px 16px; border: 2px dashed var(--line); border-radius: 16px; color: var(--muted); }
+    @media (max-width: 520px) { .fotos-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
     .equipo { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
     .miembro { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
     .miembro.baja { opacity: .55; }
@@ -780,6 +793,9 @@
         <button role="tab" data-tab="productos" aria-selected="false" class="en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="9" width="13" height="12" rx="2.5"/><path d="M8 9V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V9"/><path d="M9 14h6"/></svg>
           <span class="lbl">Productos</span></button>
+        <button role="tab" data-tab="fotos" aria-selected="false" class="en-mas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.4-2h6.6l1.4 2h1.8A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>
+          <span class="lbl"><span class="largo">Fotos de cortes</span><span class="corto">Fotos</span></span></button>
         <div class="tabs-grupo" role="presentation">Configuración</div>
         <button role="tab" data-tab="precios" aria-selected="false" class="en-mas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.2V4.5A1.5 1.5 0 0 1 4.5 3h7.7l8.8 8.8a1.5 1.5 0 0 1 0 2.1l-7.1 7.1a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.6"/></svg>
@@ -1170,6 +1186,17 @@
           <button type="button" class="ghost" id="btnPublicarHorario">Otro día o estilo</button>
         </div>
       </div>
+    </section>
+
+    <section id="tab-fotos" class="hidden">
+      <div class="topbar" style="margin-top:12px">
+        <h1 class="page-title" style="margin:0">Fotos de cortes</h1>
+        <div class="fila" style="flex:0 0 auto"><button type="button" class="primary" id="fotosSubir">+ Subir fotos</button>
+          <input type="file" id="fotosArchivo" accept="image/*" multiple class="hidden"></div>
+      </div>
+      <p class="muted" style="margin:0 0 14px">Las fotos de tus mejores cortes salen en la página principal y cuando el cliente te elige al agendar. Tócala para ponerle nombre al corte, ocultarla o borrarla.</p>
+      <div class="pub-sugerencias fotos-filtro" id="fotosFiltro" role="group" aria-label="De quién"></div>
+      <div id="fotosGrid" class="fotos-grid"></div>
     </section>
 
     <section id="tab-equipo" class="hidden">
@@ -1843,8 +1870,114 @@
     };
   }
 
+  // ---------- Fotos de cortes (19_fotos_cortes.sql) ----------
+  let fotos = [], fotosFiltro = null, fotosSubiendo = 0;
+  const urlFoto = (ruta) => `${cfg.supabaseUrl}/storage/v1/object/public/cortes/${ruta.split("/").map(encodeURIComponent).join("/")}`;
+  const puedoEditarFoto = (f) => esAdmin() || (miBarbero && f.barbero_id === miBarbero);
+  async function cargarFotos() {
+    if (fotosFiltro === null) fotosFiltro = !esAdmin() && miBarbero ? String(miBarbero) : "todos";
+    const { data, error } = await db.from("fotos_cortes").select("*").order("creado_en", { ascending: false });
+    if (error) {
+      $("fotosFiltro").innerHTML = ""; $("fotosSubir").classList.add("hidden");
+      $("fotosGrid").innerHTML = `<div class="fotos-vacio">Para usar las fotos falta instalar <b>19_fotos_cortes.sql</b> en Supabase.</div>`;
+      return;
+    }
+    $("fotosSubir").classList.toggle("hidden", !esAdmin() && !miBarbero);
+    fotos = data || []; pintarFotos();
+  }
+  function pintarFotos() {
+    const activos = barberos.filter((b) => b.activo || fotos.some((f) => f.barbero_id === b.id));
+    const cuenta = (id) => fotos.filter((f) => f.barbero_id === id).length;
+    $("fotosFiltro").innerHTML = activos.length > 1
+      ? [`<button type="button" data-ffiltro="todos" aria-pressed="${fotosFiltro === "todos"}">Todas · ${fotos.length}</button>`,
+         ...activos.map((b) => `<button type="button" data-ffiltro="${b.id}" aria-pressed="${fotosFiltro === String(b.id)}">${b.id === miBarbero ? "Mías" : esc(b.nombre)} · ${cuenta(b.id)}</button>`)].join("")
+      : "";
+    const lista = fotos.filter((f) => fotosFiltro === "todos" || String(f.barbero_id) === fotosFiltro);
+    const nombre = (id) => barberos.find((b) => b.id === id)?.nombre || "";
+    $("fotosGrid").innerHTML = [...Array(fotosSubiendo)].map(() => `<div class="subiendo">Subiendo…</div>`).join("") + (lista.length
+      ? lista.map((f) => `<button type="button" class="ft${f.visible ? "" : " oculta"}" data-foto="${f.id}" aria-label="Foto de ${esc(nombre(f.barbero_id))}">
+          <img src="${esc(urlFoto(f.ruta))}" alt="" loading="lazy">${f.visible ? "" : '<span class="oculta-et">Oculta</span>'}
+          <span class="pie"><b>${esc(f.descripcion || "Corte")}</b>${esc(nombre(f.barbero_id))}</span></button>`).join("")
+      : fotosSubiendo ? "" : `<div class="fotos-vacio">Todavía no hay fotos${fotosFiltro !== "todos" ? " aquí" : ""}.<br>Toma foto de tu próximo corte (de frente, de lado y de atrás) y súbela con «+ Subir fotos».</div>`);
+  }
+  $("fotosFiltro").addEventListener("click", (e) => { const b = e.target.closest("[data-ffiltro]"); if (!b) return; fotosFiltro = b.dataset.ffiltro; pintarFotos(); });
+
+  // Achica la foto (máx. 1400 px, JPG) para que suba rápido y no gaste datos
+  async function comprimirFoto(archivo, max = 1400) {
+    let src = null;
+    try { src = await createImageBitmap(archivo, { imageOrientation: "from-image" }); } catch {}
+    if (!src) src = await new Promise((ok, mal) => { const im = new Image(); im.onload = () => ok(im); im.onerror = mal; im.src = URL.createObjectURL(archivo); });
+    const k = Math.min(1, max / Math.max(src.width, src.height)), c = document.createElement("canvas");
+    c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+    c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+    return await new Promise((ok, mal) => c.toBlob((b) => (b ? ok(b) : mal(new Error("sin imagen"))), "image/jpeg", 0.84));
+  }
+  async function subirFotos(archivos, barberoId, descripcion) {
+    fotosSubiendo = archivos.length; pintarFotos();
+    let bien = 0, ultimoError = "";
+    for (const [i, a] of archivos.entries()) {
+      try {
+        const blob = await comprimirFoto(a);
+        const ruta = `${barberoId}/${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+        const up = await db.storage.from("cortes").upload(ruta, blob, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
+        if (up.error) throw up.error;
+        const { error } = await db.from("fotos_cortes").insert({ barbero_id: barberoId, ruta, descripcion: descripcion || null });
+        if (error) { await db.storage.from("cortes").remove([ruta]); throw error; }
+        bien++;
+      } catch (e) { ultimoError = e?.message || String(e); }
+      fotosSubiendo--;
+    }
+    fotosSubiendo = 0;
+    if (bien) toast(bien === 1 ? "Foto subida: ya la ven los clientes" : `${bien} fotos subidas: ya las ven los clientes`);
+    if (bien < archivos.length) toast(`No se pudieron subir ${archivos.length - bien}: ${ultimoError}`, { tipo: "error" });
+    await cargarFotos();
+  }
+  $("fotosSubir").onclick = () => $("fotosArchivo").click();
+  $("fotosArchivo").onchange = (e) => {
+    const archivos = [...(e.target.files || [])].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name)).slice(0, 12);
+    e.target.value = "";
+    if (!archivos.length) return;
+    const activos = barberos.filter((b) => b.activo);
+    if (esAdmin() && !activos.length) return faltanBarberos();
+    const predet = !esAdmin() ? miBarbero : fotosFiltro !== "todos" ? Number(fotosFiltro) : (miBarbero || activos[0]?.id);
+    abrirSimple(archivos.length === 1 ? "Subir 1 foto" : `Subir ${archivos.length} fotos`, `
+      ${esAdmin() ? `<label for="fsBarbero">¿Quién hizo el corte?</label><select id="fsBarbero">${opciones(barberos, predet)}</select>` : ""}
+      <label for="fsDesc">Nombre del corte <span class="muted small">(opcional)</span></label>
+      <input id="fsDesc" maxlength="60" placeholder="Ej. Taper fade, Buzz cut, Barba" autocomplete="off">
+      <div class="pub-sugerencias" style="margin-top:8px">${["Taper fade", "Low fade", "Mid fade", "Buzz cut", "Crop", "Barba"].map((x) => `<button type="button" data-fsdesc="${x}">${x}</button>`).join("")}</div>
+      <p class="muted small" style="margin:12px 0 0">Se achican solas para subir rápido. Salen en la página en cuanto terminan de subir.</p>`,
+      async () => { subirFotos(archivos, esAdmin() ? Number($("fsBarbero").value) : miBarbero, $("fsDesc").value.trim()); return null; });
+    $("simpleCampos").onclick = (ev) => { const b = ev.target.closest("[data-fsdesc]"); if (b) $("fsDesc").value = b.dataset.fsdesc; };
+  };
+
+  // Tocar una foto: verla grande, cambiar el nombre, ocultar o borrar
+  $("fotosGrid").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-foto]"); if (!b) return;
+    const f = fotos.find((x) => x.id === Number(b.dataset.foto)); if (!f) return;
+    const edita = puedoEditarFoto(f), quien = barberos.find((x) => x.id === f.barbero_id)?.nombre || "";
+    abrirSimple(f.descripcion || "Foto", `
+      <img src="${esc(urlFoto(f.ruta))}" alt="" style="width:100%;max-height:52vh;object-fit:contain;border-radius:12px;background:var(--surface-2)">
+      <p class="muted small" style="margin:8px 0 0">De ${esc(quien)} · ${esc(fechaLarga(String(f.creado_en).slice(0, 10), { day: "numeric", month: "long" }))}</p>
+      ${edita ? `<label for="fdDesc">Nombre del corte</label><input id="fdDesc" maxlength="60" value="${esc(f.descripcion || "")}" placeholder="Ej. Taper fade">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin-top:14px"><input type="checkbox" id="fdVisible" style="width:auto" ${f.visible ? "checked" : ""}> Que la vean los clientes</label>
+      <button type="button" class="ghost danger" id="fdBorrar" style="margin-top:14px;width:100%">Borrar foto</button>` : ""}`,
+      async () => {
+        if (!edita) return null;
+        const { error } = await db.from("fotos_cortes").update({ descripcion: $("fdDesc").value.trim() || null, visible: $("fdVisible").checked }).eq("id", f.id);
+        if (error) return "No se pudo guardar: " + error.message;
+        toast("Foto actualizada"); cargarFotos(); return null;
+      });
+    if (edita) $("fdBorrar").onclick = async () => {
+      if (!confirm("¿Borrar esta foto? Ya no se podrá recuperar.")) return;
+      const { error } = await db.from("fotos_cortes").delete().eq("id", f.id);
+      if (error) return toast("No se pudo borrar: " + error.message, { tipo: "error" });
+      await db.storage.from("cortes").remove([f.ruta]);
+      $("dlgSimple").close(); toast("Foto borrada"); cargarFotos();
+    };
+  });
+
   // ---------- Pestañas ----------
-  const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
+  const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "fotos", "equipo", "horario", "ajustes"];
   const botonTab = (t) => document.querySelector(`.tabs [data-tab="${t}"]`);
   // Cambia de sección. Guarda la pestaña (para recargar ahí) y deja que el «atrás» del celular regrese.
   function irTab(tab, { historial = true } = {}) {
@@ -1864,6 +1997,7 @@
     if (tab === "precios") pintarPrecios();
     if (tab === "productos") cargarCatalogos().then(pintarProductos);
     if (tab === "equipo") pintarEquipo();
+    if (tab === "fotos") cargarFotos();
     try { localStorage.setItem("panel-tab", tab); localStorage.setItem("visto-" + tab, "1"); } catch {}
     if (historial && location.hash !== "#" + tab) history.pushState({ tab }, "", "#" + tab);
     if ($("dlgMas").open) $("dlgMas").close();
@@ -1882,11 +2016,11 @@
 
   // ---------- «Más» (celular): el resto de las secciones, agrupadas y explicadas ----------
   const DESC_TAB = {
-    clientes: "Quién viene y quién ya no regresa", reportes: "Ventas y ganancia de la semana o el mes", productos: "Pomadas, ceras e inventario",
+    clientes: "Quién viene y quién ya no regresa", reportes: "Ventas y ganancia de la semana o el mes", productos: "Pomadas, ceras e inventario", fotos: "Tus mejores cortes para la página",
     precios: "Lo que cobras y cuánto tarda", horario: "Días y horas que abres", equipo: "Barberos, cuentas y comisiones", ajustes: "Colores del panel y código QR",
   };
   $("tabMas").onclick = () => {
-    const grupos = [["Negocio", ["clientes", "reportes", "productos"]], ["Configuración", ["precios", "horario", "equipo", "ajustes"]]];
+    const grupos = [["Negocio", ["clientes", "reportes", "productos", "fotos"]], ["Configuración", ["precios", "horario", "equipo", "ajustes"]]];
     const actual = TABS.find((t) => botonTab(t)?.getAttribute("aria-selected") === "true");
     $("masCuerpo").innerHTML = grupos.map(([titulo, tabs]) => {
       const vis = tabs.filter((t) => !botonTab(t).classList.contains("hidden"));

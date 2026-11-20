@@ -38,15 +38,23 @@ await db.exec(`
     returns bigint language sql as $$ insert into net.llamadas (url, body, headers) values (url, body, headers) returning id $$;
   grant usage on schema net to anon, authenticated;
   grant all on all tables in schema net to anon, authenticated; grant all on all sequences in schema net to anon, authenticated;
+  -- Storage de mentiras: carpetas (buckets) y archivos (objects) con RLS como en Supabase
+  create schema storage;
+  create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id serial primary key, bucket_id text, name text);
+  alter table storage.objects enable row level security;
+  create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
+  grant usage on schema storage to anon, authenticated;
+  grant all on all tables in schema storage to anon, authenticated; grant all on all sequences in schema storage to anon, authenticated;
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql", "19_fotos_cortes.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql", "19_fotos_cortes.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -869,6 +877,28 @@ await como(null);
 const pubP = await uno(`select promos_publicas()`);
 prueba("Los clientes ya ven las aceptadas", pubP.length === 2 && pubP[0].valor == 20 && pubP[0].hora_ini === "10:00", JSON.stringify(pubP));
 await db.exec(`reset role`);
+
+// =========================================================
+seccion("FOTOS DE CORTES");
+await db.exec(`set role authenticated`);
+await como(BARB);   // Juan (barbero 1)
+prueba("Juan sube la foto de su corte a su carpeta", !(await error(`insert into storage.objects (bucket_id, name) values ('cortes', '1/a.jpg')`)));
+prueba("…y la registra", !(await error(`insert into fotos_cortes (barbero_id, ruta, descripcion) values (1, '1/a.jpg', 'Taper fade')`)));
+prueba("Juan no puede subir a la carpeta de Pedro", !!(await error(`insert into storage.objects (bucket_id, name) values ('cortes', '2/b.jpg')`)));
+prueba("…ni registrar fotos a nombre de Pedro", !!(await error(`insert into fotos_cortes (barbero_id, ruta) values (2, '2/b.jpg')`)));
+await como(ADMIN);
+const eA = (await error(`insert into storage.objects (bucket_id, name) values ('cortes', '2/b.jpg')`)) || (await error(`insert into fotos_cortes (barbero_id, ruta) values (2, '2/b.jpg')`)); prueba("Alejandro sube fotos de cualquiera", !eA, eA);
+await como(BARB);
+prueba("Juan no puede ocultar ni borrar la de Pedro", (await q(`update fotos_cortes set visible = false where barbero_id = 2 returning id`)).length === 0 && (await q(`delete from fotos_cortes where barbero_id = 2 returning id`)).length === 0);
+prueba("Juan oculta la suya", (await q(`update fotos_cortes set visible = false where ruta = '1/a.jpg' returning id`)).length === 1);
+await db.exec(`set role anon`);
+await como(null);
+let fp = await uno(`select fotos_publicas()`);
+prueba("Los clientes solo ven las visibles, con el nombre del barbero", fp.length === 1 && fp[0].barbero === "Pedro" && fp[0].ruta === "2/b.jpg", JSON.stringify(fp));
+prueba("Un cliente no puede subir fotos", !!(await error(`insert into storage.objects (bucket_id, name) values ('cortes', '1/c.jpg')`)) || !!(await error(`insert into fotos_cortes (barbero_id, ruta) values (1, '1/c.jpg')`)));
+prueba("Un cliente no ve la tabla directa", (await q(`select id from fotos_cortes`)).length === 0);
+await db.exec(`reset role`);
+prueba("La carpeta «cortes» es pública", (await uno(`select public from storage.buckets where id = 'cortes'`)) === true);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }
