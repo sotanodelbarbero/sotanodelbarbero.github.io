@@ -2934,6 +2934,7 @@
          <label for="nPass">Contraseña</label>${campoPass("nPass", generarPass())}
          <label for="nRol">Permisos</label>
          <select id="nRol"><option value="barbero">Barbero: ve la fila, citas y sus ventas</option><option value="admin">Administrador: ve y cambia todo</option></select>
+         ${nuevo ? `<label id="nCortaFila" class="hidden" style="display:flex;gap:8px;align-items:center;font-weight:500;margin-top:12px"><input type="checkbox" id="nCorta" style="width:auto"> También corta pelo (sale en la agenda, la fila y las citas)</label>` : ""}
        </div>`,
       async () => {
         const conCuenta = nuevo ? $("nConCuenta").checked : true;
@@ -2949,12 +2950,15 @@
         const email = $("nCorreo").value.trim(), pass = $("nPass").value;
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return "Escribe un correo válido.";
         if (pass.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
-        const r = await llamarEquipo({ accion: "crear", nombre, email, password: pass, rol: $("nRol").value, comision_pct: com, barbero_id: barbero?.id || null });
+        // Un admin que no corta (dueño, encargado) no se registra como barbero: no sale en la agenda ni abre lugares de citas
+        const corta = !(nuevo && $("nRol").value === "admin" && !$("nCorta").checked);
+        const r = await llamarEquipo({ accion: "crear", nombre, email, password: pass, rol: $("nRol").value, comision_pct: com, barbero_id: barbero?.id || null, corta });
         if (r.error) return r.error;
         await pintarEquipo();
         setTimeout(() => mostrarAcceso(nombre, email, pass), 200);
         return null;
       });
+    if (nuevo) $("nRol").onchange = () => $("nCortaFila").classList.toggle("hidden", $("nRol").value !== "admin");
     if (nuevo) $("nConCuenta").onchange = () => {
       const con = $("nConCuenta").checked;
       $("nCuenta").classList.toggle("hidden", !con);
