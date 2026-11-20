@@ -111,14 +111,15 @@
     .sem-leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: .8125rem; color: var(--muted); }
     .sem-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
     .sem-leyenda i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none; }
-    .sem-cab { position: sticky; top: 0; z-index: 3; background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 4px; text-align: center; line-height: 1.15; }
+    .sem-cab { position: sticky; top: 0; z-index: 3; background: var(--surface); border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: center; line-height: 1.1; }
     .sem-cab .d { font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-    .sem-cab .n { font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; display: inline-grid; place-items: center; min-width: 34px; height: 34px; border-radius: 50%; }
+    .sem-cab .n { font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; }
     .sem-cab small { display: block; font-size: .6875rem; color: var(--muted); margin-top: 2px; }
     .sem-cab.hoy .d { color: var(--oro); }
     .sem-cab.hoy .n { background: var(--oro); color: var(--accent-ink); }
     .sem-col { position: relative; border-right: 1px solid var(--line); cursor: copy;
-      background-image: repeating-linear-gradient(to bottom, transparent 0 47px, color-mix(in srgb, var(--text) 6%, transparent) 47px 48px); }
+      background-image: repeating-linear-gradient(to bottom, transparent 0 53px, color-mix(in srgb, var(--text) 7%, transparent) 53px 54px),
+                        repeating-linear-gradient(to bottom, transparent 0 26px, color-mix(in srgb, var(--text) 3%, transparent) 26px 27px); }
     .sem-col:last-child { border-right: 0; }
     /* La columna de horas se queda fija al deslizar de lado (celular) */
     #semana .agenda { width: max-content; min-width: 100%; }
@@ -128,12 +129,12 @@
     .sem-col.cerrado { cursor: default; background-color: color-mix(in srgb, var(--text) 4%, transparent);
       background-image: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--text) 5%, transparent) 8px 16px); }
     .sem-col.cerrado::before { content: attr(data-motivo); position: absolute; top: 10px; left: 0; right: 0; text-align: center; font-size: .75rem; font-weight: 600; color: var(--muted); }
-    .sem-cita { position: absolute; min-height: 0; padding: 4px 6px; border-radius: 8px; overflow: hidden; cursor: pointer; text-align: left; z-index: 2;
+    .sem-cita { position: absolute; min-height: 0; padding: 2px 6px; border-radius: 6px; white-space: nowrap; overflow: hidden; cursor: pointer; text-align: left; z-index: 2;
       background: color-mix(in srgb, var(--c) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); border-left: 3px solid var(--c);
       color: var(--text); font-size: .75rem; line-height: 1.2; font-weight: 400; }
     .sem-cita:hover { background: color-mix(in srgb, var(--c) 30%, var(--surface)); }
-    .sem-cita .hh { display: block; font-weight: 700; color: color-mix(in srgb, var(--c) 70%, var(--text)); font-variant-numeric: tabular-nums; }
-    .sem-cita b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sem-cita .hh { display: inline; font-weight: 700; color: color-mix(in srgb, var(--c) 70%, var(--text)); font-variant-numeric: tabular-nums; }
+    .sem-cita b { font-weight: 600; }
     .sem-cita .sv { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sem-cita.llego { opacity: .7; }
     i.conf { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); color: #fff; font-style: normal; font-size: .5625rem; font-weight: 800; vertical-align: 1px; margin-left: 2px; }
@@ -3339,6 +3340,7 @@
 
   // ---------- Semana: una columna por día, horas hacia abajo, cada cita del color de su barbero ----------
   let citasSemana = [];
+  const PXS = 0.9;   // semana más compacta: 27 px cada media hora (la vista Día usa 48)
   const PALETA_SEM = ["azul", "verde", "naranja", "morado", "rosa", "cian", "amarillo", "indigo", "rojo", "menta"];
   const colorBarbero = (id) => {
     if (id == null) return "#8e8e93";   // «Cualquier barbero»: gris
@@ -3378,9 +3380,9 @@
     }
     if (!isFinite(ini)) { ini = 600; fin = 1200; }
     ini = Math.floor(ini / 30) * 30; fin = Math.ceil(fin / 30) * 30;
-    const alto = (fin - ini) * PX;
+    const alto = (fin - ini) * PXS;
     const horas = [];
-    for (let t = ini; t <= fin; t += 30) horas.push(`<span style="top:${(t - ini) * PX}px">${t % 60 ? "" : deMin(t)}</span>`);
+    for (let t = ini; t <= fin; t += 30) horas.push(`<span style="top:${(t - ini) * PXS}px">${t % 60 ? "" : deMin(t)}</span>`);
     const NOMBRES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const hoy = hoyISO();
 
@@ -3393,11 +3395,11 @@
       for (const c of orden) { if (grupo.length && aMin(c.hora) >= finGrupo) cerrar(); grupo.push(c); finGrupo = Math.max(finGrupo, aMin(c.hora) + c.duracion_min); }
       if (grupo.length) cerrar();
       return out.map(({ c, k, n }) => {
-        const s = servicio(c.servicio_id), b = barbero(c.barbero_id), top = (aMin(c.hora) - ini) * PX, hgt = Math.max(c.duracion_min * PX - 3, 26);
+        const s = servicio(c.servicio_id), b = barbero(c.barbero_id), top = (aMin(c.hora) - ini) * PXS, hgt = Math.max(c.duracion_min * PXS - 2, 22);
         const cls = [c.estado, minutosTarde(c) ? "tarde" : ""].join(" ");
         return `<button type="button" class="sem-cita ${cls}" data-sem-cita="${c.id}" title="${esc(`${hhmm(c.hora)} · ${c.cliente_nombre} · ${s?.nombre || ""} · ${b ? b.nombre : "Cualquier barbero"}`)}"
           style="--c:${colorBarbero(c.barbero_id)};top:${top + 1}px;height:${hgt}px;left:calc(${(k / n) * 100}% + 3px);width:calc(${100 / n}% - 6px)">
-          <span class="hh">${hhmm(c.hora)}${c.estado === "llego" ? " · llegó" : c.confirmada_en ? ' <i class="conf" title="Confirmó que viene">✓</i>' : ""}</span><b>${esc(c.cliente_nombre)}</b>${hgt > 58 ? `<span class="sv">${esc(s?.nombre || "")}</span>` : ""}</button>`;
+          <span class="hh">${hhmm(c.hora)}${c.estado === "llego" ? " · llegó" : c.confirmada_en ? ' <i class="conf" title="Confirmó que viene">✓</i>' : ""}</span> <b>${esc(c.cliente_nombre.split(" ")[0])}</b>${hgt > 44 ? `<span class="sv">${esc(s?.nombre || "")}</span>` : ""}</button>`;
       }).join("");
     };
 
@@ -3416,7 +3418,7 @@
         <div class="ag-horas" style="height:${alto}px">${horas.join("")}</div>
         ${dias.map((x) => {
           let linea = "";
-          if (x.f === hoy) { const a = ahoraMin(); if (a >= ini && a <= fin) linea = `<div class="ag-ahora" style="top:${(a - ini) * PX}px"></div>`; }
+          if (x.f === hoy) { const a = ahoraMin(); if (a >= ini && a <= fin) linea = `<div class="ag-ahora" style="top:${(a - ini) * PXS}px"></div>`; }
           const motivo = x.bloqueoTotal ? (x.bloqueoTotal.motivo || "Bloqueado") : "Cerrado";
           return `<div class="sem-col${x.cerrado ? " cerrado" : ""}" data-fecha="${x.f}" data-ini="${ini}" data-motivo="${esc(motivo)}" style="height:${alto}px">${bloquesDia(x.lista)}${linea}</div>`;
         }).join("")}
@@ -3430,7 +3432,7 @@
     if (cb) return abrirDetalleCita(citasSemana.find((c) => c.id === Number(cb.dataset.semCita)));
     const col = e.target.closest(".sem-col"); if (!col || col.classList.contains("cerrado")) return;
     const y = e.clientY - col.getBoundingClientRect().top;
-    abrirNuevaCita({ fecha: col.dataset.fecha, hora: deMin(Number(col.dataset.ini) + Math.floor(y / PX / 30) * 30), barbero: null });
+    abrirNuevaCita({ fecha: col.dataset.fecha, hora: deMin(Number(col.dataset.ini) + Math.floor(y / PXS / 30) * 30), barbero: null });
   });
 
   // Agenda: una columna por barbero, filas cada 30 min
