@@ -13,332 +13,239 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Sótano del Barbero</title>
   <meta name="description" content="Barbería de caballeros: corte, barba y afeitado a navaja. Toma tu turno desde el celular y llega cuando te toque.">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" href="logo.jpg">
   <link rel="apple-touch-icon" href="logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* =========================================================
-       Sótano del Barbero — barbería de caballeros
-       Negro, latón y rojo vino. Letra del sistema (estilo Apple)
-       y titulares condensados.
+       Portada editorial en blanco y negro (estilo revista de moda)
        ========================================================= */
     :root {
-      --negro: #000000;
-      --carbon: #111110;       /* mosaicos */
-      --carbon-2: #1a1917;     /* mosaicos al pasar el mouse */
-      --linea: rgba(255,255,255,.1);
-      --hueso: #f2ede4;        /* texto */
-      --gris: #9a958b;         /* texto secundario */
-      --oro: #d4a64a;          /* latón */
-      --oro-2: #f0cf85;
-      --vino: #8f1d1d;         /* rojo vino, cuero */
-      --vino-2: #5a1010;
-      --navy: #1c3f8c;
-      --ok: #3ccf6e;
-      --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-      --ancho: 1160px;
-      --facil: cubic-bezier(.2,.8,.2,1);
-      color-scheme: dark;
+      --papel: #e8e7e3;      /* fondo gris cálido */
+      --papel-2: #f4f3f0;
+      --tinta: #0a0a0a;
+      --gris: #5c5b58;
+      --linea: rgba(10,10,10,.14);
+      --blanco: #ffffff;
+      --titulo: "Jost", "Futura", "Avenir Next", "Century Gothic", system-ui, sans-serif;
+      --texto: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+      --facil: cubic-bezier(.2, .8, .2, 1);
+      --ancho: 1240px;
+      color-scheme: light;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
-    body {
-      margin: 0; background: var(--negro); color: var(--hueso);
-      font: 400 1.0625rem/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; overflow-x: hidden;
-    }
-    h1, h2, h3, p { margin: 0; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    html, body { margin: 0; }
+    body { background: var(--papel); color: var(--tinta); font: 15px/1.5 var(--texto); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
     .hidden { display: none !important; }
-    .contenedor { max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
-    :focus-visible { outline: 2px solid var(--oro); outline-offset: 3px; border-radius: 6px; }
+    .contenedor { max-width: var(--ancho); margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
+    .mayus { text-transform: uppercase; letter-spacing: .28em; font-size: .6875rem; font-weight: 500; }
 
-    /* Grano de película sobre todo el sitio */
-    body::after {
-      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .07;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    }
+    /* Botones: rectángulo negro y enlace subrayado */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 28px;
+      background: var(--tinta); color: var(--blanco); font: 600 .75rem/1 var(--texto); letter-spacing: .16em; text-transform: uppercase;
+      border: 1px solid var(--tinta); transition: background .2s ease, color .2s ease, transform .1s ease; }
+    .btn:hover { background: #2a2a2a; }
+    .btn:active { transform: scale(.98); }
+    .btn.claro { background: var(--blanco); color: var(--tinta); border-color: var(--blanco); }
+    .btn.claro:hover { background: #e9e9e9; }
+    .btn.linea { background: transparent; color: var(--tinta); }
+    .btn.linea:hover { background: var(--tinta); color: var(--blanco); }
+    .enlace { display: inline-flex; align-items: center; gap: 8px; font: 600 .75rem/1 var(--texto); letter-spacing: .16em; text-transform: uppercase;
+      padding: 6px 0; border-bottom: 1.5px solid currentColor; }
+    .enlace svg { width: 14px; height: 14px; transition: transform .2s ease; }
+    .enlace:hover svg { transform: translateX(4px); }
 
-    /* ---------- Botones (respuesta inmediata al presionar) ---------- */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      font: 500 .9375rem/1 inherit; letter-spacing: .01em; white-space: nowrap;
-      padding: 0 22px; height: 46px; border-radius: 999px; border: 1px solid var(--oro);
-      background: var(--oro); color: #1a1206;
-      transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform 100ms ease-out;
-      user-select: none;
-    }
-    .btn:hover { background: var(--oro-2); border-color: var(--oro-2); }
-    .btn:active { transform: scale(.97); }
-    .btn.chico { height: 34px; padding: 0 14px; font-size: .8125rem; }
-    .btn.linea { background: transparent; color: var(--hueso); border-color: rgba(255,255,255,.2); }
-    .btn.linea:hover { border-color: var(--oro); color: var(--oro-2); background: rgba(212,166,74,.06); }
-    .btn svg { width: 16px; height: 16px; flex: none; }
-
-    /* ---------- Aviso de turno activo ---------- */
-    .cinta-aviso { background: var(--oro); color: #1a1206; font-size: .9375rem; font-weight: 500; text-align: center; padding: 10px 16px; }
+    /* ---------- Tira negra de arriba ---------- */
+    .tira { background: var(--tinta); color: #d9d9d6; font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 500; }
+    .tira .contenedor { display: flex; justify-content: space-between; align-items: center; min-height: 34px; gap: 12px; }
+    .tira nav { display: flex; gap: 6px; align-items: center; }
+    .tira nav a:hover { color: #fff; }
+    .tira nav i { width: 1px; height: 10px; background: #555; margin: 0 8px; }
+    @media (max-width: 640px) { .tira .lema-largo { display: none; } }
+    .cinta-aviso { background: #fff; color: var(--tinta); font-size: .875rem; text-align: center; padding: 10px 16px; border-bottom: 1px solid var(--linea); }
     .cinta-aviso a { font-weight: 700; text-decoration: underline; }
 
-    /* ---------- Header translúcido ---------- */
-    .nav {
-      position: sticky; top: 0; z-index: 20; height: 68px;
-      background: rgba(0,0,0,.6); -webkit-backdrop-filter: saturate(160%) blur(20px); backdrop-filter: saturate(160%) blur(20px);
-      box-shadow: inset 0 -1px 0 transparent; transition: box-shadow .25s ease, background .25s ease;
+    /* ---------- Navegación ---------- */
+    .nav { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--papel) 88%, transparent);
+      -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid transparent; transition: border-color .2s ease; }
+    .nav.con-borde { border-bottom-color: var(--linea); }
+    .nav .contenedor { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 72px; gap: 16px; }
+    .nav-links { display: flex; gap: clamp(16px, 2.4vw, 36px); }
+    .nav-links a, .nav-acciones a { font-size: .6875rem; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
+    .nav-links a:hover, .nav-acciones a:hover { opacity: .6; }
+    .marca { font: 600 1.75rem/1 var(--titulo); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+    .marca img { width: 34px; height: 34px; border-radius: 50%; filter: grayscale(1) contrast(1.1); }
+    .nav-acciones { display: flex; justify-content: flex-end; gap: clamp(14px, 2vw, 28px); }
+    .nav-acciones a { display: inline-flex; align-items: center; gap: 8px; }
+    .nav-acciones svg { width: 18px; height: 18px; }
+    @media (max-width: 860px) {
+      .nav .contenedor { grid-template-columns: auto 1fr; height: 60px; }
+      .nav-links { display: none; }
+      .marca { font-size: 1.25rem; }
+      .nav-acciones .txt { display: none; }
     }
-    .nav.con-borde { box-shadow: inset 0 -1px 0 var(--linea); background: rgba(0,0,0,.78); }
-    .nav .contenedor { display: flex; align-items: center; gap: 28px; height: 100%; }
-    .marca { display: flex; align-items: center; margin-right: auto; }
-    .marca img { height: 54px; width: auto; filter: invert(1); mix-blend-mode: screen; }
-    .nav-links { display: flex; gap: 28px; }
-    .nav-links a { color: var(--gris); font-size: .875rem; font-weight: 500; transition: color .15s; }
-    .nav-links a:hover { color: var(--hueso); }
-    .nav-acciones { display: flex; gap: 10px; }
 
-    /* ---------- Hero ---------- */
-    .hero { position: relative; isolation: isolate; overflow: hidden; padding: 56px 0 40px; min-height: min(92vh, 860px); display: flex; align-items: center; }
-    .hero::before { /* luz cálida, como un foco en el sótano */
-      content: ""; position: absolute; z-index: -2; inset: -20% -10% auto auto; width: 900px; height: 900px; border-radius: 50%;
-      background: radial-gradient(closest-side, rgba(212,166,74,.22), rgba(143,29,29,.12) 55%, transparent 75%);
+    /* ---------- Hero: la palabra gigante con el poste cruzándola ---------- */
+    .hero { position: relative; overflow: hidden; min-height: min(860px, calc(100svh - 106px)); display: flex; }
+    .hero .contenedor { position: relative; width: 100%; display: grid; grid-template-rows: auto 1fr auto; padding-top: clamp(28px, 5vh, 56px); padding-bottom: clamp(28px, 5vh, 56px); }
+    .hero-lema { line-height: 2.1; }
+    .hero-lema::after { content: ""; display: block; width: 34px; height: 1px; background: var(--tinta); margin-top: 10px; }
+    .gigante { position: relative; z-index: 1; align-self: center; margin: clamp(20px, 4vh, 48px) 0; text-align: center; pointer-events: none;
+      font: 600 clamp(84px, 21vw, 300px)/.8 var(--titulo); letter-spacing: -.02em; text-transform: uppercase; color: var(--tinta); white-space: nowrap; }
+    .gigante span { display: inline-block; }
+    .escena { position: absolute; left: 50%; top: 0; bottom: 0; width: min(480px, 46vw); transform: translateX(-50%); z-index: 2; }
+    .escena canvas { width: 100% !important; height: 100% !important; display: block; }
+    .hero-abajo { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    .ctas { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+    .estado { text-align: right; line-height: 2.1; }
+    .estado::after { content: ""; display: block; width: 34px; height: 1px; background: var(--tinta); margin: 10px 0 0 auto; }
+    .estado .punto { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #1f9d55; margin-right: 8px; vertical-align: 1px;
+      animation: latido 2.4s ease-out infinite; }
+    @keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(31,157,85,.5); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+    @media (max-width: 700px) {
+      .hero { min-height: 640px; }
+      .gigante { font-size: 23vw; }
+      .escena { width: 50vw; top: 30%; bottom: 31%; }
+      .poste-css { width: 58px; top: 0; bottom: 0; border-radius: 29px; }
+      .franja-cabeza span:last-child { display: none; }
+      .hero-abajo { flex-direction: column; align-items: stretch; }
+      .ctas { flex-direction: column; align-items: stretch; gap: 14px; }
+      .ctas .enlace { align-self: center; }
+      .estado { text-align: left; }
+      .estado::after { margin-left: 0; }
     }
-    .hero::after { /* piso */
-      content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 40%;
-      background: linear-gradient(to top, #000 20%, transparent);
-    }
-    .hero .contenedor { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: center; width: 100%; }
-    .hero h1 {
-      font: 900 clamp(3.5rem, 9.5vw, 8.5rem)/.86 var(--display); text-transform: uppercase; letter-spacing: -0.01em;
-    }
-    .hero h1 .oro {
-      display: block;
-      background: linear-gradient(180deg, var(--oro-2) 10%, var(--oro) 55%, #8a6220);
-      -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
-    }
-    .hero .sub { color: var(--gris); font-size: clamp(1.0625rem, 1.6vw, 1.25rem); max-width: 36ch; margin-top: 24px; }
-    .hero .sub strong { color: var(--hueso); font-weight: 500; }
-    .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
-    .estado {
-      display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; min-height: 36px;
-      padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--linea);
-      font-size: .875rem;
-    }
-    .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(60,207,110,.6); flex: none; animation: pulso 2s ease-out infinite; }
-    @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(60,207,110,.55); } 70%, 100% { box-shadow: 0 0 0 10px rgba(60,207,110,0); } }
-
-    /* Escena 3D */
-    .escena { position: relative; height: min(78vh, 680px); }
-    .escena canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
-    .escena .sombra { position: absolute; left: 50%; bottom: 4%; width: 46%; height: 28px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.9), transparent); filter: blur(6px); }
-    /* Poste de respaldo si no hay WebGL */
-    .poste-css { position: absolute; left: 50%; top: 8%; bottom: 10%; width: 92px; transform: translateX(-50%); border-radius: 46px; overflow: hidden;
-      background: repeating-linear-gradient(-35deg, #c8102e 0 22px, #f5f1ea 22px 44px, var(--navy) 44px 66px, #f5f1ea 66px 88px);
-      background-size: 100% 200%; animation: girar 3s linear infinite; box-shadow: inset -18px 0 30px rgba(0,0,0,.45), inset 14px 0 20px rgba(255,255,255,.3); }
+    /* Poste plano (si el celular no puede con el 3D) */
+    .poste-css { position: absolute; left: 50%; top: 10%; bottom: 12%; width: 84px; transform: translateX(-50%); border-radius: 42px; overflow: hidden;
+      background: repeating-linear-gradient(-35deg, #111 0 22px, #f4f4f2 22px 44px, #8a8a86 44px 66px, #f4f4f2 66px 88px);
+      background-size: 100% 200%; animation: girar 3s linear infinite;
+      box-shadow: inset -18px 0 30px rgba(0,0,0,.35), inset 14px 0 20px rgba(255,255,255,.35), 0 30px 50px -20px rgba(0,0,0,.35); }
     @keyframes girar { to { background-position: 0 -176px; } }
+    @media (prefers-reduced-motion: reduce) { .poste-css { animation: none; } }
 
-    /* Entrada del hero */
+    /* Entrada */
     @media (prefers-reduced-motion: no-preference) {
-      .hero h1 > span { display: block; animation: subir .9s var(--facil) both; }
-      .hero h1 > span:nth-child(2) { animation-delay: .08s; }
-      .hero h1 > span:nth-child(3) { animation-delay: .16s; }
-      .hero .sub, .hero .ctas, .hero .estado { animation: subir .9s var(--facil) .28s both; }
-      .escena { animation: aparecer 1.4s var(--facil) .1s both; }
-      @keyframes subir { from { opacity: 0; transform: translateY(28px); } }
-      @keyframes aparecer { from { opacity: 0; transform: scale(.94); } }
+      .gigante span { animation: subir 1.1s var(--facil) both; }
+      .gigante span:nth-child(2) { animation-delay: .05s; } .gigante span:nth-child(3) { animation-delay: .1s; }
+      .gigante span:nth-child(4) { animation-delay: .15s; } .gigante span:nth-child(5) { animation-delay: .2s; } .gigante span:nth-child(6) { animation-delay: .25s; }
+      .hero-lema, .hero-abajo { animation: subir .9s var(--facil) .35s both; }
+      .escena { animation: aparecer 1.4s var(--facil) .2s both; }
+      @keyframes subir { from { opacity: 0; transform: translateY(30px); } }
+      @keyframes aparecer { from { opacity: 0; transform: translate(-50%, 24px) scale(.97); } to { transform: translateX(-50%); } }
+      .revelar { opacity: 0; transform: translateY(26px); transition: opacity .9s var(--facil) var(--d, 0s), transform .9s var(--facil) var(--d, 0s); }
+      .revelar.visto { opacity: 1; transform: none; }
     }
 
-    /* ---------- Cinta en movimiento ---------- */
-    .marquesina { border-block: 1px solid var(--linea); background: var(--vino-2); overflow: hidden; }
-    .marquesina .pista { display: flex; width: max-content; animation: correr 32s linear infinite; }
-    .marquesina span { display: inline-flex; align-items: center; gap: 28px; padding: 18px 14px; font: 800 1.5rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; color: var(--hueso); white-space: nowrap; }
-    .marquesina svg { width: 22px; height: 22px; color: var(--oro); }
-    @keyframes correr { to { transform: translateX(-50%); } }
+    /* ---------- Franja negra: servicios ---------- */
+    .franja { background: var(--tinta); color: #fff; padding: clamp(36px, 6vw, 64px) 0; }
+    .franja-cabeza { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 28px; color: #bdbdb9; }
+    .servicios { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: clamp(24px, 4vw, 48px); }
+    .servicio { display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: center; }
+    .servicio .foto { aspect-ratio: 4 / 5; background: linear-gradient(160deg, #3a3a38, #161616); display: grid; place-items: center; overflow: hidden; position: relative; }
+    .servicio .foto svg { width: 46px; height: 46px; color: #e9e9e6; opacity: .9; }
+    .servicio .foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); }
+    .servicio h3 { font: 500 1.0625rem/1.2 var(--titulo); letter-spacing: .12em; text-transform: uppercase; margin: 0 0 8px; }
+    .servicio .precio { font-size: .9375rem; color: #cfcfcb; margin: 0 0 14px; }
+    .servicio .precio b { color: #fff; font-weight: 600; }
+    .servicio .enlace { font-size: .6875rem; color: #fff; }
+    .franja .vacio { color: #bdbdb9; }
 
-    /* ---------- Secciones ---------- */
-    .seccion { padding: 112px 0; position: relative; }
-    .cabeza { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
-    .cabeza h2 { font: 900 clamp(2.75rem, 6.5vw, 5rem)/.9 var(--display); text-transform: uppercase; }
-    .cabeza p { color: var(--gris); max-width: 38ch; }
+    /* ---------- Banner: tu silla te espera ---------- */
+    .banner { position: relative; background: linear-gradient(100deg, #e2e1de 0%, #cfceca 55%, #b9b8b3 100%); overflow: hidden; }
+    .banner .contenedor { position: relative; z-index: 2; min-height: clamp(380px, 46vw, 520px); display: flex; flex-direction: column; justify-content: center; padding-top: 48px; padding-bottom: 48px; }
+    .banner h2 { font: 600 clamp(48px, 7.4vw, 96px)/.92 var(--titulo); text-transform: uppercase; letter-spacing: -.01em; margin: 18px 0 20px; }
+    .banner p { max-width: 300px; margin: 0 0 28px; font-size: 1rem; color: #2b2b29; }
+    .banner .ctas { gap: 20px; }
+    /* Lado derecho: franjas del poste en grises, en diagonal (o tu foto si existe fotos/banner.jpg) */
+    .banner-arte { position: absolute; right: 0; top: 0; bottom: 0; width: 52%; z-index: 1;
+      background: repeating-linear-gradient(-35deg, #1a1a1a 0 46px, #d8d7d3 46px 92px, #8e8d89 92px 138px, #d8d7d3 138px 184px);
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 38%); mask-image: linear-gradient(to right, transparent, #000 38%); }
+    .banner-arte img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.05); }
+    @media (prefers-reduced-motion: no-preference) { .banner-arte:not(.con-foto) { background-size: 100% 200%; animation: girarB 14s linear infinite; } @keyframes girarB { to { background-position: 0 -368px; } } }
+    @media (max-width: 700px) { .banner-arte { width: 100%; opacity: .28; -webkit-mask-image: none; mask-image: none; } .banner-arte.con-foto { opacity: .35; } }
 
-    /* Aparecer al hacer scroll */
-    @media (prefers-reduced-motion: no-preference) {
-      .revelar { opacity: 0; translate: 0 40px; transition: opacity .9s var(--facil), translate .9s var(--facil), transform .5s var(--facil), background .3s, border-color .3s; transition-delay: var(--d, 0s); }
-      .revelar.visto { opacity: 1; translate: 0 0; }
-      .mosaico.revelar.visto:hover { transition: opacity .9s, translate .9s, transform .12s ease-out, background .3s, border-color .3s; transition-delay: 0s; }
-    }
+    /* ---------- Ventajas ---------- */
+    .ventajas { background: var(--papel); border-bottom: 1px solid var(--linea); }
+    .ventajas ul { list-style: none; margin: 0 auto; padding: 36px clamp(16px, 4vw, 48px); max-width: var(--ancho); display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
+    .ventajas li { display: flex; gap: 14px; align-items: flex-start; }
+    .ventajas svg { width: 30px; height: 30px; flex: none; stroke-width: 1.4; }
+    .ventajas b { display: block; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+    .ventajas span { font-size: .8125rem; color: var(--gris); }
+    @media (max-width: 900px) { .ventajas ul { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .ventajas ul { grid-template-columns: 1fr; gap: 20px; } }
 
-    /* Servicios: mosaicos con inclinación 3D */
-    .mosaicos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; perspective: 1200px; }
-    .mosaico {
-      --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
-      position: relative; overflow: hidden; min-height: 200px; padding: 28px; border-radius: 26px;
-      background: var(--carbon); border: 1px solid var(--linea);
-      display: flex; flex-direction: column; justify-content: space-between; gap: 28px;
-      transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d;
-      transition: transform .5s var(--facil), background .3s, border-color .3s;
-    }
-    .mosaico:hover { background: var(--carbon-2); border-color: rgba(212,166,74,.35); transition: transform .12s ease-out, background .3s, border-color .3s; }
-    .mosaico::before { /* brillo que sigue al cursor */
-      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
-      background: radial-gradient(400px circle at var(--mx) var(--my), rgba(212,166,74,.18), transparent 45%);
-    }
-    .mosaico:hover::before { opacity: 1; }
-    .mosaico h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.2; transform: translateZ(30px); }
-    .mosaico .precio { font: 800 2.75rem/1 var(--display); color: var(--oro); font-variant-numeric: tabular-nums; transform: translateZ(50px); }
-    .mosaico .precio small { font: 500 .875rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--gris); margin-left: 6px; }
-    .mosaico .icono { width: 40px; height: 40px; color: var(--oro); opacity: .9; transform: translateZ(40px); }
-    .mosaico.grande { grid-column: span 2; grid-row: span 2; padding: 40px; justify-content: flex-end;
-      background: radial-gradient(120% 90% at 100% 0%, rgba(143,29,29,.55), transparent 60%), var(--carbon); }
-    .mosaico.grande h3 { font: 900 clamp(2.25rem, 4vw, 3.25rem)/.95 var(--display); text-transform: uppercase; }
-    .mosaico.grande .precio { font-size: 5rem; }
-    .mosaico.grande .icono { width: 64px; height: 64px; position: absolute; top: 36px; right: 36px; }
-    .vacio { grid-column: 1 / -1; text-align: center; color: var(--gris); padding: 32px; }
-    .nota { color: var(--gris); font-size: .875rem; margin-top: 20px; }
+    /* ---------- Secciones claras ---------- */
+    .seccion { background: var(--papel-2); padding: clamp(56px, 8vw, 96px) 0; }
+    .seccion + .seccion { border-top: 1px solid var(--linea); }
+    .cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+    .cabeza h2 { font: 500 clamp(26px, 3vw, 34px)/1.05 var(--titulo); text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+    .cabeza p { margin: 8px 0 0; color: var(--gris); max-width: 460px; }
+    .pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: paso; }
+    .paso { background: #fff; padding: 28px 24px 30px; position: relative; min-height: 250px; display: flex; flex-direction: column; }
+    .paso .num { font: 500 3.5rem/1 var(--titulo); color: #d4d3cf; margin-bottom: auto; }
+    .paso svg { position: absolute; top: 28px; right: 24px; width: 26px; height: 26px; stroke-width: 1.5; }
+    .paso h3 { font: 500 1.125rem/1.2 var(--titulo); text-transform: uppercase; letter-spacing: .08em; margin: 28px 0 8px; }
+    .paso p { margin: 0; color: var(--gris); font-size: .875rem; }
+    @media (max-width: 800px) { .pasos { grid-template-columns: 1fr; } .paso { min-height: 0; } .paso h3 { margin-top: 18px; } }
 
-    /* Cómo funciona */
-    .pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 0; padding: 0; list-style: none; counter-reset: paso; }
-    .paso { counter-increment: paso; position: relative; overflow: hidden; padding: 32px 28px 36px; border-radius: 26px; background: var(--carbon); border: 1px solid var(--linea); }
-    .paso::before { content: counter(paso); position: absolute; right: 18px; top: -18px; font: 900 9rem/1 var(--display); color: rgba(212,166,74,.09); }
-    .paso .app { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; margin-bottom: 28px;
-      background: linear-gradient(160deg, #2a2723, #141311); border: 1px solid rgba(212,166,74,.35); color: var(--oro);
-      box-shadow: 0 10px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); }
-    .paso .app svg { width: 28px; height: 28px; }
-    .paso h3 { font: 800 1.75rem/1 var(--display); text-transform: uppercase; margin-bottom: 10px; letter-spacing: .01em; }
-    .paso p { color: var(--gris); }
+    .visita { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 64px); }
+    .grupo-titulo { margin-bottom: 14px; color: var(--gris); }
+    .grupo { border-top: 1px solid var(--tinta); }
+    .fila { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--linea); font-size: .9375rem; }
+    a.fila:hover .accion { opacity: .6; }
+    .fila .valor { font-weight: 500; text-align: right; }
+    .fila .accion { font-size: .75rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+    .fila .accion::after { content: " →"; }
+    @media (max-width: 760px) { .visita { grid-template-columns: 1fr; } }
 
-    /* Visítanos */
-    .visita { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-    .grupo-titulo { font-size: .8125rem; color: var(--gris); margin: 0 16px 8px; }
-    .grupo { background: var(--carbon); border: 1px solid var(--linea); border-radius: 18px; overflow: hidden; }
-    .fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px 18px; min-height: 52px; position: relative; }
-    .fila + .fila::before { content: ""; position: absolute; top: 0; left: 18px; right: 0; height: 1px; background: var(--linea); }
-    .fila .valor { color: var(--gris); font-variant-numeric: tabular-nums; text-align: right; }
-    a.fila { transition: background .1s; }
-    a.fila:active { background: rgba(255,255,255,.06); }
-    a.fila .accion { color: var(--oro-2); }
-    a.fila::after { content: "›"; color: var(--gris); font-size: 1.375rem; line-height: 0; }
-
-    /* Cierre */
-    .cierre { padding: 24px 0 112px; }
-    .panel { position: relative; overflow: hidden; isolation: isolate; border-radius: 36px; padding: 96px 32px; text-align: center;
-      background: radial-gradient(90% 120% at 50% 0%, #b52a2a, var(--vino) 40%, var(--vino-2) 75%, #2a0707); border: 1px solid rgba(255,255,255,.08); }
-    .panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 10px; z-index: -1;
-      background: repeating-linear-gradient(-45deg, #c8102e 0 14px, #f5f1ea 14px 28px, var(--navy) 28px 42px, #f5f1ea 42px 56px); }
-    .panel h2 { font: 900 clamp(3rem, 9vw, 7rem)/.88 var(--display); text-transform: uppercase; }
-    .panel p { color: rgba(242,237,228,.8); font-size: 1.1875rem; margin: 16px 0 36px; }
-
-    /* ---------- Footer ---------- */
-    .footer { border-top: 1px solid var(--linea); background: #080808; color: var(--gris); font-size: .8125rem; padding: 48px 0 calc(28px + env(safe-area-inset-bottom)); }
-    .footer a:hover { color: var(--hueso); }
-    .footer-arriba { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--linea); }
-    .footer .marca img { height: 80px; }
-    .footer h4 { margin: 0 0 12px; font-size: .8125rem; font-weight: 600; color: var(--hueso); }
+    /* ---------- Pie ---------- */
+    .footer { background: var(--tinta); color: #bdbdb9; padding: 64px 0 28px; font-size: .875rem; }
+    .footer-arriba { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; padding-bottom: 40px; border-bottom: 1px solid #2a2a2a; }
+    .footer .marca { color: #fff; font-size: 1.375rem; }
+    .footer h4 { color: #fff; font-size: .6875rem; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; margin: 0 0 16px; }
     .footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-    .footer-abajo { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 20px; font-size: .75rem; }
+    .footer a:hover { color: #fff; }
+    .footer-abajo { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 22px; font-size: .75rem; }
+    @media (max-width: 760px) { .footer-arriba { grid-template-columns: 1fr 1fr; } .footer-arriba > div:first-child { grid-column: 1 / -1; } }
 
-    /* ---------- Responsivo ---------- */
-    /* ---------- Indicador "Desliza" y barra fija de botones (celular) ---------- */
-    .desliza {
-      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 25;
-      display: none; flex-direction: column; align-items: center; gap: 2px;
-      padding: 8px 16px 6px; border: 0; border-radius: 999px; background: rgba(0,0,0,.55);
-      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-      color: var(--hueso); font: 500 .8125rem/1 inherit; letter-spacing: .02em; cursor: pointer;
-      transition: opacity .3s ease;
-    }
-    .desliza svg { width: 22px; height: 22px; color: var(--oro); }
-    .desliza.oculto { opacity: 0; pointer-events: none; }
-    @media (prefers-reduced-motion: no-preference) { .desliza svg { animation: bajarFlecha 1.6s ease-in-out infinite; } }
-    @keyframes bajarFlecha { 0%, 100% { transform: translateY(-2px); opacity: .6; } 50% { transform: translateY(5px); opacity: 1; } }
-
-    .barra-cta {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-      display: none; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-      background: rgba(0,0,0,.82); -webkit-backdrop-filter: saturate(160%) blur(18px); backdrop-filter: saturate(160%) blur(18px);
-      border-top: 1px solid var(--linea);
-      transform: translateY(110%); transition: transform .35s var(--facil);
-    }
+    /* ---------- Botones fijos en el celular ---------- */
+    .barra-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: none; gap: 10px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      background: color-mix(in srgb, var(--papel) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border-top: 1px solid var(--linea); transform: translateY(110%); transition: transform .35s var(--facil); }
     .barra-cta.visible { transform: none; }
     .barra-cta .btn { flex: 1; height: 46px; padding: 0 12px; }
-
-    @media (max-width: 960px) {
-      .nav-links { display: none; }
-      .hero { min-height: 0; padding: 24px 0 32px; }
-      .hero .contenedor { grid-template-columns: 1fr; }
-      .escena { height: clamp(220px, 34vh, 380px); order: -1; margin: -8px 0 -16px; }
-      .desliza { display: flex; }
-      .barra-cta { display: flex; }
-      .footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-      .mosaicos { grid-template-columns: 1fr 1fr; }
-      .pasos, .visita { grid-template-columns: 1fr; }
-      .footer-arriba { grid-template-columns: 1fr 1fr; }
-      .footer-arriba > :first-child { grid-column: 1 / -1; }
-    }
-    @media (max-width: 560px) {
-      .contenedor { padding: 0 16px; }
-      .nav { height: 60px; }
-      .nav .contenedor { gap: 8px; }
-      .marca img { height: 44px; }
-      .nav-acciones .btn.chico { padding: 0 12px; }
-      .nav-acciones .txt-entrar { display: none; }
-      .nav-acciones .btn.linea { width: 38px; padding: 0; }
-      .escena { height: clamp(200px, 30vh, 300px); }
-      .hero { padding: 12px 0 28px; }
-      .hero h1 { font-size: clamp(3rem, 15.5vw, 4.5rem); }
-      .hero .sub { margin-top: 16px; font-size: 1rem; }
-      .hero .ctas { margin-top: 22px; }
-      .hero .ctas .btn { flex: 1 1 100%; height: 50px; font-size: 1rem; }
-      .estado { margin-top: 18px; font-size: .8125rem; }
-      .cabeza { margin-bottom: 32px; }
-      .footer-arriba { grid-template-columns: 1fr; }
-      .seccion { padding: 80px 0; }
-      .mosaico { padding: 20px; min-height: 160px; border-radius: 22px; }
-      .mosaico .precio { font-size: 2.25rem; }
-      .mosaico.grande { padding: 24px; min-height: 260px; }
-      .mosaico.grande .precio { font-size: 3.5rem; }
-      .mosaico.grande .icono { width: 48px; height: 48px; top: 22px; right: 22px; }
-      .panel { padding: 72px 20px; border-radius: 28px; }
-      .marquesina span { font-size: 1.25rem; padding: 14px 10px; gap: 20px; }
-    }
-
-    @media (max-width: 380px) {
-      .contenedor { padding: 0 14px; }
-      .nav-acciones .btn.chico { font-size: .75rem; padding: 0 10px; }
-      .mosaicos { grid-template-columns: 1fr; }
-      .mosaico.grande { grid-column: auto; grid-row: auto; }
-      .barra-cta .btn { font-size: .875rem; }
-    }
-    /* Tablet acostada: dos columnas pero sin que el poste coma la pantalla */
-    @media (min-width: 961px) and (max-height: 760px) {
-      .hero { min-height: 0; padding: 32px 0; }
-      .escena { height: 72vh; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-    }
-    @media (prefers-reduced-transparency: reduce) { .nav { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+    @media (max-width: 700px) { .barra-cta { display: flex; } body { padding-bottom: 0; } }
   </style>
 </head>
 <body>
   <!-- Solo aparece si el cliente ya tomó turno hoy en este celular -->
   <div id="aviso" class="cinta-aviso hidden" role="status">Tienes un turno activo para hoy. <a href="turno.html">Ver mi turno</a></div>
 
+  <div class="tira">
+    <div class="contenedor">
+      <span>Sin filas<span class="lema-largo"> · toma tu turno desde el celular</span></span>
+      <nav aria-label="Atajos"><a href="turno.html">Mi turno</a><i></i><a href="cita.html">Mi cita</a><i></i><a href="panel.html" title="Acceso para el admin y los barberos">Equipo</a></nav>
+    </div>
+  </div>
+
   <header id="nav" class="nav">
     <div class="contenedor">
-      <a class="marca" href="#" aria-label="Inicio"><img src="logo.jpg" alt="Sótano del Barbero"></a>
       <nav class="nav-links" aria-label="Secciones">
         <a href="#servicios">Servicios</a>
         <a href="#como-funciona">Cómo funciona</a>
         <a href="#visitanos" class="ir-visita hidden">Visítanos</a>
       </nav>
+      <a class="marca" href="#" aria-label="Inicio"><img src="logo.jpg" alt=""><span>Sótano</span></a>
       <div class="nav-acciones">
-        <a class="btn chico linea" href="panel.html" title="Acceso para el admin y los barberos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-          <span class="txt-entrar">Entrar</span>
-        </a>
-        <a class="btn chico" href="cita.html">Agendar cita</a>
+        <a href="turno.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Turno</span></a>
+        <a href="cita.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="txt">Agendar</span></a>
+        <a href="panel.html" title="Acceso para el admin y los barberos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="txt">Entrar</span></a>
       </div>
     </div>
   </header>
@@ -346,58 +253,70 @@
   <main>
     <section class="hero" id="hero">
       <div class="contenedor">
-        <div>
-          <h1><span>Corte de</span><span>caballero.</span><span class="oro">Sin fila.</span></h1>
-          <p class="sub"><strong>Corte, barba y afeitado a navaja.</strong> Fórmate desde el celular para hoy, o aparta tu día y hora con anticipación.</p>
+        <div class="hero-lema mayus">Corte de caballero<br>que no te hace<br>esperar.</div>
+        <h1 class="gigante" aria-label="Sótano del Barbero"><span>S</span><span>Ó</span><span>T</span><span>A</span><span>N</span><span>O</span></h1>
+        <div class="escena" id="escena" aria-hidden="true"></div>
+        <div class="hero-abajo">
           <div class="ctas" id="ctasHero">
-            <a class="btn" href="turno.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Tomar turno ahora</a>
-            <a class="btn linea" href="cita.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Agendar cita</a>
+            <a class="btn" href="turno.html">Tomar turno ahora</a>
+            <a class="enlace" href="cita.html">Agendar cita <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
-          <div id="estado" class="estado hidden" aria-live="polite"><span class="punto" aria-hidden="true"></span><span id="estadoTexto"></span></div>
-        </div>
-        <div class="escena" id="escena" aria-hidden="true">
-          <div class="sombra"></div>
+          <div id="estado" class="estado mayus hidden" aria-live="polite"><span class="punto" aria-hidden="true"></span><span id="estadoTexto"></span></div>
         </div>
       </div>
-      <button type="button" class="desliza" id="desliza" aria-label="Desliza para ver los botones">
-        Desliza
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
     </section>
 
-    <div class="marquesina" aria-hidden="true">
-      <div class="pista" id="pista"></div>
-    </div>
-
-    <section id="servicios" class="seccion">
+    <section id="servicios" class="franja">
       <div class="contenedor">
-        <div class="cabeza revelar">
-          <h2>Servicios</h2>
-          <p>Precios en pesos. Pagas en efectivo, con tarjeta o por transferencia.</p>
-        </div>
-        <div id="mosaicos" class="mosaicos"><div class="vacio">Cargando servicios…</div></div>
+        <div class="franja-cabeza mayus"><span>Servicios</span><span>Efectivo · tarjeta · transferencia</span></div>
+        <div id="mosaicos" class="servicios"><div class="vacio">Cargando servicios…</div></div>
       </div>
+    </section>
+
+    <section class="banner cierre">
+      <div class="banner-arte" id="bannerArte" aria-hidden="true"></div>
+      <div class="contenedor">
+        <div class="mayus revelar">Tu tiempo vale</div>
+        <h2 class="revelar" style="--d:.06s">Tu silla<br>te espera</h2>
+        <p class="revelar" style="--d:.12s">Fórmate ahora desde el celular o aparta tu día y hora. Tarda menos de un minuto.</p>
+        <div class="ctas revelar" style="--d:.18s">
+          <a class="btn" href="cita.html">Agendar cita</a>
+          <a class="enlace" href="turno.html">Tomar turno <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ventajas" aria-label="Ventajas">
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg><div><b>Sin filas</b><span>Toma turno desde tu celular</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4M8 15l2.5 2.5L16 13"/></svg><div><b>Citas en línea</b><span>Aparta tu día y tu hora</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div><b>Te avisamos</b><span>Tu celular suena cuando te toca</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="1.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg><div><b>Paga como quieras</b><span>Efectivo, tarjeta o transferencia</span></div></li>
+      </ul>
     </section>
 
     <section id="como-funciona" class="seccion">
       <div class="contenedor">
         <div class="cabeza revelar">
-          <h2>Cómo funciona</h2>
-          <p>Sin cuenta y sin descargar nada. Si prefieres no esperar, agenda tu cita con día y hora.</p>
+          <div><h2>Cómo funciona</h2><p>Sin cuenta y sin descargar nada. Si prefieres no esperar, agenda tu cita con día y hora.</p></div>
+          <a class="enlace" href="turno.html">Empezar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </div>
         <ol class="pasos">
           <li class="paso revelar">
-            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg></div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>
+            <div class="num">01</div>
             <h3>Elige tu servicio</h3>
             <p>Escribe tu nombre y lo que te vas a hacer. Antes de registrarte ves cuánta gente hay.</p>
           </li>
-          <li class="paso revelar" style="--d:.1s">
-            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <li class="paso revelar" style="--d:.08s">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <div class="num">02</div>
             <h3>Recibe tu turno</h3>
             <p>Ves cuántas personas hay antes que tú y los minutos aproximados, en vivo.</p>
           </li>
-          <li class="paso revelar" style="--d:.2s">
-            <div class="app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+          <li class="paso revelar" style="--d:.16s">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <div class="num">03</div>
             <h3>Te avisamos</h3>
             <p>Cuando te toca, tu celular vibra y suena. Si no puedes llegar, cancelas desde ahí.</p>
           </li>
@@ -410,7 +329,7 @@
         <div class="cabeza revelar"><h2>Visítanos</h2></div>
         <div class="visita revelar">
           <div id="bloqueContacto" class="hidden">
-            <div class="grupo-titulo">Dónde estamos</div>
+            <div class="grupo-titulo mayus">Dónde estamos</div>
             <div class="grupo">
               <div id="filaDireccion" class="fila hidden"><span id="direccion"></span></div>
               <a id="filaMapa" class="fila hidden" target="_blank" rel="noopener"><span class="accion">Cómo llegar</span></a>
@@ -418,21 +337,8 @@
             </div>
           </div>
           <div id="bloqueHorario" class="hidden">
-            <div class="grupo-titulo">Horario</div>
+            <div class="grupo-titulo mayus">Horario</div>
             <div id="horario" class="grupo"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="cierre">
-      <div class="contenedor">
-        <div class="panel revelar">
-          <h2>Tu silla<br>te espera.</h2>
-          <p>Fórmate ahora o aparta tu hora. Tarda menos de un minuto.</p>
-          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <a class="btn" href="turno.html">Tomar turno ahora</a>
-            <a class="btn linea" href="cita.html">Agendar cita</a>
           </div>
         </div>
       </div>
@@ -448,7 +354,7 @@
   <footer class="footer">
     <div class="contenedor">
       <div class="footer-arriba">
-        <div><a class="marca" href="#" aria-label="Volver arriba"><img src="logo.jpg" alt="Sótano del Barbero"></a></div>
+        <div><a class="marca" href="#" aria-label="Volver arriba"><span>Sótano</span></a><p style="margin:14px 0 0;max-width:260px">Barbería de caballeros. Corte, barba y afeitado a navaja.</p></div>
         <div>
           <h4>Barbería</h4>
           <ul>
@@ -518,11 +424,10 @@
       }
     } catch {}
 
-    // ---------- Cinta en movimiento ----------
-    const tijeras = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>';
-    const palabras = ["Corte clásico", "Fade", "Barba", "Afeitado a navaja", "Toalla caliente", "Diseño", "Cejas"];
-    const grupo = palabras.map((p) => `<span>${p} ${tijeras}</span>`).join("");
-    $("pista").innerHTML = grupo + grupo; // duplicado para que el ciclo no tenga corte
+    const tijeras = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>';
+
+    // ---------- Foto del banner (opcional): si subes fotos/banner.jpg, aparece en blanco y negro ----------
+    (() => { const img = new Image(); img.alt = ""; img.onload = () => { $("bannerArte").classList.add("con-foto"); $("bannerArte").appendChild(img); }; img.src = "fotos/banner.jpg"; })();
 
     // ---------- Redes y Visítanos (solo lo que esté en config.js) ----------
     if (cfg.instagram) { $("footIg").firstElementChild.href = cfg.instagram; mostrar($("footIg")); }
@@ -556,15 +461,8 @@
     }), 2500);
     addEventListener("beforeprint", () => document.querySelectorAll(".revelar").forEach((el) => el.classList.add("visto")));
 
-    // ---------- "Desliza" y barra de botones fija ----------
-    const ctas = $("ctasHero"), desliza = $("desliza"), barra = $("barraCta");
-    // "Desliza" solo si el botón principal no se alcanza a ver al abrir (y nunca encima de él)
-    function revisarDesliza() {
-      const boton = ctas.querySelector(".btn").getBoundingClientRect();
-      desliza.classList.toggle("oculto", boton.bottom <= innerHeight - 8 || scrollY > 40);
-    }
-    desliza.onclick = () => ctas.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-    // La barra aparece cuando los botones de arriba ya quedaron atrás (y no tapa el cierre con sus propios botones)
+    // ---------- Barra de botones fija en el celular ----------
+    const ctas = $("ctasHero"), barra = $("barraCta");
     const cierre = document.querySelector(".cierre");
     let ctasVisibles = true, cierreVisible = false;
     function revisarBarra() {
@@ -577,23 +475,6 @@
       new IntersectionObserver(([e]) => { ctasVisibles = e.isIntersecting || e.boundingClientRect.top > 0; revisarBarra(); }).observe(ctas);
       new IntersectionObserver(([e]) => { cierreVisible = e.isIntersecting; revisarBarra(); }, { threshold: .3 }).observe(cierre);
     }
-    addEventListener("scroll", revisarDesliza, { passive: true });
-    addEventListener("resize", revisarDesliza);
-    revisarDesliza(); setTimeout(revisarDesliza, 600); setTimeout(revisarDesliza, 1500);   // después de la animación de entrada
-
-    // ---------- Inclinación 3D de los mosaicos ----------
-    function inclinar(el) {
-      if (tactil || sinMovimiento) return;
-      el.addEventListener("pointermove", (e) => {
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-        el.style.setProperty("--ry", ((x - .5) * 12).toFixed(2) + "deg");
-        el.style.setProperty("--rx", ((.5 - y) * 12).toFixed(2) + "deg");
-        el.style.setProperty("--mx", (x * 100).toFixed(1) + "%");
-        el.style.setProperty("--my", (y * 100).toFixed(1) + "%");
-      });
-      el.addEventListener("pointerleave", () => { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); });
-    }
 
     // ---------- Datos en vivo ----------
     let db = null;
@@ -601,8 +482,8 @@
 
     const iconos = [
       tijeras,
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 15 3l6 6-12 12H3z"/><path d="M9 9l6 6"/></svg>',  // navaja
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',  // peine
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 15 3l6 6-12 12H3z"/><path d="M9 9l6 6"/></svg>',  // navaja
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4z"/><path d="M6 9v11M10 9v11M14 9v11M18 9v11"/></svg>',  // peine
     ];
 
     async function cargarServicios() {
@@ -611,13 +492,17 @@
       if (!db) { cont.innerHTML = vacio; return; }
       const { data, error } = await db.from("servicios").select("nombre,precio").eq("activo", true).order("orden");
       if (error || !data?.length) { cont.innerHTML = vacio; return; }
+      const flecha = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
       cont.innerHTML = data.map((s, i) => `
-        <div class="mosaico revelar${i === 0 && data.length > 2 ? " grande" : ""}" style="--d:${Math.min(i, 6) * 0.06}s">
-          <span class="icono" aria-hidden="true">${iconos[i % iconos.length]}</span>
-          <h3>${esc(s.nombre)}</h3>
-          <div class="precio">$${Number(s.precio).toLocaleString("es-MX", { maximumFractionDigits: 0 })}<small>MXN</small></div>
+        <div class="servicio revelar" style="--d:${Math.min(i, 6) * 0.06}s">
+          <div class="foto" aria-hidden="true">${iconos[i % iconos.length]}</div>
+          <div>
+            <h3>${esc(s.nombre)}</h3>
+            <p class="precio"><b>$${Number(s.precio).toLocaleString("es-MX", { maximumFractionDigits: 0 })}</b> MXN</p>
+            <a class="enlace" href="cita.html">Agendar ${flecha}</a>
+          </div>
         </div>`).join("");
-      cont.querySelectorAll(".mosaico").forEach((el) => { observar(el); inclinar(el); });
+      cont.querySelectorAll(".servicio").forEach(observar);
     }
 
     // Texto de la fila / horario (cola_publica)
@@ -631,8 +516,8 @@
         if (d.abierto === false) return { cerrado: true, txt: cuando ? `${pre}. Abrimos ${cuando} a las ${d.proxima_hora}` : pre };
         return { cerrado: true, txt: `Ya no tomamos turnos hoy (cerramos a las ${d.cierra})` };
       }
-      return { cerrado: false, txt: d.esperando === 0 ? "Ahora mismo no hay espera"
-        : `Ahora: ${d.esperando} ${d.esperando === 1 ? "persona esperando" : "personas esperando"}, unos ${d.minutos} min` };
+      return { cerrado: false, txt: d.esperando === 0 ? "Abierto ahora · sin espera"
+        : `Ahora · ${d.esperando} esperando · ~${d.minutos} min` };
     }
     async function cargarCola() {
       if (!db) return;
@@ -702,17 +587,17 @@
       // Reflejos: un "cuarto" de luz para que el metal brille
       const pmrem = new THREE.PMREMGenerator(renderer);
       const cuarto = new THREE.Scene();
-      cuarto.background = new THREE.Color(0x0b0a09);
+      cuarto.background = new THREE.Color(0xd9d8d4);
       const luzPanel = (c, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); cuarto.add(m); };
-      luzPanel(0xfff1d6, -6, 4, 4, 6, 10);
-      luzPanel(0xffe0a0, 6, 2, 3, 3, 10);
-      luzPanel(0x8f1d1d, 0, -6, 2, 12, 3);
+      luzPanel(0xffffff, -6, 4, 4, 6, 10);
+      luzPanel(0xf2f2f2, 6, 2, 3, 3, 10);
+      luzPanel(0x222222, 0, -6, 2, 12, 3);
       escena.environment = pmrem.fromScene(cuarto, .04).texture;
 
-      // Textura de franjas en diagonal (rojo, blanco, azul marino)
+      // Textura de franjas en diagonal (negro, blanco y gris: la portada es en blanco y negro)
       const tam = 256, cv = document.createElement("canvas"); cv.width = cv.height = tam;
       const cx = cv.getContext("2d"), img = cx.createImageData(tam, tam);
-      const colores = [[200, 16, 46], [245, 241, 234], [28, 63, 140], [245, 241, 234]];
+      const colores = [[16, 16, 16], [244, 244, 241], [138, 138, 134], [244, 244, 241]];
       for (let y = 0; y < tam; y++) for (let x = 0; x < tam; x++) {
         const c = colores[Math.floor(((x + y) % 128) / 32)], i = (y * tam + x) * 4;
         img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2]; img.data[i + 3] = 255;
@@ -730,12 +615,12 @@
       const alto = 4.6, radio = .62;
       // Cilindro de franjas
       poste.add(new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, alto, 64, 1, true),
-        new THREE.MeshStandardMaterial({ map: franjas, roughness: .35, metalness: 0, emissive: 0xffffff, emissiveMap: franjas, emissiveIntensity: .18 })));
+        new THREE.MeshStandardMaterial({ map: franjas, roughness: .35, metalness: 0, emissive: 0xffffff, emissiveMap: franjas, emissiveIntensity: .08 })));
       // Vidrio
       poste.add(new THREE.Mesh(new THREE.CylinderGeometry(radio + .1, radio + .1, alto, 64, 1, true),
         new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .12, roughness: .02, metalness: .3, envMapIntensity: 2.2, side: THREE.DoubleSide })));
-      // Latón: tapas, anillos y remate
-      const laton = new THREE.MeshStandardMaterial({ color: 0xd4a64a, metalness: 1, roughness: .22 });
+      // Metal oscuro: tapas, anillos y remate
+      const laton = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, metalness: .9, roughness: .28 });
       const pieza = (geo, y) => { const m = new THREE.Mesh(geo, laton); m.position.y = y; poste.add(m); return m; };
       pieza(new THREE.CylinderGeometry(radio + .2, radio + .26, .38, 64), alto / 2 + .19);
       pieza(new THREE.CylinderGeometry(radio + .26, radio + .2, .38, 64), -alto / 2 - .19);
@@ -748,18 +633,10 @@
       poste.position.y = .05;
       poste.scale.setScalar(.92);
 
-      // Partículas de luz flotando (polvo en el sótano)
-      const n = chico ? 60 : 140, pos = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - .5) * 8; pos[i * 3 + 1] = (Math.random() - .5) * 8; pos[i * 3 + 2] = (Math.random() - .5) * 4 - 1; }
-      const polvoGeo = new THREE.BufferGeometry(); polvoGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const polvo = new THREE.Points(polvoGeo, new THREE.PointsMaterial({ color: 0xf0cf85, size: .035, transparent: true, opacity: .7, depthWrite: false }));
-      escena.add(polvo);
-
       // Luces
-      escena.add(new THREE.AmbientLight(0xffffff, .25));
-      const clave = new THREE.DirectionalLight(0xfff0d0, 2.2); clave.position.set(-4, 5, 6); escena.add(clave);
-      const contra = new THREE.PointLight(0xd4a64a, 3, 20); contra.position.set(4, 2, -3); escena.add(contra);
-      const roja = new THREE.PointLight(0xc8102e, 2, 14); roja.position.set(-3, -3, 2); escena.add(roja);
+      escena.add(new THREE.AmbientLight(0xffffff, .55));
+      const clave = new THREE.DirectionalLight(0xffffff, 2); clave.position.set(-4, 5, 6); escena.add(clave);
+      const contra = new THREE.PointLight(0xffffff, 1.4, 20); contra.position.set(4, 2, -3); escena.add(contra);
 
       // Tamaño
       function ajustar() {
@@ -805,7 +682,6 @@
         rx += ((my * .25) - rx) * .06; ry += ((mx * .5) - ry) * .06; // resorte suave hacia el cursor
         poste.rotation.set(rx + Math.sin(t * .6) * .04, ry + t * .25, Math.sin(t * .4) * .05);
         poste.position.y = .05 + Math.sin(t * .8) * .08;        // flota
-        polvo.rotation.y = t * .03; polvo.position.y = Math.sin(t * .3) * .2;
         renderer.render(escena, camara);
         if (visible && !sinMovimiento && !document.hidden) pedir();
       }
