@@ -41,12 +41,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql", "18_promos.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -830,6 +830,45 @@ prueba("Con la tarjeta apagada no se muestran sellos", (await uno(`select sellos
 await q(`update lealtad set activa = true`);
 await db.exec(`reset role`);
 await como(null);
+
+seccion("PROMOS EN DÍAS FLOJOS");
+await db.exec(`reset role`);
+await como(null);
+await reloj("2027-03-01 08:00");   // lunes
+prueba("Sin suficiente historia no se propone nada", (await uno(`select _proponer_promos()`)) === 0);
+// 8 semanas: 6 cortes por día (mitad mañana, mitad tarde), pero los martes solo 1 y en la tarde
+await db.exec(`
+  insert into visitas (fecha, turno, cliente_nombre, servicio_id, barbero_id, estado, monto, propina, metodo_pago, creado_en)
+  select d::date, 700 + k, 'Cliente', ${CORTE}, 1, 'cobrado', 150, 0, 'efectivo',
+         (d::date::text || case when k <= 3 then ' 11:00' else ' 16:00' end || '-06')::timestamptz
+    from generate_series(date '2027-01-04', date '2027-02-28', interval '1 day') d,
+         generate_series(1, 6) k
+   where extract(dow from d) <> 0
+     and (extract(dow from d) <> 2 or k = 6);`);
+await db.exec(`delete from net.llamadas`);
+const nP = await uno(`select _proponer_promos()`);
+const pr = (await q(`select fecha::text, hora_ini::text, hora_fin::text, estado, valor, motivo from promos`))[0];
+prueba("Detecta los martes flojos y propone una promo para el próximo martes", nP === 1 && pr?.fecha === "2027-03-02" && pr.estado === "propuesta", JSON.stringify(pr));
+prueba("…en la franja más floja (la mañana, de la apertura a las 14:00)", pr?.hora_ini === "10:00:00" && pr?.hora_fin === "14:00:00", JSON.stringify(pr));
+prueba("…con el motivo explicado", /martes vienen \d+% menos/.test(pr?.motivo || ""), pr?.motivo);
+const aviso = await uno(`select body from net.llamadas order by id desc limit 1`);
+prueba("Se le avisa a Alejandro", aviso?.tipo === "promo" && aviso.promos?.length === 1, JSON.stringify(aviso));
+prueba("Correr la revisión otra vez no la repite", (await uno(`select _proponer_promos()`)) === 0);
+await db.exec(`set role anon`);
+prueba("Los clientes no ven las propuestas, solo las aceptadas", JSON.stringify(await uno(`select promos_publicas()`)) === "[]");
+prueba("Un cliente no puede pedir la revisión", !!(await error(`select proponer_promos()`)));
+await db.exec(`set role authenticated`);
+await como(BARB);
+prueba("Un barbero ve la propuesta pero no la puede aceptar", (await q(`select id from promos`)).length === 1 && (await q(`update promos set estado = 'aceptada' returning id`)).length === 0);
+await como(ADMIN);
+prueba("Alejandro la cambia a 20 % y la acepta", (await q(`update promos set valor = 20, estado = 'aceptada', decidido_en = now() returning id`)).length === 1);
+prueba("No puede haber dos promos el mismo día", !!(await error(`insert into promos (fecha, origen) values ('2027-03-02', 'manual')`)));
+prueba("Puede crear una promo a mano para otro día", !(await error(`insert into promos (fecha, valor, texto, estado, origen) values ('2027-03-04', 50, 'en barba', 'aceptada', 'manual')`)));
+await db.exec(`set role anon`);
+await como(null);
+const pubP = await uno(`select promos_publicas()`);
+prueba("Los clientes ya ven las aceptadas", pubP.length === 2 && pubP[0].valor == 20 && pubP[0].hora_ini === "10:00", JSON.stringify(pubP));
+await db.exec(`reset role`);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }

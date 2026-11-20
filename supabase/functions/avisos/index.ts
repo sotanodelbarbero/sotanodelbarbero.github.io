@@ -3,7 +3,8 @@
 //
 //  La llama la base de datos cuando se agenda, cancela o mueve una cita
 //  (ver supabase/15_notificaciones.sql), cada 10 minutos para los
-//  recordatorios a clientes (16_recordatorios.sql), y el panel para
+//  recordatorios a clientes (16_recordatorios.sql), cuando hay una promo
+//  propuesta para un día flojo (18_promos.sql, aviso al administrador), y el panel para
 //  «Activar avisos» y «Probar».
 //
 //  Cómo instalarla (una sola vez, después de ejecutar 15_notificaciones.sql):
@@ -196,6 +197,30 @@ Deno.serve(async (req) => {
           await sb.from("citas").update(marca).eq("id", c.id);   // aunque falle, no se reintenta cada 10 minutos
         }
         return responder({ ok: true, revisadas, enviados, fallidos });
+      }
+
+      // ----- Promo propuesta para un día flojo: aviso a los administradores -----
+      if (cuerpo.tipo === "promo") {
+        const ids = (cuerpo.promos || []).map(Number).filter(Boolean);
+        const [{ data: lista }, { data: admins }] = await Promise.all([
+          sb.from("promos").select("*").in("id", ids.length ? ids : [0]).eq("estado", "propuesta"),
+          sb.from("perfiles").select("user_id").eq("rol", "admin"),
+        ]);
+        const usuarios = (admins || []).map((a) => a.user_id);
+        if (!lista?.length || !usuarios.length) return responder({ ok: true, nada: "sin propuestas o sin administradores" });
+        const { data: subs } = await sb.from("push_suscripciones").select("*").in("user_id", usuarios);
+        let total = { enviados: 0, fallidos: 0 };
+        for (const pr of lista) {
+          const desc = pr.tipo === "porcentaje" ? `${Number(pr.valor)}% de descuento` : `$${Number(pr.valor)} de descuento`;
+          const horas = pr.hora_ini ? ` de ${String(pr.hora_ini).slice(0, 5)} a ${String(pr.hora_fin).slice(0, 5)}` : " todo el día";
+          const r = await mandar(subs || [], {
+            title: `💡 Día flojo: ${fechaBonita(pr.fecha, "")}`,
+            body: `Propuesta: ${desc} ${pr.texto}${horas}. ${pr.motivo || ""} Toca para aceptarla o cambiarla.`.trim(),
+            tag: `promo-${pr.id}`, url: `${PANEL}#inicio`,
+          });
+          total.enviados += r.enviados; total.fallidos += r.fallidos;
+        }
+        return responder({ ok: true, ...total });
       }
 
       const { data: c } = await sb.from("citas").select("*").eq("id", Number(cuerpo.cita)).maybeSingle();

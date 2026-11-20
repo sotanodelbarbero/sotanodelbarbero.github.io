@@ -147,6 +147,14 @@
     .lealtad-box.toca { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
     .lealtad-box b { font-weight: 600; }
     .lealtad-box .grow { flex: 1; min-width: 160px; }
+    /* Promos */
+    .promo-fila { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .promo-fila:first-child { border-top: 0; }
+    .promo-fila .q { flex: 1; min-width: 220px; }
+    .promo-fila .q b { font-size: 1rem; }
+    .promo-fila .acc { display: flex; gap: 6px; flex-wrap: wrap; }
+    .promo-fila.propuesta { background: color-mix(in srgb, var(--oro) 8%, transparent); border-radius: 12px; padding: 12px; border: 1px solid color-mix(in srgb, var(--oro) 35%, transparent); margin-bottom: 6px; }
+    .badge.activa { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
     /* Recordatorios de mañana */
     .rec-fila { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
     .rec-fila:first-child { border-top: 0; }
@@ -799,6 +807,13 @@
       </div>
       <div id="primerosPasos" class="card hidden"></div>
       <div id="alertas" class="alertas"></div>
+      <div class="card solo-admin hidden" id="cardPromos" style="margin-bottom:16px">
+        <div class="card-t" style="flex-wrap:wrap">
+          <div><h2>Promos</h2><p class="muted small" style="margin:4px 0 0">Cada mañana reviso qué días vienen menos clientes y te propongo una promo. Tú decides.</p></div>
+          <div class="fila" style="flex:0 0 auto;gap:6px"><button class="ghost" id="promoBuscar">Buscar días flojos</button><button id="promoNueva">+ Promo</button></div>
+        </div>
+        <div id="listaPromos"></div>
+      </div>
       <div class="kpis">
         <div class="kpi"><div class="l"><span class="solo-admin">Ventas hoy</span><span class="solo-barbero">Mis ventas hoy</span></div><div class="v" id="iVentas">$0</div><div class="delta" id="iVentasDelta"></div></div>
         <div class="kpi"><div class="l">Clientes atendidos</div><div class="v" id="iAtendidos">0</div><div class="delta" id="iAtendidosDelta"></div></div>
@@ -1225,6 +1240,7 @@
         <button type="button" data-m="tarjeta" aria-pressed="false">Tarjeta</button>
         <button type="button" data-m="transferencia" aria-pressed="false">Transferencia</button>
       </div>
+      <div id="cobroPromo" class="lealtad-box hidden"></div>
       <div id="cobroLealtad" class="lealtad-box hidden"></div>
       <label>Productos</label>
       <div id="cobroProductos"></div>
@@ -1704,6 +1720,97 @@
     await db.from("regreso_contactos").upsert({ tel, enviado_en: ahora }, { onConflict: "tel" });
   });
 
+  // ---------- Promos en días flojos (Alejandro decide) ----------
+  let promos = [], promoHoy = null;
+  const descPromo = (p) => `${p.tipo === "porcentaje" ? Number(p.valor) + "%" : peso(p.valor)} de descuento ${p.texto}`;
+  const horasPromo = (p) => p.hora_ini ? `de ${hhmm(p.hora_ini)} a ${hhmm(p.hora_fin)}` : "todo el día";
+  const fechaPromo = (f) => mayus(fechaLarga(f, { weekday: "long", day: "numeric", month: "long" }));
+  async function cargarPromos() {
+    if (!esAdmin()) return;
+    const { data, error } = await db.from("promos").select("*").gte("fecha", hoyISO()).neq("estado", "rechazada").order("fecha");
+    $("cardPromos").classList.toggle("hidden", !!error);   // sin 18_promos.sql no se muestra
+    if (error) return;
+    promos = data || [];
+    pintarPromos();
+  }
+  function textoCompartirPromo(p) {
+    return `🔥 Promo en ${cfg.nombre}: ${fechaPromo(p.fecha).toLowerCase()}, ${descPromo(p)} ${horasPromo(p)}.\nAparta tu lugar aquí 👉 ${new URL("cita.html", location.href).href}`;
+  }
+  function pintarPromos() {
+    $("listaPromos").innerHTML = promos.length ? promos.map((p) => {
+      const prop = p.estado === "propuesta";
+      return `<div class="promo-fila${prop ? " propuesta" : ""}">
+        <div class="q"><div>${prop ? '<span class="badge">💡 propuesta</span>' : '<span class="badge activa">activa</span>'} <b>${esc(fechaPromo(p.fecha))}</b></div>
+          <div style="margin-top:4px">${esc(descPromo(p))} · ${esc(horasPromo(p))}</div>
+          ${prop && p.motivo ? `<div class="muted small" style="margin-top:4px">${esc(p.motivo)}</div>` : ""}</div>
+        <div class="acc">${prop
+          ? `<button class="primary" data-promo="aceptar" data-id="${p.id}">Aceptar</button><button data-promo="editar" data-id="${p.id}">Cambiar</button><button class="ghost" data-promo="rechazar" data-id="${p.id}">No, gracias</button>`
+          : `<a class="boton" href="https://wa.me/?text=${encodeURIComponent(textoCompartirPromo(p))}" target="_blank" rel="noopener">Compartir</a><button data-promo="editar" data-id="${p.id}">Cambiar</button><button class="ghost danger" data-promo="quitar" data-id="${p.id}">Quitar</button>`}</div>
+      </div>`;
+    }).join("") : `<p class="muted small" style="margin:8px 0 0">No hay promos por ahora. Cuando detecte un día flojo te aviso al celular (si tienes los avisos activados) y aparece aquí.</p>`;
+  }
+  function editarPromo(p = null) {
+    const f = p?.fecha || sumarDia(hoyISO(), 1);
+    abrirSimple(p ? "Cambiar promo" : "Nueva promo", `
+      <label for="pmFecha">Día</label><input type="date" id="pmFecha" value="${f}" min="${hoyISO()}">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin-top:14px"><input type="checkbox" id="pmTodo" style="width:auto" ${p && !p.hora_ini ? "checked" : ""}> Todo el día</label>
+      <div class="fila" id="pmHoras"><div><label for="pmIni">Desde</label><input type="time" id="pmIni" value="${p?.hora_ini ? hhmm(p.hora_ini) : "10:00"}"></div><div><label for="pmFin">Hasta</label><input type="time" id="pmFin" value="${p?.hora_fin ? hhmm(p.hora_fin) : "14:00"}"></div></div>
+      <div class="fila"><div><label for="pmTipo">Descuento</label><select id="pmTipo"><option value="porcentaje">Porcentaje (%)</option><option value="monto">Pesos ($)</option></select></div>
+        <div><label for="pmValor">Cuánto</label><input type="number" id="pmValor" min="1" step="1" inputmode="numeric" value="${p ? Number(p.valor) : 15}"></div></div>
+      <label for="pmTexto">En qué</label><input id="pmTexto" maxlength="80" value="${esc(p?.texto || "en todos los cortes")}" placeholder="en todos los cortes">
+      <p class="muted small" style="margin:10px 0 0">Al guardar queda <b>activa</b>: la ven los clientes en la página y al cobrar en ese horario te ofrezco aplicar el descuento.</p>`,
+      async () => {
+        const todo = $("pmTodo").checked, tipo = $("pmTipo").value, valor = Number($("pmValor").value);
+        const fila = { fecha: $("pmFecha").value, hora_ini: todo ? null : $("pmIni").value, hora_fin: todo ? null : $("pmFin").value,
+          tipo, valor, texto: $("pmTexto").value.trim() || "en todos los cortes", estado: "aceptada", decidido_en: new Date().toISOString() };
+        if (!fila.fecha || fila.fecha < hoyISO()) return "Elige un día de hoy en adelante.";
+        if (!todo && !(fila.hora_fin > fila.hora_ini)) return "La hora final debe ser después de la inicial.";
+        if (!(valor > 0) || (tipo === "porcentaje" && valor > 100)) return "Revisa el descuento.";
+        const r = p ? await db.from("promos").update(fila).eq("id", p.id).select("id") : await db.from("promos").insert({ ...fila, origen: "manual" }).select("id");
+        if (r.error) return /promos_una_por_dia|duplicate/.test(r.error.message) ? "Ya hay una promo ese día. Cámbiala en lugar de crear otra." : "No se pudo guardar: " + r.error.message;
+        toast("Promo activa"); cargarPromos(); return null;
+      });
+    $("pmTipo").value = p?.tipo || "porcentaje";
+    const horas = () => $("pmHoras").classList.toggle("hidden", $("pmTodo").checked);
+    $("pmTodo").onchange = horas; horas();
+  }
+  $("listaPromos").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-promo]"); if (!b) return;
+    const p = promos.find((x) => x.id === Number(b.dataset.id)); if (!p) return;
+    const a = b.dataset.promo;
+    if (a === "editar") return editarPromo(p);
+    if (a === "quitar" && !confirm(`¿Quitar la promo del ${fechaPromo(p.fecha).toLowerCase()}? Ya no la verán los clientes.`)) return;
+    const estado = a === "aceptar" ? "aceptada" : "rechazada";
+    const { error } = await db.from("promos").update({ estado, decidido_en: new Date().toISOString() }).eq("id", p.id);
+    if (error) return toast("No se pudo: " + error.message, { tipo: "error" });
+    toast(a === "aceptar" ? "Promo aceptada: ya la ven los clientes" : a === "quitar" ? "Promo quitada" : "Propuesta descartada");
+    cargarPromos();
+  });
+  $("promoNueva").onclick = () => editarPromo();
+  $("promoBuscar").onclick = async () => {
+    const { data, error } = await db.rpc("proponer_promos");
+    if (error) return toast("No se pudo revisar: " + error.message, { tipo: "error" });
+    toast(data ? `Encontré ${data} ${data === 1 ? "día flojo" : "días flojos"}: revisa la propuesta` : "No encontré días flojos en la próxima semana (o todavía hay poca historia: necesito unas 4 semanas de cortes).");
+    cargarPromos();
+  };
+
+  // Al cobrar: si hay promo aceptada ahora mismo, ofrecer el descuento
+  async function pintarPromoCobro(v) {
+    const box = $("cobroPromo"); box.classList.add("hidden");
+    const { data } = await db.from("promos").select("*").eq("fecha", hoyISO()).eq("estado", "aceptada").maybeSingle();
+    const p = data; if (!p || cobrando !== v) return;
+    const ahora = ahoraMin();
+    if (p.hora_ini && (ahora < aMin(p.hora_ini) || ahora > aMin(p.hora_fin))) return;
+    box.classList.remove("hidden");
+    box.innerHTML = `<span class="grow">🔥 <b>Promo de hoy:</b> ${esc(descPromo(p))}</span><button type="button" class="primary" id="cobroPromoAplicar">Aplicar</button>`;
+    $("cobroPromoAplicar").onclick = () => {
+      const base = servicio(Number($("cobroServicio").value))?.precio ?? Number($("cobroMonto").value || 0);
+      const nuevo = p.tipo === "porcentaje" ? Math.round(base * (1 - Number(p.valor) / 100)) : Math.max(0, base - Number(p.valor));
+      $("cobroMonto").value = nuevo; pintarTotalCobro();
+      box.innerHTML = `<span class="grow">🔥 <b>Promo aplicada:</b> ${peso(base)} → <b>${peso(nuevo)}</b></span>`;
+    };
+  }
+
   // ---------- Pestañas ----------
   const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
   const botonTab = (t) => document.querySelector(`.tabs [data-tab="${t}"]`);
@@ -2138,6 +2245,7 @@
     $("cobroError").textContent = "";
     pintarTotalCobro();
     pintarLealtadCobro(v);
+    pintarPromoCobro(v);
     $("dlgCobro").showModal();
   }
   $("cobroServicio").onchange = () => { const s = servicio(Number($("cobroServicio").value)); if (s) $("cobroMonto").value = s.precio; pintarTotalCobro(); };
@@ -3956,6 +4064,7 @@
       const u = ultimoRespaldo(), dias = u ? diasEntre(u, hoy) : null;
       if (dias == null || dias >= 7) al.push(["info", icoInfo, dias == null ? `<b>Todavía no descargas un respaldo.</b> Tarda unos segundos y protege toda tu información.` : `<b>Hace ${dias} días que no descargas un respaldo.</b> Descárgalo para no perder nada.`, "ajustes"]);
     }
+    cargarPromos();
     $("alertas").innerHTML = al.map(([cls, ico, txt, tab]) => `<button class="alerta ${cls}" data-ir="${tab}">${ico}<span>${txt}</span></button>`).join("");
   }
 
