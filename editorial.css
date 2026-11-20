@@ -1,0 +1,132 @@
+/* =========================================================
+   Estilo editorial en blanco y negro (como la portada index.html)
+   para turno.html y cita.html. Se carga AL FINAL: encima de
+   styles.css, cliente.css y los estilos propios de cada página.
+   ========================================================= */
+:root:root:root:root {
+  --papel: #e8e7e3; --papel-2: #f4f3f0; --tinta: #0a0a0a; --gris: #5c5b58;
+  --bg: var(--papel); --surface: #ffffff; --surface-2: #f1f0ed; --line: rgba(10,10,10,.14);
+  --text: #0a0a0a; --muted: #6b6a66; --accent: #0a0a0a; --accent-ink: #ffffff; --tint: #0a0a0a;
+  --oro: #0a0a0a; --oro-2: #3a3a38; --ok: #1f8f4a; --bad: #c62828;
+  --display: "Jost", "Futura", "Avenir Next", "Century Gothic", system-ui, sans-serif;
+  color-scheme: light;
+}
+body.pagina-cliente { background: var(--papel); color: var(--text); font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif; letter-spacing: 0; }
+.mayus-e { text-transform: uppercase; letter-spacing: .24em; font-size: .6875rem; font-weight: 500; }
+
+/* ---------- Tira negra y barra con la marca ---------- */
+.tira { background: var(--tinta); color: #d9d9d6; font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 500; }
+.tira .dentro { max-width: 520px; margin: 0 auto; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; min-height: 32px; gap: 12px; }
+.tira a { color: inherit; text-decoration: none; }
+.tira a:hover { color: #fff; }
+.barra { height: 64px; border-bottom: 1px solid var(--line); margin: 0 -16px; padding: 0 16px; }
+.barra a.volver { color: var(--text); font-size: .6875rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+.barra a.volver:hover { opacity: .6; color: var(--text); }
+.barra img { display: none; }
+.barra .marca { font: 600 1.375rem/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--text); text-decoration: none; }
+
+/* ---------- Encabezado ---------- */
+.intro { margin: 34px 0 30px; }
+.intro h1 { font: 600 clamp(2.75rem, 13vw, 4.25rem)/.92 var(--display); text-transform: uppercase; letter-spacing: -.01em; }
+.intro p { color: var(--gris); margin-top: 12px; }
+.intro p::after { content: ""; display: block; width: 34px; height: 1px; background: var(--tinta); margin: 16px auto 0; }
+.modo { background: transparent; border: 1px solid var(--tinta); border-radius: 0; padding: 0; gap: 0; max-width: 340px; }
+.modo a { border-radius: 0; height: 42px; color: var(--text); font-size: .6875rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.modo a:hover { background: rgba(0,0,0,.05); color: var(--text); }
+.modo a[aria-current="page"] { background: var(--tinta); color: #fff; }
+.cola-pill { border-radius: 0; background: transparent; border: 0; border-bottom: 1px solid var(--tinta); padding: 6px 0; font-size: .6875rem; letter-spacing: .16em; text-transform: uppercase; }
+
+/* ---------- Pasos ---------- */
+.paso-t { margin: 36px 0 14px; padding-top: 18px; border-top: 1px solid var(--tinta); }
+.paso-t .n { display: inline-flex; white-space: nowrap; min-width: 24px; width: auto; height: auto; border: 0; border-radius: 0; color: var(--muted); font: 500 .8125rem/1 var(--display); letter-spacing: .1em; }
+.paso-t .n::before { content: "0"; }
+.paso-t.listo .n { background: transparent; color: var(--text); }
+.paso-t h2 { font: 500 1.125rem/1 var(--display); text-transform: uppercase; letter-spacing: .14em; }
+.nota-paso { color: var(--gris); }
+
+/* ---------- Campos ---------- */
+.campo2 input { border-radius: 0; background: #fff; border: 1px solid var(--line); }
+.campo2 input:focus { border-color: var(--tinta); box-shadow: 0 0 0 1px var(--tinta); }
+.campo2 input:focus + label { color: var(--text); }
+
+/* ---------- Tarjetas de servicio ---------- */
+.serv { border-radius: 0; background: #fff; border: 1px solid var(--line); }
+.serv:hover { border-color: var(--tinta); }
+.serv svg.ico { color: var(--tinta); stroke-width: 1.5; }
+.serv b { font-family: var(--display); font-weight: 500; text-transform: uppercase; letter-spacing: .1em; font-size: .9375rem; }
+.serv .precio { font: 500 1.375rem/1 var(--display); color: var(--text); }
+.serv::after { border-radius: 0; border-color: var(--line); }
+.serv[aria-pressed="true"] { background: var(--tinta); color: #fff; border-color: var(--tinta); box-shadow: none; }
+.serv[aria-pressed="true"] svg.ico, .serv[aria-pressed="true"] .precio { color: #fff; }
+.serv[aria-pressed="true"]::after { border-color: #fff;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat; }
+.servicios .cargando { border-radius: 0; background: linear-gradient(90deg, #fff 30%, #f1f0ed 50%, #fff 70%) 0 0 / 300% 100%; }
+
+/* ---------- Barbero, días, calendario y horas (cita) ---------- */
+.chip { border-radius: 0; background: #fff; border-color: var(--line); font-size: .8125rem; letter-spacing: .08em; text-transform: uppercase; }
+.chip[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.dia { border-radius: 0; background: #fff; border-color: var(--line); }
+.dia .num { font-family: var(--display); font-weight: 500; }
+.dia[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.dia[aria-pressed="true"] .sem, .dia[aria-pressed="true"] .mes { color: rgba(255,255,255,.75); }
+.mes-cal { border-radius: 0; background: #fff; border-color: var(--line); }
+.mes-cab b { font: 500 1.0625rem/1 var(--display); letter-spacing: .14em; }
+.mes-cab button { border-radius: 0; background: transparent; border: 1px solid var(--line); color: var(--text); }
+.dm { border-radius: 0; font-weight: 500; }
+.dm:not(:disabled) { background: var(--surface-2); border-color: transparent; }
+.dm:not(:disabled):hover { border-color: var(--tinta); }
+.dm small { color: var(--gris); }
+.dm:disabled { color: rgba(10,10,10,.25); }
+.dm.hoy::after { background: var(--tinta); }
+.dm[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.dm[aria-pressed="true"] small { color: rgba(255,255,255,.75); }
+.dm[aria-pressed="true"]::after { background: #fff; }
+.dia-info b { color: var(--text); }
+.hora { border-radius: 0; background: #fff; border-color: var(--line); font-weight: 500; }
+.hora:hover { border-color: var(--tinta); }
+.hora[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.horas .aviso-horas { border-radius: 0; background: #fff; }
+
+/* ---------- Barra fija para enviar ---------- */
+.enviar-barra { background: rgba(232,231,227,.9); border-top: 1px solid var(--line); }
+.resumen b { font-family: var(--display); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+#enviar { border-radius: 0; background: var(--tinta); color: #fff; font-size: .75rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; padding: 0 24px; }
+#enviar:hover { background: #2a2a2a; }
+
+/* ---------- Tarjeta del turno y de la cita ---------- */
+.card { border-radius: 0; background: #fff; border: 1px solid var(--line); box-shadow: none; }
+.estado-card::before { background: repeating-linear-gradient(-45deg, #0a0a0a 0 10px, #f4f4f2 10px 20px, #8a8a86 20px 30px, #f4f4f2 30px 40px); }
+.estado-card h2 { font-family: var(--display); font-weight: 600; letter-spacing: .02em; }
+.turno-num { font-family: var(--display); font-weight: 600; background: none; color: var(--tinta); -webkit-text-fill-color: var(--tinta); }
+.badge { background: var(--surface-2); color: var(--text); border-radius: 0; letter-spacing: .1em; text-transform: uppercase; font-size: .6875rem; }
+.stat { border-radius: 0; background: var(--surface-2); }
+.stat .v { font-family: var(--display); font-weight: 500; }
+.siguiente { font-family: var(--display); font-weight: 600; color: var(--ok); }
+.tu-turno { background: var(--tinta); color: #fff; }
+.tu-turno .muted { color: rgba(255,255,255,.8); }
+.tu-turno .check-ok { background: #fff; color: var(--tinta); }
+.confirmada .cuando { font-family: var(--display); font-weight: 600; letter-spacing: .04em; }
+.detalle { border-radius: 0; }
+.detalle div { background: #fff; }
+
+/* Botones de las tarjetas: rectángulos negros o con borde */
+button.big, .big, #accionesTurno .big, .acciones-cita .big { border-radius: 0 !important; letter-spacing: .12em; text-transform: uppercase; font-size: .75rem !important; font-weight: 600; }
+button.primary, .btn-oro, .btn-siguiente { background: var(--tinta) !important; color: #fff !important; border-color: var(--tinta) !important; border-radius: 0 !important; }
+.btn-oro:hover, .btn-siguiente:hover { background: #2a2a2a !important; }
+button:not([class]), button.big:not(.primary), button.danger { border-color: var(--line); }
+.volver-inicio { border-radius: 0; background: transparent; border: 1px solid var(--tinta); letter-spacing: .14em; text-transform: uppercase; font-size: .75rem; }
+.otra-cita { border-radius: 0; background: #fff; }
+.otra-cita.mini { border-radius: 0; color: var(--text); border-color: var(--tinta); }
+.ya-tienes, .aviso-llegada { border-radius: 0; background: #fff; border-color: var(--tinta); }
+.aviso-llegada b { color: var(--text); }
+.guardar a, .guardar button { border-radius: 0; background: #fff; }
+.guardar a:hover, .guardar button:hover { border-color: var(--tinta); }
+.guardar svg { color: var(--tinta); }
+.btn-wa, .btn-wa-linea, .ultimo-paso { border-radius: 0 !important; }
+.btn-wa-linea { color: #157a3c; }
+.ultimo-paso b { color: #157a3c; }
+
+/* Avisos dentro del formulario (traen colores en el propio HTML) */
+#avisoCita, #avisoCerrado { border-radius: 0 !important; background: #fff !important; border-color: var(--tinta) !important; }
+#avisoCerrado a { border-radius: 0 !important; background: var(--tinta) !important; color: #fff !important; letter-spacing: .14em; text-transform: uppercase; font-size: .75rem; }
+.error { color: var(--bad); }
