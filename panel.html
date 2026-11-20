@@ -107,6 +107,38 @@
     .ag-ahora::before { content: ""; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); }
     .ag-cerrado { padding: 28px; text-align: center; color: var(--muted); }
 
+    /* ===== Semana: una columna por día, horas hacia abajo, citas del color de su barbero ===== */
+    .sem-leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: .8125rem; color: var(--muted); }
+    .sem-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .sem-leyenda i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none; }
+    .sem-cab { position: sticky; top: 0; z-index: 3; background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 4px; text-align: center; line-height: 1.15; }
+    .sem-cab .d { font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .sem-cab .n { font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; display: inline-grid; place-items: center; min-width: 34px; height: 34px; border-radius: 50%; }
+    .sem-cab small { display: block; font-size: .6875rem; color: var(--muted); margin-top: 2px; }
+    .sem-cab.hoy .d { color: var(--oro); }
+    .sem-cab.hoy .n { background: var(--oro); color: var(--accent-ink); }
+    .sem-col { position: relative; border-right: 1px solid var(--line); cursor: copy;
+      background-image: repeating-linear-gradient(to bottom, transparent 0 47px, color-mix(in srgb, var(--text) 6%, transparent) 47px 48px); }
+    .sem-col:last-child { border-right: 0; }
+    /* La columna de horas se queda fija al deslizar de lado (celular) */
+    #semana .agenda { width: max-content; min-width: 100%; }
+    #semana .ag-horas { position: sticky; left: 0; z-index: 4; background: var(--surface); }
+    #semana .sem-cab:first-child { left: 0; z-index: 5; }
+    .sem-col:hover { background-color: color-mix(in srgb, var(--oro) 3%, transparent); }
+    .sem-col.cerrado { cursor: default; background-color: color-mix(in srgb, var(--text) 4%, transparent);
+      background-image: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--text) 5%, transparent) 8px 16px); }
+    .sem-col.cerrado::before { content: attr(data-motivo); position: absolute; top: 10px; left: 0; right: 0; text-align: center; font-size: .75rem; font-weight: 600; color: var(--muted); }
+    .sem-cita { position: absolute; min-height: 0; padding: 4px 6px; border-radius: 8px; overflow: hidden; cursor: pointer; text-align: left; z-index: 2;
+      background: color-mix(in srgb, var(--c) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); border-left: 3px solid var(--c);
+      color: var(--text); font-size: .75rem; line-height: 1.2; font-weight: 400; }
+    .sem-cita:hover { background: color-mix(in srgb, var(--c) 30%, var(--surface)); }
+    .sem-cita .hh { display: block; font-weight: 700; color: color-mix(in srgb, var(--c) 70%, var(--text)); font-variant-numeric: tabular-nums; }
+    .sem-cita b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sem-cita .sv { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sem-cita.llego { opacity: .7; }
+    .sem-cita.no_vino { opacity: .45; border-style: dashed; text-decoration: line-through; }
+    .sem-cita.tarde { box-shadow: 0 0 0 1.5px var(--bad) inset; }
+
     /* Detalle de cita */
     .dc-datos { display: grid; gap: 1px; background: var(--line); border-radius: 12px; overflow: hidden; margin: 12px 0; }
     .dc-datos div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 14px; background: color-mix(in srgb, var(--text) 5%, var(--surface)); font-size: .9375rem; }
@@ -814,18 +846,23 @@
           <button id="citaDespues" aria-label="Día siguiente">›</button>
           <button class="ghost" id="citaHoy">Hoy</button>
         </div>
-        <div class="seg" id="citaVista" style="flex:0 0 220px">
-          <button type="button" data-v="agenda" aria-pressed="true">Agenda</button>
+        <div class="seg" id="citaVista" style="flex:0 0 270px">
+          <button type="button" data-v="semana" aria-pressed="true">Semana</button>
+          <button type="button" data-v="agenda" aria-pressed="false">Día</button>
           <button type="button" data-v="lista" aria-pressed="false">Lista</button>
         </div>
       </div>
       <p class="muted small" id="citaResumen" style="margin:0 0 10px"></p>
-      <div id="agenda" class="agenda-wrap"></div>
+      <div id="semanaBox">
+        <div id="semLeyenda" class="sem-leyenda"></div>
+        <div id="semana" class="agenda-wrap"></div>
+      </div>
+      <div id="agenda" class="agenda-wrap hidden"></div>
       <div id="listaCitasBox" class="hidden">
         <label class="small muted" style="margin:0 0 8px;font-weight:500"><input type="checkbox" id="citaVerTodas" style="width:auto"> Ver canceladas</label>
         <div id="listaCitas" class="cola"></div>
       </div>
-      <p class="footnote">Toca un espacio libre de la agenda para apartar una cita ahí. Toca una cita para ver sus datos, marcar que llegó, moverla o cancelarla.</p>
+      <p class="footnote">Cada color es un barbero. Toca un espacio libre para apartar una cita ahí. Toca una cita para ver sus datos, marcar que llegó, moverla o cancelarla.</p>
 
       <div class="topbar"><h2>Bloqueos próximos</h2></div>
       <div id="listaBloqueos" class="cola"></div>
@@ -3177,7 +3214,7 @@
   }
 
   // ---------- Pestaña Citas ----------
-  let vistaCitas = "agenda";
+  let vistaCitas = "semana";
   async function cargarCitas() {
     if (!$("citaFecha").value) $("citaFecha").value = hoyISO();
     const fecha = $("citaFecha").value;
@@ -3204,7 +3241,104 @@
     $("listaCitas").innerHTML = lista.length ? lista.map((c) => filaCita(c)).join("")
       : `<div class="card muted" style="text-align:center">No hay citas este día.</div>`;
     cargarBloqueos();
+    if (vistaCitas === "semana") cargarSemana();
   }
+
+  // ---------- Semana: una columna por día, horas hacia abajo, cada cita del color de su barbero ----------
+  let citasSemana = [];
+  const PALETA_SEM = ["azul", "verde", "naranja", "morado", "rosa", "cian", "amarillo", "indigo", "rojo", "menta"];
+  const colorBarbero = (id) => {
+    if (id == null) return "#8e8e93";   // «Cualquier barbero»: gris
+    const orden = [...barberos].sort((a, b) => a.id - b.id), i = Math.max(0, orden.findIndex((b) => b.id === id));
+    const claro = document.documentElement.dataset.tema === "claro";
+    return COLORES_AP[PALETA_SEM[i % PALETA_SEM.length]][claro ? 2 : 1];
+  };
+  const lunesDe = (iso) => { const [y, m, d] = iso.split("-").map(Number); const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); return sumarDia(iso, -((dow + 6) % 7)); };
+  async function cargarSemana() {
+    const lunes = lunesDe($("citaFecha").value || hoyISO()), domingo = sumarDia(lunes, 6);
+    const [rc, rb, rh, rhe] = await Promise.all([
+      db.from("citas").select("*").gte("fecha", lunes).lte("fecha", domingo).neq("estado", "cancelada").order("fecha").order("hora"),
+      db.from("bloqueos").select("*").lte("fecha_ini", domingo).gte("fecha_fin", lunes),
+      horarioSemana.length ? Promise.resolve({ data: horarioSemana }) : db.from("horario").select("*"),
+      db.from("horario_especial").select("*").gte("fecha", lunes).lte("fecha", domingo),
+    ]);
+    if (rc.error) { $("semana").innerHTML = `<div class="ag-cerrado">No se pudieron cargar las citas: ${esc(rc.error.message)}</div>`; return; }
+    citasSemana = rc.data || [];
+    horarioSemana = rh.data || horarioSemana;
+    pintarSemana(lunes, rb.error ? [] : (rb.data || []), rhe.error ? [] : (rhe.data || []));
+  }
+  function pintarSemana(lunes, bloqueos, especiales) {
+    const dias = [...Array(7)].map((_, i) => {
+      const f = sumarDia(lunes, i), [y, m, d] = f.split("-").map(Number), dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+      let h = horarioSemana.find((x) => x.dia === dow);
+      const e = especiales.find((x) => x.fecha === f);
+      if (e) h = e.abierto ? { abierto: true, abre: e.abre, cierra: e.cierra } : { abierto: false };
+      const bloqueoTotal = bloqueos.find((b) => !b.barbero_id && !b.hora_ini && b.fecha_ini <= f && b.fecha_fin >= f);
+      const lista = citasSemana.filter((c) => c.fecha === f);
+      return { f, d, dow, h, bloqueoTotal, lista, cerrado: (!h || !h.abierto || !!bloqueoTotal) && !lista.length };
+    });
+    // Rango de horas: de la hora más temprana que se abre a la más tarde que se cierra en la semana
+    let ini = Infinity, fin = -Infinity;
+    for (const x of dias) {
+      if (x.h?.abierto) { ini = Math.min(ini, aMin(x.h.abre)); fin = Math.max(fin, aMin(x.h.cierra)); }
+      for (const c of x.lista) { ini = Math.min(ini, aMin(c.hora)); fin = Math.max(fin, aMin(c.hora) + c.duracion_min); }
+    }
+    if (!isFinite(ini)) { ini = 600; fin = 1200; }
+    ini = Math.floor(ini / 30) * 30; fin = Math.ceil(fin / 30) * 30;
+    const alto = (fin - ini) * PX;
+    const horas = [];
+    for (let t = ini; t <= fin; t += 30) horas.push(`<span style="top:${(t - ini) * PX}px">${t % 60 ? "" : deMin(t)}</span>`);
+    const NOMBRES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const hoy = hoyISO();
+
+    // Citas encimadas el mismo día se acomodan lado a lado
+    const bloquesDia = (lista) => {
+      const orden = [...lista].sort((a, b) => aMin(a.hora) - aMin(b.hora));
+      const out = []; let grupo = [], finGrupo = -1;
+      const cerrar = () => { const carriles = []; for (const c of grupo) { let k = carriles.findIndex((z) => z <= aMin(c.hora)); if (k < 0) { k = carriles.length; carriles.push(0); } carriles[k] = aMin(c.hora) + c.duracion_min; out.push({ c, k, n: 0 }); }
+        const n = carriles.length; out.slice(-grupo.length).forEach((o) => (o.n = n)); grupo = []; };
+      for (const c of orden) { if (grupo.length && aMin(c.hora) >= finGrupo) cerrar(); grupo.push(c); finGrupo = Math.max(finGrupo, aMin(c.hora) + c.duracion_min); }
+      if (grupo.length) cerrar();
+      return out.map(({ c, k, n }) => {
+        const s = servicio(c.servicio_id), b = barbero(c.barbero_id), top = (aMin(c.hora) - ini) * PX, hgt = Math.max(c.duracion_min * PX - 3, 26);
+        const cls = [c.estado, minutosTarde(c) ? "tarde" : ""].join(" ");
+        return `<button type="button" class="sem-cita ${cls}" data-sem-cita="${c.id}" title="${esc(`${hhmm(c.hora)} · ${c.cliente_nombre} · ${s?.nombre || ""} · ${b ? b.nombre : "Cualquier barbero"}`)}"
+          style="--c:${colorBarbero(c.barbero_id)};top:${top + 1}px;height:${hgt}px;left:calc(${(k / n) * 100}% + 3px);width:calc(${100 / n}% - 6px)">
+          <span class="hh">${hhmm(c.hora)}${c.estado === "llego" ? " ✓" : ""}</span><b>${esc(c.cliente_nombre)}</b>${hgt > 58 ? `<span class="sv">${esc(s?.nombre || "")}</span>` : ""}</button>`;
+      }).join("");
+    };
+
+    // Leyenda: un color por barbero
+    const conCitas = new Set(citasSemana.map((c) => c.barbero_id ?? null));
+    const ley = barberos.filter((b) => b.activo || conCitas.has(b.id)).map((b) => `<span><i style="--c:${colorBarbero(b.id)}"></i>${esc(b.nombre)}</span>`);
+    if (conCitas.has(null) || !ley.length) ley.push(`<span><i style="--c:${colorBarbero(null)}"></i>Cualquier barbero</span>`);
+    $("semLeyenda").innerHTML = ley.join("");
+
+    const pend = citasSemana.filter((c) => c.estado === "agendada").length;
+    $("citaResumen").textContent = `Semana del ${fechaLarga(lunes, { day: "numeric", month: "long" })} al ${fechaLarga(sumarDia(lunes, 6), { day: "numeric", month: "long" })} · ${pend} ${pend === 1 ? "cita pendiente" : "citas pendientes"}`;
+    $("semana").innerHTML = `<div class="agenda" style="grid-template-columns:52px repeat(7, minmax(108px, 1fr))">
+        <div class="sem-cab"></div>
+        ${dias.map((x) => { const n = x.lista.filter((c) => c.estado === "agendada").length;
+          return `<div class="sem-cab${x.f === hoy ? " hoy" : ""}"><div class="d">${NOMBRES[x.dow]}</div><div class="n">${x.d}</div><small>${x.cerrado ? "Cerrado" : n ? (n === 1 ? "1 cita" : n + " citas") : "Libre"}</small></div>`; }).join("")}
+        <div class="ag-horas" style="height:${alto}px">${horas.join("")}</div>
+        ${dias.map((x) => {
+          let linea = "";
+          if (x.f === hoy) { const a = ahoraMin(); if (a >= ini && a <= fin) linea = `<div class="ag-ahora" style="top:${(a - ini) * PX}px"></div>`; }
+          const motivo = x.bloqueoTotal ? (x.bloqueoTotal.motivo || "Bloqueado") : "Cerrado";
+          return `<div class="sem-col${x.cerrado ? " cerrado" : ""}" data-fecha="${x.f}" data-ini="${ini}" data-motivo="${esc(motivo)}" style="height:${alto}px">${bloquesDia(x.lista)}${linea}</div>`;
+        }).join("")}
+      </div>`;
+    // En el celular (cuando no caben los 7 días), arrancar en el día de hoy
+    const caja = $("semana"), colHoy = caja.querySelector(`.sem-col[data-fecha="${hoy}"]`);
+    if (caja._semana !== lunes) { caja._semana = lunes; caja.scrollLeft = colHoy && caja.scrollWidth > caja.clientWidth ? colHoy.offsetLeft - 52 : 0; }
+  }
+  $("semana").addEventListener("click", (e) => {
+    const cb = e.target.closest("[data-sem-cita]");
+    if (cb) return abrirDetalleCita(citasSemana.find((c) => c.id === Number(cb.dataset.semCita)));
+    const col = e.target.closest(".sem-col"); if (!col || col.classList.contains("cerrado")) return;
+    const y = e.clientY - col.getBoundingClientRect().top;
+    abrirNuevaCita({ fecha: col.dataset.fecha, hora: deMin(Number(col.dataset.ini) + Math.floor(y / PX / 30) * 30), barbero: null });
+  });
 
   // Agenda: una columna por barbero, filas cada 30 min
   const PX = 1.6; // píxeles por minuto (48 px cada media hora)
@@ -3272,8 +3406,9 @@
 
   $("citaFecha").onchange = cargarCitas;
   $("citaVerTodas").onchange = cargarCitas;
-  $("citaAntes").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), -1); cargarCitas(); };
-  $("citaDespues").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), 1); cargarCitas(); };
+  // En la semana, las flechas brincan de semana en semana
+  $("citaAntes").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), vistaCitas === "semana" ? -7 : -1); cargarCitas(); };
+  $("citaDespues").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), vistaCitas === "semana" ? 7 : 1); cargarCitas(); };
   $("citaHoy").onclick = () => { $("citaFecha").value = hoyISO(); cargarCitas(); };
   $("citaVista").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]"); if (!b) return;
@@ -3281,6 +3416,10 @@
     $("citaVista").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     $("agenda").classList.toggle("hidden", vistaCitas !== "agenda");
     $("listaCitasBox").classList.toggle("hidden", vistaCitas !== "lista");
+    $("semanaBox").classList.toggle("hidden", vistaCitas !== "semana");
+    $("citaAntes").setAttribute("aria-label", vistaCitas === "semana" ? "Semana anterior" : "Día anterior");
+    $("citaDespues").setAttribute("aria-label", vistaCitas === "semana" ? "Semana siguiente" : "Día siguiente");
+    cargarCitas();
   });
 
   // ---------- Acciones sobre una cita ----------
@@ -3607,7 +3746,7 @@
     if (a === "bloqueo") { irA("citas"); abrirBloqueo(); }
     if (a === "venta") { irA("hoy"); $("btnVenta").click(); }
   });
-  setInterval(() => { if (!document.hidden && visible("inicio")) cargarInicio(); if (!document.hidden && visible("citas")) pintarAgenda($("citaFecha").value); }, 60000);
+  setInterval(() => { if (!document.hidden && visible("inicio")) cargarInicio(); if (!document.hidden && visible("citas")) { if (vistaCitas === "semana") cargarSemana(); else pintarAgenda($("citaFecha").value); } }, 60000);
 
   // =========================================================
   //  Calendario de apertura (requiere supabase/09_calendario.sql)
@@ -4031,7 +4170,7 @@
       ["#btnNuevaCita", "+ Cita", "Para apartarle a quien te llama o te escribe. Pones nombre, teléfono, servicio, barbero, día y hora. Solo te deja elegir horas que estén libres."],
       ["#btnBloquear", "Bloquear horario", "Para que nadie aparte en un rato: la comida, una salida o el día libre de un barbero. Los clientes ya no verán esas horas."],
       ["#tab-citas .fila:has(#citaFecha)", "Cambiar de día", "Las flechas ‹ › pasan al día anterior o al siguiente. Toca la fecha para elegir cualquier día. «Hoy» te regresa a hoy."],
-      ["#citaVista", "Agenda o lista", "«Agenda» muestra las horas por barbero, como un cuaderno. «Lista» las pone una debajo de otra, y ahí puedes ver también las canceladas."],
+      ["#citaVista", "Semana, día o lista", "«Semana» muestra los 7 días con cada cita a su hora, del color de su barbero. «Día» pone una columna por barbero. «Lista» las pone una debajo de otra, y ahí ves también las canceladas."],
       ["#agenda", "La agenda", "Cada columna es un barbero y cada renglón una hora. Toca un espacio vacío para apartar ahí mismo."],
       ["#agenda", "Toca una cita", "Ves sus datos y puedes: «Llegó» (pasa a la fila), «Mover» (cambiar día u hora), escribirle por WhatsApp o cancelarla."],
       ["#listaBloqueos", "Bloqueos próximos", "Los ratos que bloqueaste. Si cambias de planes, quítalo y esas horas se vuelven a abrir."],
