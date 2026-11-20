@@ -335,9 +335,6 @@
       .tabla-cards.pago td.pagar::before { margin: 0; font-size: .875rem; color: var(--text); }
       .tabla-cards.pago td.pagar, .tabla-cards.pago td.pagar b { font-size: 1.125rem; font-weight: 800; color: var(--oro-2); }
       .tabla-cards .sin-movil { display: none; }
-      #listaHorario .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); margin-top: 0 !important; }
-      #listaHorario .fila:last-child { border-bottom: 0; }
-      #listaHorario .fila > label { grid-column: 1 / -1; flex: none !important; }
     }
     @media (max-width: 768px) {
       /* Indica que hay más pestañas a la derecha */
@@ -441,20 +438,47 @@
       .tabs button[aria-selected="true"] .cuenta { background: var(--warn); color: #1a1206; }
     }
 
+    /* ===== Horario: pasos numerados y tabla de la semana ===== */
+    .h-paso { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .h-paso > span { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: var(--accent-ink); font-weight: 700; font-size: .8125rem; margin-top: 1px; }
+    .h-paso > div { flex: 1; min-width: 0; }
+    .h-paso h2 { margin: 0; }
+    .h-paso p { margin: 2px 0 0; }
+    @media (max-width: 620px) { .h-paso { flex-wrap: wrap; } .h-paso > button { margin-left: 30px; padding: 4px 8px; } }
+    .hsem-wrap { overflow-x: auto; margin: 0 -4px; }
+    .hsem { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    .hsem th, .hsem td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    .hsem tbody tr:last-child th, .hsem tbody tr:last-child td { border-bottom: 0; }
+    .hsem thead th { font-size: .75rem; font-weight: 600; color: var(--muted); }
+    .hsem thead th i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: 0; }
+    .hsem tbody th { font-weight: 600; width: 56px; position: sticky; left: 0; background: var(--surface); z-index: 1; }
+    .hsem .tienda { display: flex; align-items: center; gap: 6px; }
+    .hsem .tienda input[type="time"] { width: 92px; padding: 5px 6px; font-size: .875rem; border-radius: 8px; min-height: 0; }
+    .hsem .tienda input[type="checkbox"] { width: 18px; height: 18px; margin: 0 4px 0 0; accent-color: var(--ok); flex: none; }
+    .hsem .tienda .cerr { color: var(--muted); }
+    .hsem tr.cerrado th { color: var(--muted); }
+    .hsem .tb { min-height: 0; padding: 5px 10px; border-radius: 8px; font-size: .8125rem; font-weight: 500; width: 100%; text-align: left;
+      background: color-mix(in srgb, var(--c) 14%, transparent); border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); color: var(--text); }
+    .hsem .tb:hover { border-color: var(--c); }
+    .hsem .tb.descansa { background: transparent; border-style: dashed; color: var(--muted); }
+    .hsem .tb.nada { background: transparent; border-color: transparent; color: var(--muted); cursor: default; }
+
     /* ===== Calendario de apertura ===== */
     .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-    .cal-cab h2 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 1.75rem; letter-spacing: .01em; }
+    .cal-cab h2 { font-family: var(--display); font-weight: 700; text-transform: capitalize; font-size: 1.125rem; letter-spacing: 0; }
     .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
     .cal .sem { text-align: center; font-size: .75rem; color: var(--muted); padding: 4px 0; }
-    .cal-dia { position: relative; min-height: 76px; padding: 8px; border-radius: 12px; text-align: left; display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+    .cal-dia { position: relative; min-height: 54px; padding: 6px 8px; border-radius: 10px; text-align: left; display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
       background: color-mix(in srgb, var(--oro) 8%, transparent); border: 1px solid color-mix(in srgb, var(--oro) 25%, transparent); color: var(--text); font-weight: 400; transition: transform 100ms ease-out, border-color .15s; }
     .cal-dia:hover { border-color: color-mix(in srgb, var(--oro) 60%, transparent); }
-    .cal-dia .n { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1; }
+    .cal-dia .n { font-family: var(--display); font-weight: 700; font-size: 1.125rem; line-height: 1; }
+    .cal-dia:not(.especial):not(.cerrado) .hr { display: none; }   /* el horario normal ya está arriba */
     .cal-dia .hr { font-size: .75rem; color: var(--oro-2); font-variant-numeric: tabular-nums; }
     .cal-dia .ct { position: absolute; top: 8px; right: 8px; font-size: .6875rem; color: var(--muted); }
-    .cal-dia.especial { background: color-mix(in srgb, var(--oro) 18%, transparent); border-color: var(--oro); }
+    .cal-dia { background: color-mix(in srgb, var(--oro) 5%, transparent) !important; border-color: color-mix(in srgb, var(--oro) 18%, transparent); }
+    .cal-dia.especial { background: color-mix(in srgb, var(--oro) 20%, transparent) !important; border-color: var(--oro); }
     .cal-dia.especial::after { content: "★"; position: absolute; bottom: 6px; right: 8px; font-size: .75rem; color: var(--oro); }
-    .cal-dia.cerrado { background: rgba(143,29,29,.18); border-color: rgba(143,29,29,.5); }
+    .cal-dia.cerrado { background: rgba(143,29,29,.16) !important; border-color: rgba(143,29,29,.5); }
     .cal-dia.cerrado .hr { color: color-mix(in srgb, var(--bad) 75%, var(--text)); }
     .cal-dia.pasado { opacity: .35; pointer-events: none; }
     .cal-dia.hoy .n { color: var(--oro); }
@@ -1096,18 +1120,14 @@
     <!-- Ajustes -->
     <section id="tab-horario" class="hidden">
       <h1 class="page-title">Horario</h1>
-      <p class="muted" style="margin:-6px 0 16px">Lo que marques aquí es lo que ven los clientes en su calendario para agendar y tomar turno.</p>
-      <div class="card publicar">
-        <div class="publicar-txt">
-          <h2>Publicar en WhatsApp</h2>
-          <p class="muted small" style="margin:4px 0 0">La página web se actualiza sola. La imagen de hoy ya está lista: tócala y elige «Mi estado».</p>
-        </div>
-        <div class="publicar-botones">
-          <button type="button" class="wa-btn" id="btnPublicarHoy"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar hoy en mi Estado</button>
-          <button type="button" class="ghost" id="btnPublicarHorario">Otro día o estilo</button>
-        </div>
-      </div>
+      <p class="muted" style="margin:-6px 0 16px">Lo que pongas aquí es lo que ven los clientes al agendar y al tomar turno.</p>
       <div class="card">
+        <div class="h-paso"><span>1</span><div><h2>Cada semana</h2><p class="muted small">El horario que se repite. Tócale a un barbero para cambiar su turno.</p></div>
+          <button class="ghost solo-admin" id="hIgualLunes" title="Pone el horario del lunes en todos los días abiertos">Igual que el lunes</button></div>
+        <div class="hsem-wrap"><div id="listaHorario"></div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="h-paso"><span>2</span><div><h2>Días diferentes</h2><p class="muted small">Festivos, vacaciones o un día con otro horario. Solo se marcan los días que cambian.</p></div></div>
         <div class="cal-cab">
           <button id="calAntes" aria-label="Mes anterior">‹</button>
           <h2 id="calTitulo"></h2>
@@ -1115,11 +1135,11 @@
         </div>
         <div id="calendario" class="cal"></div>
         <div class="cal-ley">
-          <span><i style="background:color-mix(in srgb, var(--oro) 25%, transparent)"></i>Abierto (horario normal)</span>
-          <span><i style="background:var(--oro)"></i>Horario especial ★</span>
+          <span><i style="background:color-mix(in srgb, var(--oro) 12%, transparent);border:1px solid color-mix(in srgb, var(--oro) 30%, transparent)"></i>Horario normal</span>
+          <span><i style="background:var(--oro)"></i>Horario diferente ★</span>
           <span><i style="background:rgba(143,29,29,.6)"></i>Cerrado</span>
         </div>
-        <p class="footnote" style="margin:10px 0 0">Toca uno o varios días para cambiarles el horario o cerrarlos. Los números en la esquina son las citas apartadas.</p>
+        <p class="footnote" style="margin:10px 0 0">Toca uno o varios días para darles otro horario o cerrarlos. El número chico es cuántas citas hay ese día.</p>
         <div id="calBarra" class="cal-barra hidden">
           <b id="calSel"></b>
           <button class="primary" id="calAbrir">Horario y quién trabaja…</button>
@@ -1128,15 +1148,15 @@
           <button class="ghost" id="calLimpiar">Quitar selección</button>
         </div>
       </div>
-      <div class="card" style="margin-top:16px">
-        <h2>Turnos de los barberos</h2>
-        <p class="muted small" style="margin:6px 0 4px">Si alguno trabaja solo en la mañana o en la tarde, ponle su turno. Las citas con él solo se apartan dentro de su turno.</p>
-        <div id="listaTurnos"></div>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <h2>Horario normal de la semana</h2>
-        <p class="muted small" style="margin:6px 0 4px">Es el horario de todos los días que no cambies en el calendario. Las citas se apartan cada 30 minutos.</p>
-        <div id="listaHorario"></div>
+      <div class="card publicar" style="margin-top:16px">
+        <div class="publicar-txt">
+          <h2>Publicar en WhatsApp</h2>
+          <p class="muted small" style="margin:4px 0 0">La página web se actualiza sola. La imagen de hoy ya está lista: tócala y elige «Mi estado».</p>
+        </div>
+        <div class="publicar-botones">
+          <button type="button" class="wa-btn" id="btnPublicarHoy"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4 5.2 5.2 0 0 0 3.2.6 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Publicar hoy en mi Estado</button>
+          <button type="button" class="ghost" id="btnPublicarHorario">Otro día o estilo</button>
+        </div>
       </div>
     </section>
 
@@ -1823,7 +1843,7 @@
     TABS.forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== tab));
     window.scrollTo(0, 0);
     if (tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
-    if (tab === "horario") { pintarHorario(); pintarTurnos(); cargarCalendario(); prepararHoy(); }
+    if (tab === "horario") { pintarHorario(); cargarCalendario(); prepararHoy(); }
     if (tab === "citas") cargarCitas();
     if (tab === "ajustes" && esAdmin()) { pintarRespaldo(); cargarLealtad(); }
     if (tab === "corte") cargarCorte();
@@ -4252,17 +4272,37 @@
   async function pintarHorario() {
     const { data, error } = await db.from("horario").select("*").order("dia");
     if (error) { $("listaHorario").innerHTML = '<p class="muted small">Ejecuta <b>supabase/07_citas.sql</b> para activar las citas.</p>'; return; }
-    const orden = [1, 2, 3, 4, 5, 6, 0]; // lunes primero
-    $("listaHorario").innerHTML = orden.map((d) => {
-      const h = data.find((x) => x.dia === d); if (!h) return "";
-      return `<div class="fila" style="margin-top:8px;flex-wrap:wrap" data-dia="${d}">
-        <label style="margin:0;font-weight:500;flex:0 0 130px;display:flex;align-items:center;gap:8px">
-          <input type="checkbox" data-h="abierto" ${h.abierto ? "checked" : ""}> ${DIAS[d]}</label>
-        <input type="time" step="1800" data-h="abre" value="${hhmm(h.abre)}" ${h.abierto ? "" : "disabled"} aria-label="Abre">
-        <input type="time" step="1800" data-h="cierra" value="${hhmm(h.cierra)}" ${h.abierto ? "" : "disabled"} aria-label="Cierra">
-      </div>`;
-    }).join("");
+    horarioSemana = data;
+    const orden = [1, 2, 3, 4, 5, 6, 0];   // lunes primero
+    const equipo = barberos.filter((b) => b.activo);
+    const admin = esAdmin();
+    const celdaBarbero = (b, h) => {
+      if (!h.abierto) return `<td><span class="tb nada">—</span></td>`;
+      const t = turnoDia(b, h.dia);
+      const txt = !t ? "Descansa" : t.entra ? `${t.entra}–${t.sale}` : "Todo el día";
+      return `<td><button type="button" class="tb${t ? "" : " descansa"}" style="--c:${colorBarbero(b.id)}" ${admin ? `data-turno="${b.id}"` : "disabled"} title="${admin ? "Cambiar el turno de " + esc(b.nombre) : ""}">${txt}</button></td>`;
+    };
+    $("listaHorario").innerHTML = `<table class="hsem">
+      <thead><tr><th>Día</th><th>Barbería</th>${equipo.map((b) => `<th><i style="--c:${colorBarbero(b.id)}"></i>${esc(b.nombre)}</th>`).join("")}</tr></thead>
+      <tbody>${orden.map((d) => {
+        const h = data.find((x) => x.dia === d); if (!h) return "";
+        return `<tr data-dia="${d}" class="${h.abierto ? "" : "cerrado"}"><th>${DIAS_C[d]}</th>
+          <td><div class="tienda"><input type="checkbox" data-h="abierto" ${h.abierto ? "checked" : ""} ${admin ? "" : "disabled"} aria-label="Abre el ${DIAS[d]}" title="Abierto">
+            ${h.abierto ? `<input type="time" step="1800" data-h="abre" value="${hhmm(h.abre)}" ${admin ? "" : "disabled"} aria-label="Abre"><span class="muted">–</span><input type="time" step="1800" data-h="cierra" value="${hhmm(h.cierra)}" ${admin ? "" : "disabled"} aria-label="Cierra">` : `<span class="cerr">Cerrado</span>`}</div></td>
+          ${equipo.map((b) => celdaBarbero(b, h)).join("")}</tr>`;
+      }).join("")}</tbody></table>
+      ${equipo.length ? "" : `<p class="muted small" style="margin:8px 4px 0">Agrega a tus barberos en <b>Equipo</b> para ver aquí sus turnos.</p>`}`;
   }
+  // Pone el horario del lunes en todos los días que abren
+  $("hIgualLunes").onclick = async () => {
+    const l = horarioSemana.find((x) => x.dia === 1);
+    if (!l?.abierto) return toast("Primero pon el horario del lunes (y que esté abierto).");
+    if (!confirm(`¿Poner ${hhmm(l.abre)}–${hhmm(l.cierra)} en todos los días que abres?`)) return;
+    const { error } = await db.from("horario").update({ abre: l.abre, cierra: l.cierra }).eq("abierto", true).neq("dia", 1);
+    if (error) return toast("No se pudo: " + error.message, { tipo: "error" });
+    toast("Listo: todos los días abren igual que el lunes", { accion: { texto: "Publicar en WhatsApp", fn: publicarHorario } });
+    pintarHorario(); horarioSemana = []; cargarCalendario(); prepararHoy();
+  };
   $("listaHorario").addEventListener("change", async (e) => {
     const fila = e.target.closest("[data-dia]"); const f = e.target.dataset.h; if (!fila || !f) return;
     const valor = f === "abierto" ? e.target.checked : e.target.value;
@@ -4299,16 +4339,9 @@
     const txt = grupos.filter(Boolean).map((g) => `${DIAS_C[g.ini]}${g.ini !== g.fin ? " a " + DIAS_C[g.fin] : ""} ${g.h}`).join(" · ");
     return txt || "Sin días de trabajo";
   }
-  async function pintarTurnos() {
-    const cont = $("listaTurnos"); if (!cont) return;
-    const lista = barberos.filter((b) => b.activo);
-    cont.innerHTML = lista.length ? lista.map((b) => `<div class="prox" style="align-items:center">
-        <div class="avatar">${esc(b.nombre.trim()[0]?.toUpperCase() || "?")}</div>
-        <div style="flex:1;min-width:0"><b>${esc(b.nombre)}</b><div class="muted small">${esc(turnoTxt(b))}</div></div>
-        ${esAdmin() ? `<button data-turno="${b.id}">Cambiar</button>` : ""}</div>`).join("")
-      : `<p class="muted small">Primero agrega a tus barberos en <b>Equipo</b>.</p>`;
-  }
-  $("listaTurnos").addEventListener("click", (e) => {
+  // Los turnos ahora viven en la tabla de la semana (pestaña Horario)
+  const pintarTurnos = () => pintarHorario();
+  $("listaHorario").addEventListener("click", (e) => {
     const bt = e.target.closest("[data-turno]"); if (bt) abrirTurno(barbero(Number(bt.dataset.turno)), pintarTurnos);
   });
   // Editor: «igual que la barbería» o su propio horario por día, con atajos de mañana / tarde
@@ -4570,10 +4603,10 @@
       ["#tab-horario .cal-cab", "Cambiar de mes", "Con las flechas ves el mes anterior o el siguiente."],
       ["#calendario", "Días especiales", "Toca uno o varios días. Abajo salen los botones para cerrarlos (festivos, vacaciones), o darles otro horario y elegir quién trabaja y a qué hora. «Volver al normal» los regresa como estaban."],
       ["#tab-horario .cal-ley", "Los colores", "Azul: horario normal. Dorado con ★: horario especial. Rojo: cerrado. El número en la esquina son las citas apartadas ese día."],
-      ["#listaTurnos", "Turnos de los barberos", "Aquí ves el horario de cada barbero. Si uno trabaja solo en la mañana o en la tarde, ponle su turno: las citas con él solo se apartan dentro de su turno."],
-      ["#listaTurnos [data-turno]", "Cambiar el turno", "Toca «Cambiar». Elige «Su propio horario», palomea los días que viene y escribe a qué hora entra y sale. Los botones Mañana y Tarde llenan las horas solos."],
+      ["#listaHorario", "Turnos de los barberos", "En la tabla ves el horario de cada barbero. Si uno trabaja solo en la mañana o en la tarde, ponle su turno: las citas con él solo se apartan dentro de su turno."],
+      ["#listaHorario [data-turno]", "Cambiar el turno", "Toca la casilla del barbero. Elige «Su propio horario», palomea los días que viene y escribe a qué hora entra y sale. Los botones Mañana y Tarde llenan las horas solos."],
       ["#calendario", "Un día distinto", "¿Un día cambia quién viene? Toca ese día en el calendario y luego «Horario y quién trabaja…». Ahí palomeas a quién viene ese día y a qué hora. Solo cambia ese día."],
-      ["#listaHorario", "Horario de cada semana", "Palomea los días que abres y escribe a qué hora abres y cierras. Se repite todas las semanas; para un día distinto usa el calendario."],
+      ["#listaHorario .tienda", "Horario de cada semana", "Palomea los días que abres y escribe a qué hora abres y cierras. Se repite todas las semanas; para un día distinto usa el calendario."],
     ],
     equipo: () => [
       [null, "Equipo", "Tus barberos: sus cuentas para entrar al panel, sus comisiones y sus números."],
