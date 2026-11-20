@@ -41,12 +41,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -741,6 +741,57 @@ prueba("Una cuenta sin rol no puede activar avisos", !!(await error(`select guar
 await db.exec(`set role anon`);
 await como(null);
 prueba("Un cliente (sin sesión) tampoco", !!(await error(`select guardar_suscripcion($1, 'BPclave-publica-del-cel', 'secreto-auth-16b')`, [EP])));
+await db.exec(`reset role`);
+
+seccion("RECORDATORIOS Y «CONFIRMAR ASISTENCIA»");
+await db.exec(`reset role`);
+await como(null);
+await reloj("2026-12-07 10:00");   // lunes
+const rCita = await uno(`select agendar_cita('Rita Paz','5577777101',${CORTE},1,'2026-12-08','12:00')`);
+prueba("Se agenda una cita para mañana", !!rCita?.token, JSON.stringify(rCita));
+let ec2 = await uno(`select estado_cita($1)`, [rCita.token]);
+prueba("Recién agendada: sin confirmar y sin aviso al celular", ec2.confirmada === false && ec2.aviso_celular === false, JSON.stringify(ec2));
+await db.exec(`set role anon`);
+prueba("El cliente confirma su asistencia con su enlace", (await uno(`select confirmar_cita($1)`, [rCita.token])) === true);
+prueba("Un enlace inventado no confirma nada", (await uno(`select confirmar_cita(gen_random_uuid())`)) === false);
+prueba("El cliente pide aviso en su celular", (await uno(`select suscribir_cita($1, 'https://fcm.googleapis.com/fcm/send/cli-1', 'BPclave-publica-cliente', 'secreto-auth-cli')`, [rCita.token])) === true);
+prueba("Una dirección que no es https se rechaza", !!(await error(`select suscribir_cita($1, 'http://malo.com/x', 'BPclave-publica-cliente', 'secreto-auth-cli')`, [rCita.token])));
+prueba("Un cliente no puede leer los celulares guardados", !!(await error(`select * from cita_push`)) || (await q(`select * from cita_push`)).length === 0);
+ec2 = await uno(`select estado_cita($1)`, [rCita.token]);
+prueba("Su cita ya dice confirmada y con aviso al celular", ec2.confirmada === true && ec2.aviso_celular === true, JSON.stringify(ec2));
+await db.exec(`reset role`);
+
+// La revisión de cada 10 minutos solo llama a la función cuando toca
+await db.exec(`delete from net.llamadas`);
+await reloj("2026-12-07 10:00");   // faltan 26 h
+await db.exec(`select _lanzar_recordatorios()`);
+prueba("A 26 horas de la cita todavía no se manda nada", (await uno(`select count(*)::int from net.llamadas`)) === 0);
+await reloj("2026-12-07 12:05");   // faltan ~24 h
+await db.exec(`select _lanzar_recordatorios()`);
+let llR = await uno(`select body from net.llamadas order by id desc limit 1`);
+prueba("A 24 horas se pide mandar el recordatorio", llR?.tipo === "recordatorios", JSON.stringify(llR));
+await db.exec(`update citas set aviso24_en = now() where token = '${rCita.token}'`);
+await db.exec(`delete from net.llamadas`);
+await reloj("2026-12-08 08:00");   // faltan 4 h, el de 24 h ya se mandó
+await db.exec(`select _lanzar_recordatorios()`);
+prueba("Ya mandado el del día anterior, no se repite", (await uno(`select count(*)::int from net.llamadas`)) === 0);
+await reloj("2026-12-08 10:05");   // faltan ~2 h
+await db.exec(`select _lanzar_recordatorios()`);
+prueba("A 2 horas se pide el segundo aviso", (await uno(`select count(*)::int from net.llamadas`)) === 1);
+
+// Si se mueve la cita, los avisos se reinician
+await db.exec(`update citas set aviso2_en = now(), recordada_en = now() where token = '${rCita.token}'`);
+await db.exec(`set role authenticated`);
+await como(ADMIN);
+await q(`update citas set hora = '13:00' where token = $1`, [rCita.token]);
+await db.exec(`reset role`);
+await como(null);
+const tras = (await q(`select aviso24_en, aviso2_en, recordada_en, confirmada_en from citas where token = $1`, [rCita.token]))[0];
+prueba("Al mover la cita, los avisos se vuelven a mandar con la hora nueva", tras.aviso24_en === null && tras.aviso2_en === null && tras.recordada_en === null, JSON.stringify(tras));
+prueba("…y la confirmación del cliente se conserva", tras.confirmada_en !== null);
+await reloj("2026-12-08 13:30");
+await db.exec(`set role anon`);
+prueba("Una cita que ya pasó no se puede confirmar", (await uno(`select confirmar_cita($1)`, [rCita.token])) === false);
 await db.exec(`reset role`);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);

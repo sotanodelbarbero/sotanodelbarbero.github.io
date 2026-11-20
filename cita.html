@@ -121,6 +121,10 @@
     .otra-cita span { color: var(--muted); font-size: 1.25rem; line-height: 0; }
     .otra-cita.mini { width: auto; padding: 6px 12px; border-radius: 999px; font-size: .875rem; color: var(--oro-2); border-color: rgba(212,166,74,.45); }
     .btn-siguiente { display: block; margin: 12px auto 0; padding: 10px 18px; border-radius: 999px; background: var(--oro); color: #1a1206; font-weight: 600; border: 0; }
+    /* Confirmación y aviso al celular */
+    .ya-confirmada, .aviso-cel { text-align: center; padding: 13px 14px; border: 1px solid var(--line); font-size: .9375rem; }
+    .ya-confirmada { color: var(--ok); font-weight: 600; }
+    .aviso-cel { color: var(--muted); }
     /* Llegada */
     .btn-llegue { display: flex !important; align-items: center; justify-content: center; gap: 10px; min-height: 56px; font-size: 1.125rem !important; }
     .aviso-llegada { margin-top: 16px; padding: 12px 14px; border-radius: 14px; font-size: .9375rem; line-height: 1.4; text-align: left;
@@ -589,11 +593,13 @@
           <div class="turno-num">${hora12(d.hora).replace(/ (am|pm)$/, "")}<span style="font-size:.3em;margin-left:.15em">${hora12(d.hora).slice(-2)}</span></div>
           ${filas}
           ${avisoLlegada}
-          ${recienAgendada && num ? `<div class="ultimo-paso"><b>Último paso:</b> manda tu confirmación por WhatsApp para que la barbería tenga tus datos.</div>` : ""}
+          ${recienAgendada && num ? `<div class="ultimo-paso"><b>Último paso:</b> manda tus datos por WhatsApp para que la barbería los tenga.</div>` : ""}
           <p class="muted small" style="margin:16px 0 0">Llega 5 minutos antes. Si no puedes venir, cancela aquí para liberar el lugar.</p>`;
         acc.innerHTML = `
           ${d.puede_llegar ? `<button class="big btn-oro btn-llegue" id="btnLlegue">${ICO.llegue}Ya llegué</button><div class="error" id="errLlegue" role="alert"></div>` : ""}
-          ${num ? `<a class="big btn-wa" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "confirmar")))}">${ICONO_WA}Confirmar por WhatsApp</a>` : ""}
+          ${d.cancelable ? (d.confirmada ? `<div class="ya-confirmada">✓ Confirmaste tu asistencia</div>` : `<button class="big btn-oro" id="btnConfirmar">Confirmar asistencia</button><div class="error" id="errConfirmar" role="alert"></div>`) : ""}
+          ${d.cancelable && pushPosible() ? (d.aviso_celular && avisoEnEste(c.token) ? `<div class="aviso-cel">Te avisaremos en este celular un día antes y 2 horas antes de tu cita.</div>` : `<button class="big" id="btnAvisame">Recordármelo en este celular</button><div class="error" id="errAvisame" role="alert"></div>`) : ""}
+          ${num ? `<a class="big btn-wa" target="_blank" rel="noopener" href="${esc(enlaceWa(num, mensajeCita(d, "confirmar")))}">${ICONO_WA}Enviar mis datos por WhatsApp</a>` : ""}
           <div class="guardar-t">Guarda tu cita</div>
           <div class="guardar">
             <a href="${esc(enlaceGoogle(d))}" target="_blank" rel="noopener">${ICO.google}Google Calendar</a>
@@ -606,6 +612,8 @@
         $("btnCalendario").onclick = () => calendario(d);
         $("btnCopiar").onclick = copiarEnlace;
         if ($("btnLlegue")) $("btnLlegue").onclick = llegue;
+        if ($("btnConfirmar")) $("btnConfirmar").onclick = confirmarAsistencia;
+        if ($("btnAvisame")) $("btnAvisame").onclick = activarAvisoCita;
         if ($("btnCancelar")) $("btnCancelar").onclick = cancelar;
       }
       // Sus otras citas y la opción de agendar otra
@@ -617,6 +625,41 @@
       acc.querySelectorAll(".otra-cita").forEach((b) => (b.onclick = () => abrirCita(b.dataset.token)));
       const mas = $("btnOtraMas"); if (mas) mas.onclick = () => { guardar("cita", null); irAlFormulario(); };
       const otra = $("btnOtra"); if (otra) otra.onclick = () => { guardar("cita", null); irAlFormulario(); };
+    }
+
+    // ---------- Confirmar asistencia ----------
+    async function confirmarAsistencia() {
+      const btn = $("btnConfirmar"), c = leer("cita");
+      btn.disabled = true; btn.textContent = "Confirmando…";
+      const { data, error } = await db.rpc("confirmar_cita", { p_token: c.token });
+      if (error || !data) { btn.disabled = false; btn.textContent = "Confirmar asistencia"; $("errConfirmar").textContent = "No se pudo confirmar. Revisa tu conexión e inténtalo otra vez."; return; }
+      try { navigator.vibrate?.(20); } catch {}
+      verCita();
+    }
+
+    // ---------- Recordatorio en el celular (notificación push un día antes y 2 h antes) ----------
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const instalada = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    // En iPhone los avisos solo funcionan con la página en la pantalla de inicio: ahí no se ofrece
+    const pushPosible = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && (!esIOS || instalada) && Notification.permission !== "denied";
+    const avisoEnEste = (token) => { try { return (JSON.parse(localStorage.getItem("avisos-cita") || "[]")).includes(token); } catch { return false; } };
+    const b64uA = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (ch) => ch.charCodeAt(0));
+    async function activarAvisoCita() {
+      const btn = $("btnAvisame"), c = leer("cita"), err = $("errAvisame");
+      btn.disabled = true; btn.textContent = "Activando…";
+      const fallo = (m) => { btn.disabled = false; btn.textContent = "Recordármelo en este celular"; err.textContent = m; };
+      try {
+        if (await Notification.requestPermission() !== "granted") return fallo("Para avisarte, permite las notificaciones de esta página.");
+        const r = await db.functions.invoke("avisos", { body: { accion: "clave_publica" } });
+        if (r.error || !r.data?.clave) return fallo("Por ahora no se pueden activar los avisos. Guarda tu cita en el calendario.");
+        const reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+        const sus = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uA(r.data.clave) });
+        const j = sus.toJSON();
+        const { data, error } = await db.rpc("suscribir_cita", { p_token: c.token, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+        if (error || !data) return fallo("No se pudo activar el aviso. Inténtalo otra vez.");
+        try { const l = JSON.parse(localStorage.getItem("avisos-cita") || "[]"); if (!l.includes(c.token)) l.push(c.token); localStorage.setItem("avisos-cita", JSON.stringify(l.slice(-10))); } catch {}
+        verCita();
+      } catch (e) { fallo("No se pudo activar el aviso en este celular."); }
     }
 
     // "Ya llegué": entra a la fila con la prioridad de su cita y pasa a ver su turno

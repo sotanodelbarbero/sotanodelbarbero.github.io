@@ -2,8 +2,9 @@
 //  Función "avisos": manda notificaciones al celular de los barberos.
 //
 //  La llama la base de datos cuando se agenda, cancela o mueve una cita
-//  (ver supabase/15_notificaciones.sql), y el panel para «Activar avisos»
-//  y «Probar».
+//  (ver supabase/15_notificaciones.sql), cada 10 minutos para los
+//  recordatorios a clientes (16_recordatorios.sql), y el panel para
+//  «Activar avisos» y «Probar».
 //
 //  Cómo instalarla (una sola vez, después de ejecutar 15_notificaciones.sql):
 //  Supabase → Edge Functions → Deploy a new function → Via Editor,
@@ -25,7 +26,8 @@ const CORS = {
 const responder = (cuerpo, estado = 200) =>
   new Response(JSON.stringify(cuerpo), { status: estado, headers: { ...CORS, "Content-Type": "application/json" } });
 const ZONA = "America/Mexico_City";
-const PANEL = "https://sotanodelbarbero.github.io/panel.html";
+const SITIO = "https://sotanodelbarbero.github.io";
+const PANEL = SITIO + "/panel.html";
 
 // ---- WEBPUSH:INICIO ---- (Web Push estándar con WebCrypto: RFC 8291 y RFC 8292)
 const te = new TextEncoder();
@@ -137,7 +139,7 @@ Deno.serve(async (req) => {
     const contacto = "https://sotanodelbarbero.github.io";
 
     // Manda a una lista de suscripciones y borra las que ya no existen
-    async function mandar(subs, mensaje) {
+    async function mandar(subs, mensaje, tabla = "push_suscripciones") {
       let enviados = 0, fallidos = 0;
       await Promise.all(subs.map(async (s) => {
         try {
@@ -145,7 +147,7 @@ Deno.serve(async (req) => {
           if (st >= 200 && st < 300) enviados++;
           else {
             fallidos++;
-            if (st === 404 || st === 410) await sb.from("push_suscripciones").delete().eq("id", s.id);
+            if (st === 404 || st === 410) await sb.from(tabla).delete().eq("id", s.id);
             else console.log("aviso rechazado", st, new URL(s.endpoint).host);
           }
         } catch (e) { fallidos++; console.log("aviso falló", String(e)); }
@@ -158,6 +160,43 @@ Deno.serve(async (req) => {
     if (secreto) {
       const { data: bueno } = await sb.rpc("ajuste_privado", { p_clave: "avisos_secreto" });
       if (!bueno || secreto !== bueno) return responder({ error: "No autorizado" }, 401);
+
+      // ----- Recordatorios a clientes: ~24 h antes y 2 h antes de su cita -----
+      if (cuerpo.tipo === "recordatorios") {
+        const hoy = hoyLocal(), pasado = new Date(Date.parse(hoy + "T12:00:00Z") + 2 * 864e5).toISOString().slice(0, 10);
+        const { data: lista, error: eL } = await sb.from("citas")
+          .select("id,fecha,hora,token,servicio_id,barbero_id,aviso24_en,aviso2_en,cita_push(*)")
+          .eq("estado", "agendada").eq("aviso_celular", true).gte("fecha", hoy).lte("fecha", pasado);
+        if (eL) return responder({ error: eL.message }, 500);
+        const [{ data: servs }, { data: barbs }] = await Promise.all([
+          sb.from("servicios").select("id,nombre"), sb.from("barberos").select("id,nombre"),
+        ]);
+        let enviados = 0, fallidos = 0, revisadas = 0;
+        for (const c of lista || []) {
+          const subs = c.cita_push || [];
+          if (!subs.length) continue;
+          // México no cambia de horario desde 2022: la hora de la cita es UTC−6
+          const faltan = (Date.parse(`${c.fecha}T${String(c.hora).slice(0, 5)}:00-06:00`) - Date.now()) / 60000;
+          if (faltan <= 0) continue;
+          const serv = servs?.find((x) => x.id === c.servicio_id)?.nombre || "tu servicio";
+          const con = barbs?.find((x) => x.id === c.barbero_id)?.nombre;
+          const url = `${SITIO}/cita.html?c=${c.token}`;
+          let mensaje = null, marca = null;
+          if (!c.aviso2_en && faltan <= 130) {
+            mensaje = { title: `Tu cita es a las ${String(c.hora).slice(0, 5)}`, body: `${serv}${con ? " con " + con : ""}. Te esperamos; si ya no puedes venir, cancélala aquí.`, tag: `recordatorio-${c.id}`, url };
+            marca = { aviso2_en: new Date().toISOString(), aviso24_en: c.aviso24_en || new Date().toISOString() };
+          } else if (!c.aviso24_en && faltan > 130 && faltan <= 24 * 60 + 10) {
+            mensaje = { title: `Recordatorio: ${cuando(c.fecha, c.hora)}`, body: `Tienes cita para ${serv}${con ? " con " + con : ""}. Toca para confirmar tu asistencia o cancelar.`, tag: `recordatorio-${c.id}`, url };
+            marca = { aviso24_en: new Date().toISOString() };
+          }
+          if (!mensaje) continue;
+          revisadas++;
+          const r = await mandar(subs, mensaje, "cita_push");
+          enviados += r.enviados; fallidos += r.fallidos;
+          await sb.from("citas").update(marca).eq("id", c.id);   // aunque falle, no se reintenta cada 10 minutos
+        }
+        return responder({ ok: true, revisadas, enviados, fallidos });
+      }
 
       const { data: c } = await sb.from("citas").select("*").eq("id", Number(cuerpo.cita)).maybeSingle();
       if (!c) return responder({ ok: true, nada: "cita no encontrada" });
@@ -214,6 +253,9 @@ Deno.serve(async (req) => {
       }
       return responder({ ok: true, ...total });
     }
+
+    // La llave pública de avisos (para que el celular del cliente se suscriba). Es pública por diseño.
+    if (cuerpo.accion === "clave_publica") return responder({ clave: vapidPublica(jwk) });
 
     // ---------- Llamada del panel (alguien del equipo con sesión) ----------
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");

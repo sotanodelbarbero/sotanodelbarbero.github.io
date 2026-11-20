@@ -136,6 +136,15 @@
     .sem-cita b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sem-cita .sv { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sem-cita.llego { opacity: .7; }
+    i.conf { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); color: #fff; font-style: normal; font-size: .5625rem; font-weight: 800; vertical-align: 1px; margin-left: 2px; }
+    .badge.confirmo { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+    /* Recordatorios de mañana */
+    .rec-fila { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .rec-fila:first-child { border-top: 0; }
+    .rec-fila .h { font-weight: 700; font-variant-numeric: tabular-nums; width: 48px; flex: none; }
+    .rec-fila .q { flex: 1; min-width: 0; }
+    .rec-fila .q b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rec-fila .ok { color: var(--ok); font-size: .8125rem; font-weight: 600; white-space: nowrap; }
     .sem-cita.no_vino { opacity: .45; border-style: dashed; text-decoration: line-through; }
     .sem-cita.tarde { box-shadow: 0 0 0 1.5px var(--bad) inset; }
 
@@ -835,6 +844,7 @@
       <div class="topbar" style="margin-top:12px">
         <h1 class="page-title" style="margin:0">Citas</h1>
         <div class="fila" style="flex:0 0 auto">
+          <button id="btnRecordar" title="Mandar los recordatorios de las citas de mañana">Recordar mañana</button>
           <button id="btnBloquear">Bloquear horario</button>
           <button class="primary" id="btnNuevaCita">+ Cita</button>
         </div>
@@ -1543,6 +1553,37 @@
     } finally { btn.disabled = false; btn.textContent = txt; }
   }
   $("btnRespaldo").onclick = descargarRespaldo;
+
+  // ---------- Recordatorios de mañana: un WhatsApp por cita, ya escrito, con enlace para confirmar o cancelar ----------
+  async function abrirRecordatorios() {
+    const manana = sumarDia(hoyISO(), 1);
+    const { data, error } = await db.from("citas").select("*").eq("fecha", manana).eq("estado", "agendada").order("hora");
+    if (error) return toast("No se pudieron cargar las citas: " + error.message, { tipo: "error" });
+    const mias = (data || []).filter((c) => esAdmin() || !c.barbero_id || c.barbero_id === miBarbero);
+    $("dcTitulo").textContent = "Recordatorios de mañana";
+    const fila = (c) => {
+      const s = servicio(c.servicio_id), b = barbero(c.barbero_id);
+      const estado = c.confirmada_en ? '<span class="ok">✓ Confirmó</span>'
+        : c.recordada_en ? `<span class="ok" style="color:var(--muted)">Enviado</span> <a class="boton" href="${waCita(c)}" target="_blank" rel="noopener" data-rec="${c.id}" style="padding:4px 10px">Otra vez</a>`
+        : `<a class="boton primary" href="${waCita(c)}" target="_blank" rel="noopener" data-rec="${c.id}">WhatsApp</a>`;
+      return `<div class="rec-fila"><div class="h">${hhmm(c.hora)}</div><div class="q"><b>${esc(c.cliente_nombre)}</b><span class="muted small">${esc(s?.nombre || "")} · ${b ? esc(b.nombre) : "Cualquiera"}${c.aviso_celular ? " · 🔔 aviso en su celular" : ""}</span></div><div>${estado}</div></div>`;
+    };
+    const pend = mias.filter((c) => !c.confirmada_en && !c.recordada_en).length;
+    $("dcCuerpo").innerHTML = mias.length
+      ? `<p class="muted small" style="margin:4px 0 10px">${esc(mayus(fechaLarga(manana)))} · ${mias.length} ${mias.length === 1 ? "cita" : "citas"}${pend ? ` · faltan ${pend}` : " · ¡todas listas!"}. Cada mensaje lleva su enlace para confirmar o cancelar; cuando confirmen, aquí sale ✓.</p><div>${mias.map(fila).join("")}</div>`
+      : `<p class="muted" style="margin:8px 0">No hay citas para mañana.</p>`;
+    $("dcAcciones").innerHTML = "";
+    $("dcCuerpo").onclick = async (e) => {
+      const a = e.target.closest("[data-rec]"); if (!a) return;
+      const c = mias.find((x) => x.id === Number(a.dataset.rec)); if (!c) return;
+      c.recordada_en = new Date().toISOString();
+      a.closest(".rec-fila").outerHTML = fila(c);   // el WhatsApp ya se abrió en otra pestaña
+      await db.from("citas").update({ recordada_en: c.recordada_en }).eq("id", c.id);
+      if (visible("inicio")) cargarInicio();
+    };
+    if (!$("dlgCita").open) $("dlgCita").showModal();
+  }
+  $("btnRecordar").onclick = abrirRecordatorios;
 
   // ---------- Pestañas ----------
   const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
@@ -3201,7 +3242,7 @@
       ? `Hola ${nombre}, te escribimos de ${cfg.nombre}. Tu cita ${dia} a las ${hhmm(c.hora)} sigue en pie; ahora te atenderá otro de nuestros barberos. ¡Te esperamos!`
       : tipo === "reprogramar"
       ? `Hola ${nombre}, te escribimos de ${cfg.nombre}. Tuvimos un cambio y no podremos atenderte ${dia} a las ${hhmm(c.hora)}. ¿Te acomoda otro horario? Disculpa la molestia.`
-      : `Hola ${nombre}, te recordamos tu cita en ${cfg.nombre} ${dia} a las ${hhmm(c.hora)} (${s?.nombre || "servicio"}${b ? " con " + b.nombre : ""}). Si no puedes venir, avísanos por aquí. ¡Te esperamos!`;
+      : `Hola ${nombre}, te recordamos tu cita en ${cfg.nombre} ${dia} a las ${hhmm(c.hora)} (${s?.nombre || "servicio"}${b ? " con " + b.nombre : ""}).${c.token ? `\n\nConfirma tu asistencia o cancela aquí 👉 ${new URL("cita.html?c=" + c.token, location.href).href}` : " Si no puedes venir, avísanos por aquí."}\n\n¡Te esperamos!`;
     return `https://wa.me/${telWa(c.telefono)}?text=${encodeURIComponent(txt)}`;
   }
 
@@ -3216,7 +3257,7 @@
     return `<div class="visita ${CLASE_CITA[c.estado]}">
       <div class="t" style="font-size:.8125rem;width:52px;border-radius:12px">${hhmm(c.hora)}</div>
       <div>
-        <div><b>${esc(c.cliente_nombre)}</b> <span class="badge ${CLASE_CITA[c.estado]}">${ESTADO_CITA[c.estado]}</span>${retraso(c)}</div>
+        <div><b>${esc(c.cliente_nombre)}</b> <span class="badge ${CLASE_CITA[c.estado]}">${ESTADO_CITA[c.estado]}</span>${c.estado === "agendada" && c.confirmada_en ? ' <span class="badge confirmo">✓ confirmó</span>' : ""}${retraso(c)}</div>
         <div class="muted small">${esc(s?.nombre || "Servicio")} · ${c.duracion_min} min · ${b ? esc(b.nombre) : "Cualquier barbero"} · ${esc(c.telefono)}</div>
       </div>
       <div class="acciones">${acc}</div>
@@ -3356,7 +3397,7 @@
         const cls = [c.estado, minutosTarde(c) ? "tarde" : ""].join(" ");
         return `<button type="button" class="sem-cita ${cls}" data-sem-cita="${c.id}" title="${esc(`${hhmm(c.hora)} · ${c.cliente_nombre} · ${s?.nombre || ""} · ${b ? b.nombre : "Cualquier barbero"}`)}"
           style="--c:${colorBarbero(c.barbero_id)};top:${top + 1}px;height:${hgt}px;left:calc(${(k / n) * 100}% + 3px);width:calc(${100 / n}% - 6px)">
-          <span class="hh">${hhmm(c.hora)}${c.estado === "llego" ? " ✓" : ""}</span><b>${esc(c.cliente_nombre)}</b>${hgt > 58 ? `<span class="sv">${esc(s?.nombre || "")}</span>` : ""}</button>`;
+          <span class="hh">${hhmm(c.hora)}${c.estado === "llego" ? " · llegó" : c.confirmada_en ? ' <i class="conf" title="Confirmó que viene">✓</i>' : ""}</span><b>${esc(c.cliente_nombre)}</b>${hgt > 58 ? `<span class="sv">${esc(s?.nombre || "")}</span>` : ""}</button>`;
       }).join("");
     };
 
@@ -3430,7 +3471,7 @@
       const s = servicio(c.servicio_id), top = (aMin(c.hora) - ini) * PX, hgt = Math.max(c.duracion_min * PX - 3, 22);
       const cls = [c.estado, minutosTarde(c) ? "tarde" : ""].join(" ");
       return `<button type="button" class="ag-cita ${cls}" data-cita="${c.id}" style="top:${top + 1}px;height:${hgt}px">
-        <span class="hh">${hhmm(c.hora)}</span> ${c.estado === "llego" ? "✓" : ""}<b>${esc(c.cliente_nombre)}</b>${hgt > 50 ? `<span class="muted">${esc(s?.nombre || "")}</span>` : ""}</button>`;
+        <span class="hh">${hhmm(c.hora)}</span> ${c.estado === "llego" ? "✓" : c.confirmada_en ? '<i class="conf" title="Confirmó que viene">✓</i>' : ""}<b>${esc(c.cliente_nombre)}</b>${hgt > 50 ? `<span class="muted">${esc(s?.nombre || "")}</span>` : ""}</button>`;
     }).join("");
     let linea = "";
     if (fecha === hoyISO()) { const a = ahoraMin(); if (a >= ini && a <= fin) linea = `<div class="ag-ahora" style="top:${(a - ini) * PX}px"></div>`; }
@@ -3523,6 +3564,8 @@
       <div><span>Barbero</span><span>${b ? esc(b.nombre) : "Cualquiera"}</span></div>
       <div><span>Teléfono</span><span><a href="tel:${esc(c.telefono)}">${esc(c.telefono)}</a></span></div>
       <div><span>Estado</span><span>${ESTADO_CITA[c.estado]}${minutosTarde(c) ? ` · retrasada ${minutosTarde(c)} min` : ""}</span></div>
+      ${c.estado === "agendada" ? `<div><span>Confirmación</span><span>${c.confirmada_en ? '<b style="color:var(--ok)">✓ Confirmó que viene</b>' : "Sin confirmar"}</span></div>
+      <div><span>Recordatorio</span><span>${[c.aviso_celular ? "aviso en su celular" : "", c.recordada_en ? "WhatsApp enviado" : ""].filter(Boolean).join(" · ") || "Todavía no"}</span></div>` : ""}
     </div>`;
     const acc = [];
     if (c.estado === "agendada") {
@@ -3781,6 +3824,10 @@
       if (b.barbero_id && !esAdmin() && b.barbero_id !== miBarbero) continue;
       al.push(["info", icoInfo, `<b>Hoy: ${esc(b.motivo || "bloqueo")}</b> · ${b.barbero_id ? esc(barbero(b.barbero_id)?.nombre || "") : "toda la barbería"} · ${b.hora_ini ? `${hhmm(b.hora_ini)}–${hhmm(b.hora_fin)}` : "todo el día"}`, "citas"]);
     }
+    // Recordatorios de mañana (desde el mediodía): citas sin confirmar, sin aviso al celular y sin WhatsApp
+    const manana = sumarDia(hoy, 1);
+    const sinRecordar = (rc.data || []).filter((c) => c.fecha === manana && !c.confirmada_en && !c.recordada_en && !c.aviso_celular && (esAdmin() || !c.barbero_id || c.barbero_id === miBarbero));
+    if (hora >= 12 * 60 && sinRecordar.length) al.push(["info", icoInfo, `<b>Mañana hay ${sinRecordar.length} ${sinRecordar.length === 1 ? "cita sin recordar" : "citas sin recordar"}.</b> Mándales su recordatorio por WhatsApp en un toque.`, "recordatorios"]);
     if (esAdmin()) {   // respaldo semanal
       const u = ultimoRespaldo(), dias = u ? diasEntre(u, hoy) : null;
       if (dias == null || dias >= 7) al.push(["info", icoInfo, dias == null ? `<b>Todavía no descargas un respaldo.</b> Tarda unos segundos y protege toda tu información.` : `<b>Hace ${dias} días que no descargas un respaldo.</b> Descárgalo para no perder nada.`, "ajustes"]);
@@ -3791,7 +3838,7 @@
   // Botones de Inicio: ir a otra pestaña o abrir una acción
   $("tab-inicio").addEventListener("click", (e) => {
     const ir = e.target.closest("[data-ir]");
-    if (ir) { irA(ir.dataset.ir); return; }
+    if (ir) { if (ir.dataset.ir === "recordatorios") abrirRecordatorios(); else irA(ir.dataset.ir); return; }
     const det = e.target.closest("button[data-c]");
     if (det) { accionCita(e); return; }
     const acc = e.target.closest("[data-acceso]"); if (!acc) return;
