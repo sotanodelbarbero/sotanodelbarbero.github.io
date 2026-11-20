@@ -139,6 +139,14 @@
     .sem-cita.llego { opacity: .7; }
     i.conf { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); color: #fff; font-style: normal; font-size: .5625rem; font-weight: 800; vertical-align: 1px; margin-left: 2px; }
     .badge.confirmo { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+    /* Lealtad */
+    .sellos { display: inline-flex; gap: 3px; vertical-align: middle; }
+    .sellos i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--oro); }
+    .sellos i.si { background: var(--oro); }
+    .lealtad-box { margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: .9375rem; }
+    .lealtad-box.toca { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+    .lealtad-box b { font-weight: 600; }
+    .lealtad-box .grow { flex: 1; min-width: 160px; }
     /* Recordatorios de mañana */
     .rec-fila { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
     .rec-fila:first-child { border-top: 0; }
@@ -970,6 +978,17 @@
         <div class="kpi"><div class="v" id="clFrecuentes">0</div><div class="l">Frecuentes (3+ visitas)</div></div>
         <div class="kpi"><div class="v" id="clAusentes">0</div><div class="l">No han vuelto (+30 días)</div></div>
       </div>
+      <div class="card" id="cardRegreso" style="margin-top:16px">
+        <div class="card-t" style="flex-wrap:wrap">
+          <div><h2>Les toca corte</h2><p class="muted small" style="margin:4px 0 0">Clientes que no han vuelto y no tienen cita. Invítalos a regresar con un toque.</p></div>
+          <select id="regresoDias" style="width:auto">
+            <option value="21">Más de 3 semanas</option>
+            <option value="28" selected>Más de 4 semanas</option>
+            <option value="42">Más de 6 semanas</option>
+          </select>
+        </div>
+        <div id="listaRegreso"></div>
+      </div>
       <div class="fila" style="margin:16px 0 12px;flex-wrap:wrap">
         <input id="buscarCliente" type="search" placeholder="Buscar por nombre o teléfono" style="flex:2 1 220px">
         <select id="ordenClientes" style="flex:1 1 180px">
@@ -1160,6 +1179,16 @@
           <div class="seg" data-ap="letra" role="group" aria-label="Tamaño de letra"><button type="button" data-v="normal">Normal</button><button type="button" data-v="grande">Grande</button><button type="button" data-v="muy">Más grande</button></div></div>
         <div class="fila" style="margin-top:10px;justify-content:flex-end"><button type="button" class="ghost" id="apRestablecer" style="flex:0 0 auto">Volver a como venía</button></div>
       </div>
+      <div class="card solo-admin hidden" style="margin-top:16px" id="cardLealtad">
+        <h2>Tarjeta de lealtad</h2>
+        <p class="muted" style="margin:6px 0 4px">Cada corte cobrado es un sello (se cuenta por teléfono). Al juntar los sellos, al cliente le toca su premio. Él ve sus sellos en su turno y en su cita, y al cobrar el panel te avisa.</p>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="lActiva" style="width:auto"> Tarjeta activa</label>
+        <div class="fila">
+          <div><label for="lCada">Sellos para el premio</label><input id="lCada" type="number" min="2" max="50" step="1" inputmode="numeric"></div>
+          <div style="flex:2"><label for="lPremio">Premio</label><input id="lPremio" maxlength="60" placeholder="Corte gratis"></div>
+        </div>
+        <button class="primary" id="lGuardar" style="margin-top:12px">Guardar</button>
+      </div>
       <div class="card solo-admin hidden" style="margin-top:16px" id="cardRespaldo">
         <h2>Respaldo</h2>
         <p class="muted" style="margin:6px 0 12px">Descarga un Excel con toda la información: clientes, citas, cobros, caja, gastos, productos, horario y equipo. Guárdalo en tu computadora o en Google Drive. Hazlo cada semana: si algo se borra por error, ahí está todo.</p>
@@ -1196,6 +1225,7 @@
         <button type="button" data-m="tarjeta" aria-pressed="false">Tarjeta</button>
         <button type="button" data-m="transferencia" aria-pressed="false">Transferencia</button>
       </div>
+      <div id="cobroLealtad" class="lealtad-box hidden"></div>
       <label>Productos</label>
       <div id="cobroProductos"></div>
       <div id="cobroTotal" style="margin-top:12px;text-align:right;font-weight:700;font-size:1.125rem"></div>
@@ -1586,6 +1616,94 @@
   }
   $("btnRecordar").onclick = abrirRecordatorios;
 
+  // ---------- Tarjeta de lealtad ----------
+  let lealtad = null;   // { activa, cada, premio }
+  async function cargarLealtad() {
+    const { data, error } = await db.from("lealtad").select("*").eq("id", 1).maybeSingle();
+    lealtad = error ? null : data;
+    if (lealtad && $("lCada")) { $("lActiva").checked = lealtad.activa; $("lCada").value = lealtad.cada; $("lPremio").value = lealtad.premio; }
+    return lealtad;
+  }
+  const progresoDe = (c) => !lealtad?.activa || !c.telefono ? null : Math.max(0, Number(c.pagados || 0) - Number(c.canjes || 0) * lealtad.cada);
+  const puntos = (n, total) => `<span class="sellos" aria-label="${n} de ${total} sellos">${Array.from({ length: Math.min(total, 12) }, (_, i) => `<i class="${i < n ? "si" : ""}"></i>`).join("")}</span>`;
+  function sellosHtml(c) {
+    const pr = progresoDe(c); if (pr == null) return "";
+    return pr >= lealtad.cada ? ` · <b style="color:var(--ok)">🎁 le toca: ${esc(lealtad.premio)}</b>` : ` · ${puntos(pr, lealtad.cada)} ${pr}/${lealtad.cada}`;
+  }
+  $("lGuardar").onclick = async () => {
+    const cada = Number($("lCada").value), premio = $("lPremio").value.trim() || "Corte gratis";
+    if (!(cada >= 2 && cada <= 50)) return toast("Los sellos van de 2 a 50.", { tipo: "error" });
+    const { data, error } = await db.from("lealtad").update({ activa: $("lActiva").checked, cada, premio }).eq("id", 1).select();
+    if (error || !data?.length) return toast(error ? "No se pudo guardar: " + error.message : "Falta ejecutar 17_regreso_lealtad.sql en Supabase", { tipo: "error" });
+    lealtad = data[0]; toast("Tarjeta de lealtad guardada");
+  };
+
+  // Al cobrar: cuántos sellos lleva y, si le toca, aplicar su premio
+  let canjeAplicado = false;
+  async function pintarLealtadCobro(v) {
+    const box = $("cobroLealtad"); canjeAplicado = false;
+    box.classList.add("hidden"); box.classList.remove("toca");
+    if (!v.telefono) return;
+    const { data } = await db.rpc("sellos_telefono", { p_tel: v.telefono });
+    if (!data || cobrando !== v) return;
+    box.classList.remove("hidden");
+    if (data.toca) {
+      box.classList.add("toca");
+      box.innerHTML = `<span class="grow">🎁 <b>${esc(v.cliente_nombre.split(" ")[0])} juntó sus ${data.cada} sellos:</b> le toca ${esc(data.premio)}.</span><button type="button" class="primary" id="cobroCanje">Aplicar premio</button>`;
+      $("cobroCanje").onclick = () => {
+        canjeAplicado = true; $("cobroMonto").value = 0; pintarTotalCobro();
+        box.innerHTML = `<span class="grow">🎁 <b>Premio aplicado:</b> ${esc(data.premio)}. Este corte no cuenta como sello.</span><button type="button" class="ghost" id="cobroCanjeQuitar">Quitar</button>`;
+        $("cobroCanjeQuitar").onclick = () => { canjeAplicado = false; const s2 = servicio(Number($("cobroServicio").value)); $("cobroMonto").value = s2?.precio ?? ""; pintarTotalCobro(); pintarLealtadCobro(v); };
+      };
+    } else {
+      box.innerHTML = `<span class="grow">⭐ Tarjeta de lealtad: <b>${data.progreso} de ${data.cada}</b> ${puntos(data.progreso, data.cada)}</span><span class="muted small">Con este corte lleva ${data.progreso + 1}${data.progreso + 1 >= data.cada ? " · ¡el próximo es gratis!" : ""}</span>`;
+    }
+  }
+
+  // ---------- «Les toca corte»: invitar a regresar a quien ya tardó ----------
+  let contactosRegreso = new Map(), telsConCita = new Set();
+  const tel10 = (t) => String(t || "").replace(/\D/g, "").slice(-10);
+  async function cargarRegreso() {
+    const [rc, rcc] = await Promise.all([
+      db.from("regreso_contactos").select("*"),
+      db.from("citas").select("telefono").eq("estado", "agendada").gte("fecha", hoyISO()),
+    ]);
+    contactosRegreso = new Map((rc.data || []).map((x) => [x.tel, x.enviado_en]));
+    telsConCita = new Set((rcc.data || []).map((x) => tel10(x.telefono)));
+    pintarRegreso(rc.error);
+  }
+  function waRegreso(c) {
+    const n = tel10(c.telefono); if (!n) return "";
+    const dias = diasEntre(c.ultima_visita, hoyISO()), sem = Math.round(dias / 7);
+    const pr = progresoDe(c);
+    const extra = pr == null ? "" : pr >= lealtad.cada ? ` Además ya juntaste tus sellos: ¡te toca ${lealtad.premio.toLowerCase()}! 🎁` : pr > 0 ? ` Llevas ${pr} de ${lealtad.cada} sellos en tu tarjeta.` : "";
+    const msg = `Hola ${c.nombre.split(" ")[0]} 👋 Ya van ${sem >= 2 ? sem + " semanas" : dias + " días"} desde tu último corte en ${cfg.nombre}.${extra} ¿Te apartamos lugar? Agenda aquí 👉 ${new URL("cita.html", location.href).href}`;
+    return `https://wa.me/52${n}?text=${encodeURIComponent(msg)}`;
+  }
+  function pintarRegreso(falta) {
+    if (falta) { $("listaRegreso").innerHTML = `<p class="muted small" style="margin:6px 0 0">Falta ejecutar <b>17_regreso_lealtad.sql</b> en Supabase.</p>`; return; }
+    const hoy = hoyISO(), min = Number($("regresoDias").value);
+    const lista = clientes.filter((c) => c.telefono && tel10(c.telefono).length === 10 && c.visitas > 0 && !telsConCita.has(tel10(c.telefono)))
+      .map((c) => ({ c, dias: diasEntre(c.ultima_visita, hoy) }))
+      .filter((x) => x.dias >= min && x.dias <= 180)
+      .sort((a, b) => b.c.visitas - a.c.visitas || a.dias - b.dias);
+    const escrito = (c) => { const e = contactosRegreso.get(tel10(c.telefono)); return e && e.slice(0, 10) >= c.ultima_visita ? e : null; };
+    const pend = lista.filter((x) => !escrito(x.c));
+    $("listaRegreso").innerHTML = lista.length ? `<p class="muted small" style="margin:8px 0 4px">${lista.length} ${lista.length === 1 ? "cliente" : "clientes"} · ${pend.length ? `faltan ${pend.length} por invitar` : "ya invitaste a todos"}</p>` + lista.slice(0, 40).map(({ c, dias }) => {
+      const e = escrito(c);
+      return `<div class="rec-fila"><div class="q"><b>${esc(c.nombre)}</b><span class="muted small">hace ${dias} días · ${c.visitas} ${c.visitas === 1 ? "visita" : "visitas"}${sellosHtml(c)}</span></div>
+        <div>${e ? `<span class="ok" style="color:var(--muted)">Invitado ${diasEntre(e.slice(0, 10), hoy) === 0 ? "hoy" : "hace " + diasEntre(e.slice(0, 10), hoy) + " d"}</span>` : ""}
+        <a class="boton${e ? "" : " primary"}" href="${waRegreso(c)}" target="_blank" rel="noopener" data-regreso="${esc(tel10(c.telefono))}"${e ? ' style="padding:4px 10px"' : ""}>${e ? "Otra vez" : "WhatsApp"}</a></div></div>`;
+    }).join("") : `<p class="muted small" style="margin:8px 0 0">Nadie por ahora: todos tus clientes vinieron hace poco o ya tienen cita. 👌</p>`;
+  }
+  $("regresoDias").onchange = () => pintarRegreso();
+  $("listaRegreso").addEventListener("click", async (e) => {
+    const a = e.target.closest("[data-regreso]"); if (!a) return;
+    const tel = a.dataset.regreso, ahora = new Date().toISOString();
+    contactosRegreso.set(tel, ahora); pintarRegreso();
+    await db.from("regreso_contactos").upsert({ tel, enviado_en: ahora }, { onConflict: "tel" });
+  });
+
   // ---------- Pestañas ----------
   const TABS = ["inicio", "hoy", "citas", "corte", "clientes", "reportes", "precios", "productos", "equipo", "horario", "ajustes"];
   const botonTab = (t) => document.querySelector(`.tabs [data-tab="${t}"]`);
@@ -1600,7 +1718,7 @@
     if (tab === "inicio") { cargarInicio(); pintarPrimerosPasos(); }
     if (tab === "horario") { pintarHorario(); pintarTurnos(); cargarCalendario(); prepararHoy(); }
     if (tab === "citas") cargarCitas();
-    if (tab === "ajustes" && esAdmin()) pintarRespaldo();
+    if (tab === "ajustes" && esAdmin()) { pintarRespaldo(); cargarLealtad(); }
     if (tab === "corte") cargarCorte();
     if (tab === "clientes") cargarClientes();
     if (tab === "reportes") cargarReportes();
@@ -2019,6 +2137,7 @@
     carritoCobro.poner(ventasDe(v.id));
     $("cobroError").textContent = "";
     pintarTotalCobro();
+    pintarLealtadCobro(v);
     $("dlgCobro").showModal();
   }
   $("cobroServicio").onchange = () => { const s = servicio(Number($("cobroServicio").value)); if (s) $("cobroMonto").value = s.precio; pintarTotalCobro(); };
@@ -2038,6 +2157,7 @@
       barbero_id: barberoId,
       servicio_id: Number($("cobroServicio").value),
       monto, propina, metodo_pago: metodo,
+      ...(canjeAplicado && monto === 0 ? { canje_lealtad: true } : {}),   // corte gratis de la tarjeta de lealtad
       // quién y cuándo cobró lo registra la base de datos automáticamente
     });
     if (!ok) { $("cobroGuardar").disabled = false; $("cobroError").textContent = "No se pudo guardar el cobro."; return; }
@@ -2390,6 +2510,8 @@
     const { data, error } = await traerTodo(() => db.from("clientes_resumen").select("*"));
     if (error) { toast("Falta ejecutar 04_admin.sql en Supabase"); return; }
     clientes = data.filter((c) => c.clave !== "nombre:" + LIBRETA_NOMBRE.toLowerCase());   // los cortes de la libreta no son un cliente
+    await cargarLealtad();
+    cargarRegreso();
     const hoy = hoyISO(), inicioMes = hoy.slice(0, 8) + "01";
     $("clTotal").textContent = clientes.length;
     $("clNuevos").textContent = clientes.filter((c) => c.primera_visita >= inicioMes).length;
@@ -2432,7 +2554,7 @@
           <div><b>${esc(c.nombre)}</b>
             ${c.visitas >= 3 ? '<span class="badge cobrado">frecuente</span>' : ""}
             ${c.visitas > 0 && dias > 30 ? '<span class="badge cancelado">no ha vuelto</span>' : ""}</div>
-          <div class="muted small">${c.telefono ? esc(c.telefono) + " · " : ""}${c.visitas} ${c.visitas === 1 ? "visita" : "visitas"} · ${peso(c.gastado)} · última ${cuando}</div>
+          <div class="muted small">${c.telefono ? esc(c.telefono) + " · " : ""}${c.visitas} ${c.visitas === 1 ? "visita" : "visitas"} · ${peso(c.gastado)} · última ${cuando}${sellosHtml(c)}</div>
         </div>
         <div class="acciones">${linkWhatsApp(c)}</div>
       </div>`;

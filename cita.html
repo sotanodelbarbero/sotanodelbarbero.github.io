@@ -215,6 +215,7 @@
     <!-- ===== Mi cita ===== -->
     <section id="vistaCita" class="hidden" aria-live="polite">
       <div id="tarjetaCita" class="card estado-card confirmada"></div>
+      <div id="sellosBox"></div>
       <div id="accionesCita" class="acciones-cita"></div>
     </section>
   </main>
@@ -558,6 +559,7 @@
       if (data.estado === "agendada" || data.estado === "llego") recordarCita({ token: c.token, fecha: data.fecha, hora: data.hora });
       else olvidarCita(c.token);
       mostrar("cita");
+      pintarSellos(c.token);
       const d = data, card = $("tarjetaCita"), acc = $("accionesCita");
       const num = numeroBarberia(), esHoy = d.fecha === hoyISO();
       const filas = `
@@ -625,6 +627,21 @@
       acc.querySelectorAll(".otra-cita").forEach((b) => (b.onclick = () => abrirCita(b.dataset.token)));
       const mas = $("btnOtraMas"); if (mas) mas.onclick = () => { guardar("cita", null); irAlFormulario(); };
       const otra = $("btnOtra"); if (otra) otra.onclick = () => { guardar("cita", null); irAlFormulario(); };
+    }
+
+    // ---------- Tarjeta de lealtad: sus sellos (con el enlace de su turno o cita, nunca con su teléfono) ----------
+    let sellosDe = null;
+    async function pintarSellos(token) {
+      const box = document.getElementById("sellosBox"); if (!box || !token || sellosDe === token) return;
+      sellosDe = token;
+      const { data } = await db.rpc("mis_sellos", { p_token: token });
+      if (!data || !data.cada) { box.innerHTML = ""; return; }
+      const n = Math.min(data.progreso, data.cada);
+      const puntos = Array.from({ length: data.cada }, (_, i) => `<i class="${i < n ? "si" : ""}">${i < n ? "✓" : i + 1}</i>`).join("");
+      box.innerHTML = `<div class="sellos-cli${data.toca ? " toca" : ""}">
+        <div class="sc-t">${data.toca ? `🎁 ¡Te toca ${esc(data.premio.toLowerCase())}!` : "Tu tarjeta de lealtad"}</div>
+        <div class="sc-p">${puntos}</div>
+        <div class="sc-s">${data.toca ? "Díselo a tu barbero al cobrar." : `Llevas ${n} de ${data.cada}. Al juntarlos: ${esc(data.premio.toLowerCase())}.`}</div></div>`;
     }
 
     // ---------- Confirmar asistencia ----------

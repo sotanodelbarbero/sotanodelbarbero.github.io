@@ -130,3 +130,14 @@ button:not([class]), button.big:not(.primary), button.danger { border-color: var
 #avisoCita, #avisoCerrado { border-radius: 0 !important; background: #fff !important; border-color: var(--tinta) !important; }
 #avisoCerrado a { border-radius: 0 !important; background: var(--tinta) !important; color: #fff !important; letter-spacing: .14em; text-transform: uppercase; font-size: .75rem; }
 .error { color: var(--bad); }
+
+/* ---------- Tarjeta de lealtad del cliente ---------- */
+.sellos-cli { margin-top: 12px; background: #fff; border: 1px solid var(--line); padding: 16px; text-align: center; }
+.sellos-cli.toca { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+.sc-t { font: 500 .8125rem/1.2 var(--display); text-transform: uppercase; letter-spacing: .16em; }
+.sc-p { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 12px 0 10px; }
+.sc-p i { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--tinta); display: grid; place-items: center; font: 600 .6875rem/1 var(--display); font-style: normal; color: var(--muted); }
+.sc-p i.si { background: var(--tinta); color: #fff; }
+.toca .sc-p i { border-color: #fff; } .toca .sc-p i.si { background: #fff; color: var(--tinta); }
+.sc-s { font-size: .8125rem; color: var(--muted); }
+.toca .sc-s { color: rgba(255,255,255,.8); }

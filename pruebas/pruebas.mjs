@@ -41,12 +41,12 @@ await db.exec(`
 `);
 
 // ---------- Cargar los archivos del proyecto en orden ----------
-for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql"]) {
+for (const f of ["schema.sql", "03_roles.sql", "04_admin.sql", "05_cliente.sql", "06_productos.sql", "07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); console.log("cargado " + f); }
   catch (e) { console.log("ERROR al cargar " + f + ": " + e.message); process.exit(1); }
 }
 // 07 y 08 se ejecutan dos veces: deben poder repetirse sin error
-for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql"]) {
+for (const f of ["07_citas.sql", "08_panel.sql", "09_calendario.sql", "10_equipo.sql", "11_llegada.sql", "12_turnos.sql", "13_turno_dia.sql", "14_tiempo_real.sql", "15_notificaciones.sql", "16_recordatorios.sql", "17_regreso_lealtad.sql"]) {
   try { await db.exec(fs.readFileSync(path.join(dir, f), "utf8")); prueba(f + " se puede volver a ejecutar", true); }
   catch (e) { prueba(f + " se puede volver a ejecutar", false, e.message); }
 }
@@ -793,6 +793,43 @@ await reloj("2026-12-08 13:30");
 await db.exec(`set role anon`);
 prueba("Una cita que ya pasó no se puede confirmar", (await uno(`select confirmar_cita($1)`, [rCita.token])) === false);
 await db.exec(`reset role`);
+
+seccion("LEALTAD: sellos por teléfono y corte gratis");
+await db.exec(`reset role`);
+await como(null);
+await db.exec(`update lealtad set cada = 3, premio = 'Corte gratis', activa = true where id = 1`);
+const DL = "2026-11-02";
+const insV = async (t, tel, monto, canje = false) => uno(`insert into visitas (fecha, turno, cliente_nombre, telefono, servicio_id, barbero_id, estado, monto, propina, metodo_pago, canje_lealtad)
+  values ($1,$2,'Leo Sol',$3,${CORTE},1,'cobrado',$4,0,'efectivo',$5) returning token`, [DL, t, tel, monto, canje]);
+const tk1 = await insV(901, "5588880001", 150);
+await insV(902, "+52 55 8888 0001", 150);
+let sl = await uno(`select _sellos('5588880001')`);
+prueba("Dos cortes cobrados (aunque el teléfono venga con +52) = 2 sellos", sl.progreso === 2 && sl.toca === false, JSON.stringify(sl));
+await insV(903, "5588880001", 150);
+sl = await uno(`select _sellos('5588880001')`);
+prueba("Al tercer corte (cada 3) le toca su premio", sl.toca === true && sl.progreso === 3, JSON.stringify(sl));
+await insV(904, "5588880001", 0, true);
+sl = await uno(`select _sellos('5588880001')`);
+prueba("Al usar el premio, la tarjeta vuelve a empezar", sl.toca === false && sl.progreso === 0 && sl.canjes === 1, JSON.stringify(sl));
+await db.exec(`set role anon`);
+const sm = await uno(`select mis_sellos($1)`, [tk1]);
+prueba("El cliente ve sus sellos con el enlace de su turno", sm?.progreso === 0 && sm?.cada === 3, JSON.stringify(sm));
+prueba("Con un enlace inventado no ve nada", (await uno(`select mis_sellos(gen_random_uuid())`)) === null);
+prueba("Un cliente no puede consultar sellos por teléfono", !!(await error(`select sellos_telefono('5588880001')`)));
+await db.exec(`set role authenticated`);
+await como(BARB);
+prueba("Un barbero sí puede (para avisar al cobrar)", (await uno(`select sellos_telefono('5588880001')`))?.cada === 3);
+prueba("Un barbero no puede cambiar las reglas de la tarjeta", (await q(`update lealtad set cada = 2 returning id`)).length === 0);
+prueba("Puede marcar a quién ya invitó a regresar", !(await error(`insert into regreso_contactos (tel) values ('5588880001') on conflict (tel) do update set enviado_en = now()`)));
+await como(ADMIN);
+prueba("Alejandro cambia las reglas (cada 10)", (await q(`update lealtad set cada = 10 returning id`)).length === 1);
+const res = (await q(`select pagados, canjes from clientes_resumen where telefono = '5588880001'`))[0];
+prueba("El resumen de clientes trae sus sellos", Number(res?.pagados) >= 2 && Number(res?.canjes) === 1, JSON.stringify(res));
+await q(`update lealtad set activa = false`);
+prueba("Con la tarjeta apagada no se muestran sellos", (await uno(`select sellos_telefono('5588880001')`)) === null);
+await q(`update lealtad set activa = true`);
+await db.exec(`reset role`);
+await como(null);
 
 console.log(`\n${ok} pasaron, ${mal} fallaron`);
 if (mal) { console.log("Fallaron:\n - " + fallas.join("\n - ")); process.exit(1); }

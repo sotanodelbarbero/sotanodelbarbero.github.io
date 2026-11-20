@@ -86,6 +86,7 @@
     <!-- ===== 2. Mi turno (se actualiza solo) ===== -->
     <section id="vistaTurno" class="hidden" aria-live="polite">
       <div id="tarjetaTurno" class="card estado-card"></div>
+      <div id="sellosBox"></div>
       <div id="accionesTurno"></div>
       <div class="actualizado" id="actualizado"></div>
     </section>
@@ -247,6 +248,21 @@
       seguirTurno();
     });
 
+    // ---------- Tarjeta de lealtad: sus sellos (con el enlace de su turno o cita, nunca con su teléfono) ----------
+    let sellosDe = null;
+    async function pintarSellos(token) {
+      const box = document.getElementById("sellosBox"); if (!box || !token || sellosDe === token) return;
+      sellosDe = token;
+      const { data } = await db.rpc("mis_sellos", { p_token: token });
+      if (!data || !data.cada) { box.innerHTML = ""; return; }
+      const n = Math.min(data.progreso, data.cada);
+      const puntos = Array.from({ length: data.cada }, (_, i) => `<i class="${i < n ? "si" : ""}">${i < n ? "✓" : i + 1}</i>`).join("");
+      box.innerHTML = `<div class="sellos-cli${data.toca ? " toca" : ""}">
+        <div class="sc-t">${data.toca ? `🎁 ¡Te toca ${esc(data.premio.toLowerCase())}!` : "Tu tarjeta de lealtad"}</div>
+        <div class="sc-p">${puntos}</div>
+        <div class="sc-s">${data.toca ? "Díselo a tu barbero al cobrar." : `Llevas ${n} de ${data.cada}. Al juntarlos: ${esc(data.premio.toLowerCase())}.`}</div></div>`;
+    }
+
     // ---------- Seguimiento del turno ----------
     let ultimoEstado = null, timer = null;
 
@@ -261,6 +277,7 @@
       if (data.estado === "atendiendo" && ultimoEstado && ultimoEstado !== "atendiendo") avisar();
       ultimoEstado = data.estado;
       pintarTurno(data);
+      pintarSellos(t.token);
       $("actualizado").textContent = data.estado === "espera" || data.estado === "atendiendo"
         ? "Actualizado " + new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + " · se actualiza solo"
         : "";
