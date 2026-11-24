@@ -516,6 +516,16 @@
     .cal-barra b { flex: 1 1 100%; }
     @media (min-width: 700px) { .cal-barra b { flex: 1; } }
     @media (max-width: 620px) { .cal-dia { min-height: 58px; padding: 6px; } .cal-dia .n { font-size: 1.125rem; } .cal-dia .hr { font-size: .625rem; } .cal-dia .ct { display: none; } .cal { gap: 4px; } }
+    /* Mes en Citas: cuántas citas y turnos hubo (o hay) cada día */
+    .mes-cal .cal-dia { min-height: 76px; cursor: pointer; }
+    .mes-cal .cal-dia.ya { opacity: .7; }
+    .mes-cal .cal-dia.vacio .n { color: var(--muted); }
+    .mes-cal .mc { display: flex; flex-direction: column; gap: 3px; }
+    .mes-cal .mc > span { font-size: .75rem; line-height: 1.3; padding: 1px 6px; border-radius: 999px; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; align-self: flex-start; }
+    .mes-cal .m-cita { background: color-mix(in srgb, var(--oro) 30%, transparent); }
+    .mes-cal .m-turno { background: color-mix(in srgb, var(--ok) 30%, transparent); }
+    .mes-cal .m-tot { position: absolute; top: 7px; right: 8px; font-size: .6875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    @media (max-width: 620px) { .mes-cal .cal-dia { min-height: 64px; } .mes-cal .mc > span { font-size: .6875rem; padding: 0 4px; } .mes-cal .pal, .mes-cal .m-tot { display: none; } }
     @media (max-width: 768px) { body.con-tabbar .cal-barra { bottom: calc(76px + env(safe-area-inset-bottom)); } }
 
     /* =========================================================
@@ -932,7 +942,8 @@
           <button id="citaDespues" aria-label="Día siguiente">›</button>
           <button class="ghost" id="citaHoy">Hoy</button>
         </div>
-        <div class="seg" id="citaVista" style="flex:0 0 270px">
+        <div class="seg" id="citaVista" style="flex:0 0 340px">
+          <button type="button" data-v="mes" aria-pressed="false">Mes</button>
           <button type="button" data-v="semana" aria-pressed="true">Semana</button>
           <button type="button" data-v="agenda" aria-pressed="false">Día</button>
           <button type="button" data-v="lista" aria-pressed="false">Lista</button>
@@ -942,6 +953,14 @@
       <div id="semanaBox">
         <div id="semLeyenda" class="sem-leyenda"></div>
         <div id="semana" class="agenda-wrap"></div>
+      </div>
+      <div id="mesBox" class="hidden">
+        <div id="mesCal" class="cal mes-cal"></div>
+        <div class="cal-ley">
+          <span><i style="background:color-mix(in srgb, var(--oro) 45%, transparent)"></i>Citas (agendadas por día y hora)</span>
+          <span><i style="background:color-mix(in srgb, var(--ok) 45%, transparent)"></i>Turnos (llegaron sin cita)</span>
+        </div>
+        <p class="footnote">Toca un día para ver su agenda. Las citas canceladas y los turnos cancelados no cuentan. Un cliente con cita que llegó cuenta solo como cita.</p>
       </div>
       <div id="agenda" class="agenda-wrap hidden"></div>
       <div id="listaCitasBox" class="hidden">
@@ -2193,7 +2212,7 @@
     if (canal) return;
     const t = (tabla, fn) => ["postgres_changes", { event: "*", schema: "public", table: tabla }, fn];
     const escuchas = [
-      t("visitas", () => pronto("hoy", cargarHoy)),
+      t("visitas", () => { pronto("hoy", cargarHoy); if (visible("citas") && vistaCitas === "mes") pronto("mes", cargarMes); }),
       t("ventas_productos", () => pronto("hoy", cargarHoy)),
       t("citas", (pl) => {
         avisarLlegada(pl);
@@ -3732,7 +3751,53 @@
       : `<div class="card muted" style="text-align:center">No hay citas este día.</div>`;
     cargarBloqueos();
     if (vistaCitas === "semana") cargarSemana();
+    if (vistaCitas === "mes") cargarMes();
   }
+
+  // ---------- Mes: calendario con cuántas citas y cuántos turnos (sin cita) tiene cada día ----------
+  const MESES_MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const sumarMes = (iso, n) => { const [y, m] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 10); };
+  let mesPedido = 0;
+  async function cargarMes() {
+    const mes = ($("citaFecha").value || hoyISO()).slice(0, 7), [y, m] = mes.split("-").map(Number);
+    const ini = `${mes}-01`, fin = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    const yo = ++mesPedido;
+    const [rc, rv] = await Promise.all([
+      traerTodo(() => db.from("citas").select("id,fecha,visita_id").gte("fecha", ini).lte("fecha", fin).neq("estado", "cancelada").order("id")),
+      traerTodo(() => db.from("visitas").select("id,fecha").gte("fecha", ini).lte("fecha", fin).neq("estado", "cancelado").order("id")),
+    ]);
+    if (yo !== mesPedido) return;   // ya se pidió otro mes
+    if (rc.error || rv.error) { $("mesCal").innerHTML = `<p class="muted" style="grid-column:1/-1">No se pudo cargar el mes: ${esc((rc.error || rv.error).message)}</p>`; return; }
+    const dias = {};
+    for (let d = 1; d <= Number(fin.slice(8)); d++) dias[`${mes}-${String(d).padStart(2, "0")}`] = { citas: 0, turnos: 0 };
+    // El cliente con cita que llegó también tiene su visita: se cuenta una sola vez, como cita
+    const deCita = new Set();
+    for (const c of rc.data) { if (dias[c.fecha]) dias[c.fecha].citas++; if (c.visita_id) deCita.add(c.visita_id); }
+    for (const v of rv.data) if (!deCita.has(v.id) && dias[v.fecha]) dias[v.fecha].turnos++;
+    pintarMes(mes, dias);
+  }
+  function pintarMes(mes, dias) {
+    const [y, m] = mes.split("-").map(Number), hoy = hoyISO(), sel = $("citaFecha").value;
+    const primero = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;   // lunes = 0
+    let html = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => `<div class="sem">${d}</div>`).join("");
+    html += `<div class="cal-dia fuera"></div>`.repeat(primero);
+    let tc = 0, tt = 0;
+    for (const [f, d] of Object.entries(dias)) {
+      tc += d.citas; tt += d.turnos;
+      const tot = d.citas + d.turnos;
+      const cls = ["cal-dia", f < hoy ? "ya" : "", f === hoy ? "hoy" : "", tot ? "" : "vacio"].join(" ");
+      html += `<button type="button" class="${cls}" data-dia="${f}" aria-pressed="${f === sel}" aria-label="${esc(fechaLarga(f))}: ${d.citas} citas, ${d.turnos} turnos">
+        <span class="n">${Number(f.slice(8))}</span>${tot ? `<span class="m-tot">${tot}</span>` : ""}
+        <span class="mc">${d.citas ? `<span class="m-cita">${d.citas}<span class="pal"> ${d.citas === 1 ? "cita" : "citas"}</span></span>` : ""}${d.turnos ? `<span class="m-turno">${d.turnos}<span class="pal"> ${d.turnos === 1 ? "turno" : "turnos"}</span></span>` : ""}</span></button>`;
+    }
+    $("mesCal").innerHTML = html;
+    $("citaResumen").textContent = `${mayus(MESES_MES[m - 1])} ${y} · ${tc} ${tc === 1 ? "cita" : "citas"} · ${tt} ${tt === 1 ? "turno" : "turnos"} · ${tc + tt} en total${esAdmin() ? "" : " (turnos: solo los tuyos y los de hoy)"}`;
+  }
+  $("mesCal").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-dia]"); if (!b) return;
+    $("citaFecha").value = b.dataset.dia;
+    $("citaVista").querySelector('[data-v="agenda"]').click();   // abre ese día en la vista Día
+  });
 
   // ---------- Semana: una columna por día, horas hacia abajo, cada cita del color de su barbero ----------
   let citasSemana = [];
@@ -3898,8 +3963,9 @@
   $("citaFecha").onchange = cargarCitas;
   $("citaVerTodas").onchange = cargarCitas;
   // En la semana, las flechas brincan de semana en semana
-  $("citaAntes").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), vistaCitas === "semana" ? -7 : -1); cargarCitas(); };
-  $("citaDespues").onclick = () => { $("citaFecha").value = sumarDia($("citaFecha").value || hoyISO(), vistaCitas === "semana" ? 7 : 1); cargarCitas(); };
+  const moverCitas = (s) => { const f = $("citaFecha").value || hoyISO(); $("citaFecha").value = vistaCitas === "mes" ? sumarMes(f, s) : sumarDia(f, vistaCitas === "semana" ? 7 * s : s); cargarCitas(); };
+  $("citaAntes").onclick = () => moverCitas(-1);
+  $("citaDespues").onclick = () => moverCitas(1);
   $("citaHoy").onclick = () => { $("citaFecha").value = hoyISO(); cargarCitas(); };
   $("citaVista").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]"); if (!b) return;
@@ -3908,8 +3974,10 @@
     $("agenda").classList.toggle("hidden", vistaCitas !== "agenda");
     $("listaCitasBox").classList.toggle("hidden", vistaCitas !== "lista");
     $("semanaBox").classList.toggle("hidden", vistaCitas !== "semana");
-    $("citaAntes").setAttribute("aria-label", vistaCitas === "semana" ? "Semana anterior" : "Día anterior");
-    $("citaDespues").setAttribute("aria-label", vistaCitas === "semana" ? "Semana siguiente" : "Día siguiente");
+    $("mesBox").classList.toggle("hidden", vistaCitas !== "mes");
+    const paso = { mes: "Mes", semana: "Semana" }[vistaCitas] || "Día";
+    $("citaAntes").setAttribute("aria-label", `${paso} anterior`);
+    $("citaDespues").setAttribute("aria-label", `${paso} siguiente`);
     cargarCitas();
   });
 
@@ -4685,7 +4753,7 @@
       ["#btnNuevaCita", "+ Cita", "Para apartarle a quien te llama o te escribe. Pones nombre, teléfono, servicio, barbero, día y hora. Solo te deja elegir horas que estén libres."],
       ["#btnBloquear", "Bloquear horario", "Para que nadie aparte en un rato: la comida, una salida o el día libre de un barbero. Los clientes ya no verán esas horas."],
       ["#tab-citas .fila:has(#citaFecha)", "Cambiar de día", "Las flechas ‹ › pasan al día anterior o al siguiente. Toca la fecha para elegir cualquier día. «Hoy» te regresa a hoy."],
-      ["#citaVista", "Semana, día o lista", "«Semana» muestra los 7 días con cada cita a su hora, del color de su barbero. «Día» pone una columna por barbero. «Lista» las pone una debajo de otra, y ahí ves también las canceladas."],
+      ["#citaVista", "Mes, semana, día o lista", "«Mes» es un calendario con cuántas citas y cuántos turnos sin cita hay cada día. «Semana» muestra los 7 días con cada cita a su hora, del color de su barbero. «Día» pone una columna por barbero. «Lista» las pone una debajo de otra, y ahí ves también las canceladas."],
       ["#agenda", "La agenda", "Cada columna es un barbero y cada renglón una hora. Toca un espacio vacío para apartar ahí mismo."],
       ["#agenda", "Toca una cita", "Ves sus datos y puedes: «Llegó» (pasa a la fila), «Mover» (cambiar día u hora), escribirle por WhatsApp o cancelarla."],
       ["#listaBloqueos", "Bloqueos próximos", "Los ratos que bloqueaste. Si cambias de planes, quítalo y esas horas se vuelven a abrir."],
